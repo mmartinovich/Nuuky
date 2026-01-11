@@ -27,6 +27,18 @@ export default function MainLayout() {
           title: 'Settings',
         }}
       />
+      <Stack.Screen
+        name="rooms"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="room/[id]"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }

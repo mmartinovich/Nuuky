@@ -41,6 +41,7 @@ import { useNudge } from "../../hooks/useNudge";
 import { useFlare } from "../../hooks/useFlare";
 import { usePresence } from "../../hooks/usePresence";
 import { useRoom } from "../../hooks/useRoom";
+import { useRoomInvites } from "../../hooks/useRoomInvites";
 import {
   colors,
   getMoodColor,
@@ -70,6 +71,7 @@ export default function QuantumOrbitScreen() {
   const { sendFlare, activeFlares, myActiveFlare } = useFlare();
   const { updateActivity } = usePresence(); // Track presence while app is active
   const { activeRooms, createRoom, joinRoom: joinRoomFn } = useRoom();
+  const { roomInvites } = useRoomInvites();
   const [loading, setLoading] = useState(false); // Start with false - friends from Zustand show immediately
   const [showMoodPicker, setShowMoodPicker] = useState(false);
   const [showHint, setShowHint] = useState(true); // Show hint by default until user interacts
@@ -689,7 +691,7 @@ export default function QuantumOrbitScreen() {
   };
 
   const handleOpenRooms = () => {
-    setShowRoomList(true);
+    router.push('/(main)/rooms');
   };
 
   const handleCreateRoom = async (name?: string, isPrivate?: boolean) => {
@@ -828,10 +830,10 @@ export default function QuantumOrbitScreen() {
           {/* Right section */}
           <View style={styles.navSection}>
             <TouchableOpacity onPress={handleOpenRooms} activeOpacity={0.7} style={styles.navTab}>
-              <Ionicons name="home-outline" size={24} color="rgba(255, 255, 255, 0.85)" />
-              {activeRooms.length > 0 && (
+              <Ionicons name="grid-outline" size={24} color="rgba(255, 255, 255, 0.85)" />
+              {roomInvites.length > 0 && (
                 <View style={styles.roomBadge}>
-                  <Text style={styles.roomBadgeText}>{activeRooms.length}</Text>
+                  <Text style={styles.roomBadgeText}>{roomInvites.length}</Text>
                 </View>
               )}
               <Text style={styles.navLabel}>Rooms</Text>

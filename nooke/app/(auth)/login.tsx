@@ -74,37 +74,85 @@ export default function LoginScreen() {
   const handleDevLogin = async () => {
     setLoading(true);
     try {
-      // Create or find a test user
-      const testUserId = '00000000-0000-0000-0000-000000000001';
-      const testPhone = '+1234567890';
+      // Dev credentials - use email/password for proper auth session
+      const DEV_EMAIL = 'dev@nooke.local';
+      const DEV_PASSWORD = 'devpassword123'; // Only for local dev
+      const DEV_PHONE = '+1234567890';
 
-      // Check if test user exists
-      const { data: existingUser, error: fetchError } = await supabase
+      // Try to sign in first
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: DEV_EMAIL,
+        password: DEV_PASSWORD,
+      });
+
+      if (signInError) {
+        // If sign in fails, try to create the account
+        console.log('Dev user not found, creating...');
+
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: DEV_EMAIL,
+          password: DEV_PASSWORD,
+          options: {
+            data: {
+              display_name: 'Dev User',
+              phone: DEV_PHONE,
+            },
+            emailRedirectTo: undefined, // Skip email confirmation in dev
+          }
+        });
+
+        if (signUpError) {
+          throw new Error(`Failed to create dev user: ${signUpError.message}`);
+        }
+
+        // After signup, try to sign in again
+        const { error: retrySignInError } = await supabase.auth.signInWithPassword({
+          email: DEV_EMAIL,
+          password: DEV_PASSWORD,
+        });
+
+        if (retrySignInError) {
+          // Might need email confirmation - try to get session anyway
+          console.log('Sign in after signup failed, checking session...');
+        }
+      }
+
+      // Get the current session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Failed to get authenticated session. You may need to confirm the email or check Supabase auth settings.');
+      }
+
+      // Fetch or create user profile from users table
+      let { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
-        .eq('id', testUserId)
-        .single();
+        .eq('id', session.user.id)
+        .maybeSingle();
 
-      let userData;
+      if (userError && userError.code !== 'PGRST116') {
+        throw new Error(`Failed to fetch user profile: ${userError.message}`);
+      }
 
-      if (fetchError || !existingUser) {
-        // Create test user
+      // If user doesn't exist in users table, create it
+      if (!userData) {
         const { data: newUser, error: insertError } = await supabase
           .from('users')
           .insert({
-            id: testUserId,
-            phone: testPhone,
-            display_name: 'Test User',
+            id: session.user.id,
+            phone: DEV_PHONE,
+            display_name: 'Dev User',
             mood: 'neutral',
             is_online: true,
           })
           .select()
           .single();
 
-        if (insertError) throw insertError;
+        if (insertError) {
+          throw new Error(`Failed to create user profile: ${insertError.message}`);
+        }
+
         userData = newUser;
-      } else {
-        userData = existingUser;
       }
 
       // Set the user in the store
@@ -113,10 +161,13 @@ export default function LoginScreen() {
       // Navigate to main app
       router.replace('/(main)');
 
-      Alert.alert('Dev Login', 'Logged in as Test User');
+      console.log('✅ Dev login successful:', userData.display_name);
     } catch (error: any) {
-      console.error('Dev login error:', error);
-      Alert.alert('Error', error.message || 'Failed to login');
+      console.error('❌ Dev login error:', error);
+      Alert.alert(
+        'Dev Login Failed',
+        error.message || 'Failed to login. Check console for details.'
+      );
     } finally {
       setLoading(false);
     }

@@ -379,8 +379,8 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
   },
   moodImage: {
-    width: 130,
-    height: 130,
+    width: 150,
+    height: 150,
     resizeMode: 'contain',
     zIndex: 10,
   },

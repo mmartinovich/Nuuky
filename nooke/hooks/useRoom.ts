@@ -5,7 +5,7 @@ import { useAppStore } from '../stores/appStore';
 import { Room, RoomParticipant } from '../types';
 
 export const useRoom = () => {
-  const { currentUser, currentRoom, setCurrentRoom, setActiveRooms } = useAppStore();
+  const { currentUser, currentRoom, setCurrentRoom, setActiveRooms, myRooms, setMyRooms, addMyRoom, removeMyRoom } = useAppStore();
   const [participants, setParticipants] = useState<RoomParticipant[]>([]);
   const [activeRooms, setActiveRoomsList] = useState<Room[]>([]);
   const [loading, setLoading] = useState(false);
@@ -13,6 +13,7 @@ export const useRoom = () => {
   useEffect(() => {
     if (currentUser) {
       loadActiveRooms();
+      loadMyRooms();
       setupRealtimeSubscription();
     }
   }, [currentUser]);
@@ -54,6 +55,53 @@ export const useRoom = () => {
       setActiveRooms(rooms);
     } catch (error: any) {
       console.error('Error loading active rooms:', error);
+    }
+  };
+
+  const loadMyRooms = async () => {
+    if (!currentUser) return;
+
+    try {
+      // Get rooms where user is creator or participant
+      const { data: participantData } = await supabase
+        .from('room_participants')
+        .select('room_id')
+        .eq('user_id', currentUser.id);
+
+      const roomIds = participantData?.map(p => p.room_id) || [];
+
+      if (roomIds.length === 0) {
+        setMyRooms([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('rooms')
+        .select(`
+          *,
+          participants:room_participants (
+            id,
+            user_id,
+            is_muted,
+            joined_at,
+            user:user_id (
+              id,
+              display_name,
+              avatar_url,
+              mood,
+              is_online
+            )
+          )
+        `)
+        .in('id', roomIds)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setMyRooms(data || []);
+    } catch (error: any) {
+      console.error('Error loading my rooms:', error);
     }
   };
 
@@ -116,6 +164,7 @@ export const useRoom = () => {
             loadParticipants();
           }
           loadActiveRooms();
+          loadMyRooms();
         }
       )
       .subscribe();
@@ -126,23 +175,57 @@ export const useRoom = () => {
     };
   };
 
-  const createRoom = async (name?: string, isPrivate: boolean = false): Promise<Room | null> => {
+  // Check if user can create a room (max 5 rooms)
+  const canCreateRoom = async (): Promise<boolean> => {
+    if (!currentUser) return false;
+
+    try {
+      const { data, error } = await supabase
+        .from('rooms')
+        .select('id')
+        .eq('creator_id', currentUser.id)
+        .eq('is_active', true);
+
+      if (error) throw error;
+
+      return (data?.length || 0) < 5;
+    } catch (error: any) {
+      console.error('Error checking room limit:', error);
+      return false;
+    }
+  };
+
+  const createRoom = async (name?: string, friendIds?: string[]): Promise<Room | null> => {
     if (!currentUser) {
       Alert.alert('Error', 'You must be logged in');
       return null;
     }
 
+    // Verify auth session before creating room
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session) {
+      Alert.alert('Session Expired', 'Please log in again');
+      return null;
+    }
+
+    // Check room limit
+    const canCreate = await canCreateRoom();
+    if (!canCreate) {
+      Alert.alert('Room Limit Reached', 'You can only create up to 5 rooms. Delete an existing room to create a new one.');
+      return null;
+    }
+
     setLoading(true);
     try {
-      // Create the room - RLS policy will verify auth.uid() matches creator_id
+      // Create the room - all rooms are private now
       const { data: room, error: roomError } = await supabase
         .from('rooms')
         .insert({
           creator_id: currentUser.id,
           name: name || `${currentUser.display_name}'s Room`,
-          is_private: isPrivate,
+          is_private: true, // All rooms are private
           is_active: true,
-          audio_active: false, // Presence-only for now
+          audio_active: false,
         })
         .select()
         .single();
@@ -155,13 +238,27 @@ export const useRoom = () => {
         .insert({
           room_id: room.id,
           user_id: currentUser.id,
-          is_muted: true, // Start muted
+          is_muted: true,
         });
 
       if (joinError) throw joinError;
 
+      // Send invites if friendIds provided
+      if (friendIds && friendIds.length > 0) {
+        const invites = friendIds.map(friendId => ({
+          room_id: room.id,
+          sender_id: currentUser.id,
+          receiver_id: friendId,
+        }));
+
+        await supabase.from('room_invites').insert(invites);
+        // TODO: Send push notifications
+      }
+
       setCurrentRoom(room);
+      addMyRoom(room);
       await loadActiveRooms();
+      await loadMyRooms();
 
       return room;
     } catch (error: any) {
@@ -225,6 +322,7 @@ export const useRoom = () => {
 
       setCurrentRoom(room);
       await loadActiveRooms();
+      await loadMyRooms();
 
       return true;
     } catch (error: any) {
@@ -241,7 +339,32 @@ export const useRoom = () => {
 
     setLoading(true);
     try {
-      // Remove participant - RLS policy will verify auth.uid() matches user_id
+      // If user is creator, prompt to transfer ownership or delete
+      if (currentRoom.creator_id === currentUser.id) {
+        const { data: otherParticipants } = await supabase
+          .from('room_participants')
+          .select('user_id')
+          .eq('room_id', currentRoom.id)
+          .neq('user_id', currentUser.id);
+
+        if (otherParticipants && otherParticipants.length > 0) {
+          Alert.alert(
+            'Transfer or Delete',
+            'You are the room creator. Transfer ownership to another member or delete the room.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Delete Room',
+                style: 'destructive',
+                onPress: async () => await deleteRoom(currentRoom.id)
+              }
+            ]
+          );
+          return;
+        }
+      }
+
+      // Remove participant
       const { error: deleteError } = await supabase
         .from('room_participants')
         .delete()
@@ -250,23 +373,10 @@ export const useRoom = () => {
 
       if (deleteError) throw deleteError;
 
-      // Check if room is empty
-      const { data: remaining } = await supabase
-        .from('room_participants')
-        .select('id')
-        .eq('room_id', currentRoom.id);
-
-      // If empty and user was creator, close the room
-      if ((!remaining || remaining.length === 0) && currentRoom.creator_id === currentUser.id) {
-        await supabase
-          .from('rooms')
-          .update({ is_active: false, closed_at: new Date().toISOString() })
-          .eq('id', currentRoom.id);
-      }
-
       setCurrentRoom(null);
       setParticipants([]);
       await loadActiveRooms();
+      await loadMyRooms();
     } catch (error: any) {
       console.error('Error leaving room:', error);
       Alert.alert('Error', 'Failed to leave room');
@@ -304,15 +414,283 @@ export const useRoom = () => {
     }
   };
 
+  // Delete room (creator only)
+  const deleteRoom = async (roomId: string): Promise<boolean> => {
+    if (!currentUser) return false;
+
+    try {
+      setLoading(true);
+
+      // Verify user is creator
+      const { data: room } = await supabase
+        .from('rooms')
+        .select('creator_id')
+        .eq('id', roomId)
+        .single();
+
+      if (!room || room.creator_id !== currentUser.id) {
+        Alert.alert('Error', 'Only the creator can delete this room');
+        return false;
+      }
+
+      // Delete room (CASCADE will delete participants and invites)
+      const { error } = await supabase
+        .from('rooms')
+        .delete()
+        .eq('id', roomId);
+
+      if (error) throw error;
+
+      // Clear current room if it was deleted
+      if (currentRoom?.id === roomId) {
+        setCurrentRoom(null);
+        setParticipants([]);
+      }
+
+      removeMyRoom(roomId);
+      await loadActiveRooms();
+      await loadMyRooms();
+
+      Alert.alert('Success', 'Room deleted');
+      return true;
+    } catch (error: any) {
+      console.error('Error deleting room:', error);
+      Alert.alert('Error', 'Failed to delete room');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Update room name (creator only)
+  const updateRoomName = async (roomId: string, newName: string): Promise<boolean> => {
+    if (!currentUser) return false;
+
+    try {
+      setLoading(true);
+
+      // Verify user is creator
+      const { data: room } = await supabase
+        .from('rooms')
+        .select('creator_id')
+        .eq('id', roomId)
+        .single();
+
+      if (!room || room.creator_id !== currentUser.id) {
+        Alert.alert('Error', 'Only the creator can rename this room');
+        return false;
+      }
+
+      const { error } = await supabase
+        .from('rooms')
+        .update({ name: newName })
+        .eq('id', roomId);
+
+      if (error) throw error;
+
+      // Update current room if it's the one being renamed
+      if (currentRoom?.id === roomId) {
+        setCurrentRoom({ ...currentRoom, name: newName });
+      }
+
+      await loadActiveRooms();
+      await loadMyRooms();
+
+      return true;
+    } catch (error: any) {
+      console.error('Error updating room name:', error);
+      Alert.alert('Error', 'Failed to update room name');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Remove participant (creator only)
+  const removeParticipant = async (roomId: string, userId: string): Promise<boolean> => {
+    if (!currentUser) return false;
+
+    try {
+      setLoading(true);
+
+      // Verify user is creator
+      const { data: room } = await supabase
+        .from('rooms')
+        .select('creator_id')
+        .eq('id', roomId)
+        .single();
+
+      if (!room || room.creator_id !== currentUser.id) {
+        Alert.alert('Error', 'Only the creator can remove members');
+        return false;
+      }
+
+      // Cannot remove creator
+      if (userId === currentUser.id) {
+        Alert.alert('Error', 'Cannot remove yourself. Leave or delete the room instead.');
+        return false;
+      }
+
+      const { error } = await supabase
+        .from('room_participants')
+        .delete()
+        .eq('room_id', roomId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      await loadParticipants();
+      await loadMyRooms();
+
+      return true;
+    } catch (error: any) {
+      console.error('Error removing participant:', error);
+      Alert.alert('Error', 'Failed to remove participant');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Transfer ownership (creator only)
+  const transferOwnership = async (roomId: string, newOwnerId: string): Promise<boolean> => {
+    if (!currentUser) return false;
+
+    try {
+      setLoading(true);
+
+      // Verify user is creator
+      const { data: room } = await supabase
+        .from('rooms')
+        .select('creator_id')
+        .eq('id', roomId)
+        .single();
+
+      if (!room || room.creator_id !== currentUser.id) {
+        Alert.alert('Error', 'Only the creator can transfer ownership');
+        return false;
+      }
+
+      // Verify new owner is a participant
+      const { data: participant } = await supabase
+        .from('room_participants')
+        .select('id')
+        .eq('room_id', roomId)
+        .eq('user_id', newOwnerId)
+        .single();
+
+      if (!participant) {
+        Alert.alert('Error', 'New owner must be a room member');
+        return false;
+      }
+
+      const { error } = await supabase
+        .from('rooms')
+        .update({ creator_id: newOwnerId })
+        .eq('id', roomId);
+
+      if (error) throw error;
+
+      // Update current room if it's the one being transferred
+      if (currentRoom?.id === roomId) {
+        setCurrentRoom({ ...currentRoom, creator_id: newOwnerId });
+      }
+
+      await loadMyRooms();
+
+      Alert.alert('Success', 'Ownership transferred');
+      return true;
+    } catch (error: any) {
+      console.error('Error transferring ownership:', error);
+      Alert.alert('Error', 'Failed to transfer ownership');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Invite friend to room
+  const inviteFriendToRoom = async (roomId: string, friendId: string): Promise<boolean> => {
+    if (!currentUser) return false;
+
+    try {
+      // Verify user is in the room
+      const { data: participant } = await supabase
+        .from('room_participants')
+        .select('id')
+        .eq('room_id', roomId)
+        .eq('user_id', currentUser.id)
+        .single();
+
+      if (!participant) {
+        Alert.alert('Error', 'You must be in the room to invite others');
+        return false;
+      }
+
+      // Check if friend is already in the room
+      const { data: existingParticipant } = await supabase
+        .from('room_participants')
+        .select('id')
+        .eq('room_id', roomId)
+        .eq('user_id', friendId)
+        .maybeSingle();
+
+      if (existingParticipant) {
+        Alert.alert('Already in room', 'This friend is already in the room');
+        return false;
+      }
+
+      // Check if invite already exists
+      const { data: existingInvite } = await supabase
+        .from('room_invites')
+        .select('id')
+        .eq('room_id', roomId)
+        .eq('receiver_id', friendId)
+        .eq('status', 'pending')
+        .maybeSingle();
+
+      if (existingInvite) {
+        Alert.alert('Invite pending', 'This friend already has a pending invite');
+        return false;
+      }
+
+      // Create invite
+      const { error } = await supabase
+        .from('room_invites')
+        .insert({
+          room_id: roomId,
+          sender_id: currentUser.id,
+          receiver_id: friendId,
+        });
+
+      if (error) throw error;
+
+      Alert.alert('Success', 'Invite sent!');
+      return true;
+    } catch (error: any) {
+      console.error('Error inviting friend:', error);
+      Alert.alert('Error', 'Failed to send invite');
+      return false;
+    }
+  };
+
   return {
     currentRoom,
     participants,
     activeRooms,
+    myRooms,
     loading,
+    canCreateRoom,
     createRoom,
     joinRoom,
     leaveRoom,
     toggleMute,
+    deleteRoom,
+    updateRoomName,
+    removeParticipant,
+    transferOwnership,
+    inviteFriendToRoom,
     loadActiveRooms,
+    loadMyRooms,
   };
 };

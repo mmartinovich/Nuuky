@@ -1,13 +1,37 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { useAuth } from '../../hooks/useAuth';
 import { colors, spacing, radius, typography, gradients } from '../../lib/theme';
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { signOut } = useAuth();
+
+  const handleLogout = async () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to log out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await signOut();
+              router.replace('/(auth)/login');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to logout');
+            }
+          }
+        }
+      ]
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -101,6 +125,22 @@ export default function SettingsScreen() {
           </BlurView>
         </TouchableOpacity>
 
+        <Text style={styles.sectionTitle}>Account</Text>
+
+        <TouchableOpacity style={styles.settingCard} onPress={handleLogout}>
+          <BlurView intensity={20} style={styles.cardBlur}>
+            <View style={styles.cardContent}>
+              <View style={styles.settingItem}>
+                <View style={styles.iconContainer}>
+                  <Text style={styles.icon}>🚪</Text>
+                </View>
+                <Text style={[styles.settingLabel, styles.logoutText]}>Logout</Text>
+                <Feather name="log-out" size={20} color={colors.mood.reachOut.base} />
+              </View>
+            </View>
+          </BlurView>
+        </TouchableOpacity>
+
         <View style={{ height: 40 }} />
       </ScrollView>
     </View>
@@ -157,5 +197,8 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.text.secondary,
     marginRight: spacing.sm,
+  },
+  logoutText: {
+    color: colors.mood.reachOut.base,
   },
 });

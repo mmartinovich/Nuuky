@@ -1,16 +1,29 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRoom } from '../../../hooks/useRoom';
 import { RoomView } from '../../../components/RoomView';
+import { RoomSettingsModal } from '../../../components/RoomSettingsModal';
+import { InviteFriendsModal } from '../../../components/InviteFriendsModal';
 import { colors } from '../../../lib/theme';
 import { useAppStore } from '../../../stores/appStore';
 
 export default function RoomScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { currentUser } = useAppStore();
-  const { currentRoom, participants, joinRoom, leaveRoom, loading } = useRoom();
+  const { currentUser, friends } = useAppStore();
+  const {
+    currentRoom,
+    participants,
+    joinRoom,
+    leaveRoom,
+    updateRoomName,
+    deleteRoom,
+    inviteFriendToRoom,
+    loading,
+  } = useRoom();
+  const [showSettings, setShowSettings] = useState(false);
+  const [showInviteFriends, setShowInviteFriends] = useState(false);
 
   useEffect(() => {
     if (id && currentUser) {
@@ -45,17 +58,68 @@ export default function RoomScreen() {
     router.back();
   };
 
-  if (!currentRoom || loading) {
+  const handleSettingsPress = () => {
+    setShowSettings(true);
+  };
+
+  const handleRename = async (newName: string) => {
+    if (!currentRoom) return;
+    await updateRoomName(currentRoom.id, newName);
+  };
+
+  const handleDelete = async () => {
+    if (!currentRoom) return;
+    const success = await deleteRoom(currentRoom.id);
+    if (success) {
+      router.back();
+    }
+  };
+
+  const handleInviteFriend = async (friendId: string) => {
+    if (!currentRoom) return;
+    await inviteFriendToRoom(currentRoom.id, friendId);
+  };
+
+  const handleOpenInviteFriends = () => {
+    setShowSettings(false);
+    setShowInviteFriends(true);
+  };
+
+  if (!currentRoom || loading || !currentUser) {
     return <View style={styles.container} />;
   }
+
+  // Get friend users
+  const friendUsers = friends.map((f) => f.friend).filter(Boolean);
+  const participantIds = participants.map((p) => p.user_id);
 
   return (
     <View style={styles.container}>
       <RoomView
         roomName={currentRoom.name}
         participants={participants}
+        currentUser={currentUser}
         isCreator={currentRoom.creator_id === currentUser?.id}
         onLeave={handleLeaveRoom}
+        onSettingsPress={handleSettingsPress}
+      />
+
+      <RoomSettingsModal
+        visible={showSettings}
+        roomName={currentRoom.name}
+        isCreator={currentRoom.creator_id === currentUser?.id}
+        onClose={() => setShowSettings(false)}
+        onRename={handleRename}
+        onDelete={handleDelete}
+        onInviteFriends={handleOpenInviteFriends}
+      />
+
+      <InviteFriendsModal
+        visible={showInviteFriends}
+        friends={friendUsers}
+        participantIds={participantIds}
+        onClose={() => setShowInviteFriends(false)}
+        onInvite={handleInviteFriend}
       />
     </View>
   );

@@ -47,6 +47,19 @@ export interface RoomParticipant {
   user?: User;
 }
 
+export interface RoomInvite {
+  id: string;
+  room_id: string;
+  sender_id: string;
+  receiver_id: string;
+  room?: Room;
+  sender?: User;
+  status: 'pending' | 'accepted' | 'declined';
+  created_at: string;
+  expires_at: string;
+  responded_at?: string;
+}
+
 // Flare types
 export interface Flare {
   id: string;
