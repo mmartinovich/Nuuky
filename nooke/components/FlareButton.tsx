@@ -17,9 +17,11 @@ export const FlareButton: React.FC<FlareButtonProps> = ({
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
 
   React.useEffect(() => {
+    let pulseAnimation: Animated.CompositeAnimation | null = null;
+    
     if (hasActiveFlare) {
       // Pulsing animation for active flare
-      Animated.loop(
+      pulseAnimation = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
             toValue: 1.1,
@@ -32,10 +34,16 @@ export const FlareButton: React.FC<FlareButtonProps> = ({
             useNativeDriver: true,
           }),
         ])
-      ).start();
+      );
+      pulseAnimation.start();
     } else {
       pulseAnim.setValue(1);
     }
+
+    // Cleanup on unmount
+    return () => {
+      pulseAnimation?.stop();
+    };
   }, [hasActiveFlare]);
 
   return (

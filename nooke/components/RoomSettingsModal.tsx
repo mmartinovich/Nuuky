@@ -120,8 +120,6 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
     setNewName(roomName);
     onClose();
   };
-
-  console.log('RoomSettingsModal render, visible:', visible);
   
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>

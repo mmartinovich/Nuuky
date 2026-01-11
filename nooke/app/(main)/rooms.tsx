@@ -75,13 +75,13 @@ export default function RoomsScreen() {
       setShowCreateRoom(false);
       await loadMyRooms();
       await setAsDefaultRoom(room.id);
-      router.replace('/(main)');
+      router.replace("/(main)");
     }
   };
 
   const handleRoomPress = async (roomId: string) => {
     await setAsDefaultRoom(roomId);
-    router.replace('/(main)');
+    router.replace("/(main)");
   };
 
   const handleAcceptInvite = async (inviteId: string) => {

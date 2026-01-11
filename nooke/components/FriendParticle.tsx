@@ -10,6 +10,9 @@ const CENTER_X = width / 2;
 const CENTER_Y = height / 2;
 const PARTICLE_SIZE = 60;
 
+// Track active listeners by friend ID to prevent accumulation
+const activeListeners = new Map<string, { orbitListener: string; localListener: string; cleanup: () => void }>();
+
 interface FriendParticleProps {
   friend: User;
   index: number;
@@ -40,139 +43,166 @@ export function FriendParticle({
   const centerX = CENTER_X;
   const centerY = CENTER_Y;
 
-  // Orbital rotation is now controlled by shared orbitAngle from parent
-  // Use Animated.Value listener to update position reactively
-  const [translateX, setTranslateX] = React.useState(() => {
-    // Calculate initial position based on baseAngle
-    return Math.cos(baseAngle) * radius;
-  });
-  const [translateY, setTranslateY] = React.useState(() => {
-    return Math.sin(baseAngle) * radius;
-  });
-
-  // Track combined orbit angle (parent drag + local oscillation)
-  const localOrbitOffset = useRef(0);
+  // Local oscillation for organic floating movement
   const localOrbitAnim = useRef(new Animated.Value(0)).current;
   
+  // Use Animated.Value for positions to avoid React re-renders
+  const translateXAnim = useRef(new Animated.Value(Math.cos(baseAngle) * radius)).current;
+  const translateYAnim = useRef(new Animated.Value(Math.sin(baseAngle) * radius)).current;
+  const lastUpdateTime = useRef(Date.now());
+  const localOffsetRef = useRef(0);
+
+  // Start gentle oscillation animation for organic floating
   useEffect(() => {
-    // Function to update position based on combined orbit angles
-    const updatePosition = (parentValue: number, localValue: number) => {
-      const angle = baseAngle + parentValue + localValue;
-      const x = Math.cos(angle) * radius;
-      const y = Math.sin(angle) * radius;
-      setTranslateX(x);
-      setTranslateY(y);
-    };
+    const oscillationAmplitude = 0.12; // Radians - gentle swing
+    const oscillationDuration = 8000 + (index * 2000); // 8-14 seconds
+    const startDirection = index % 2 === 0 ? 1 : -1;
 
-    // Set initial position
-    updatePosition(0, 0);
-
-    // Listen for parent orbit angle changes (from drag-to-spin)
-    const parentListenerId = orbitAngle.addListener(({ value }) => {
-      updatePosition(value, localOrbitOffset.current);
-    });
-
-    // Listen for local orbit animation (oscillation around base position)
-    const localListenerId = localOrbitAnim.addListener(({ value }) => {
-      localOrbitOffset.current = value;
-      updatePosition((orbitAngle as any)._value || 0, value);
-    });
-
-    // Oscillation parameters - each avatar oscillates differently
-    // This prevents them from clustering together over time
-    const oscillationAmplitude = 0.15 + (index * 0.05); // Radians (about 8-25 degrees)
-    const oscillationDuration = 8000 + (index * 3000) + ((index % 3) * 5000); // 8-26 seconds per oscillation
-    const startDirection = index % 2 === 0 ? 1 : -1; // Alternate starting direction
-
-    // Start with oscillation - avatars swing back and forth around their base position
-    // This keeps them evenly distributed and never clustering
+    // Smooth oscillation loop
     Animated.loop(
       Animated.sequence([
         Animated.timing(localOrbitAnim, {
           toValue: oscillationAmplitude * startDirection,
           duration: oscillationDuration / 2,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: false,
+          easing: Easing.sin,
+          useNativeDriver: false, // Need JS value for position calc
         }),
         Animated.timing(localOrbitAnim, {
           toValue: -oscillationAmplitude * startDirection,
           duration: oscillationDuration,
-          easing: Easing.inOut(Easing.ease),
+          easing: Easing.sin,
           useNativeDriver: false,
         }),
         Animated.timing(localOrbitAnim, {
           toValue: 0,
           duration: oscillationDuration / 2,
-          easing: Easing.inOut(Easing.ease),
+          easing: Easing.sin,
           useNativeDriver: false,
         }),
       ])
     ).start();
 
     return () => {
-      if (parentListenerId) {
-        orbitAngle.removeListener(parentListenerId);
-      }
-      if (localListenerId) {
-        localOrbitAnim.removeListener(localListenerId);
-      }
+      localOrbitAnim.stopAnimation();
     };
-  }, [baseAngle, radius, orbitAngle, index]);
+  }, [index]);
 
-  // Gentle floating animation - independent of orbital rotation
+  // Update position when orbit angle or local oscillation changes
+  // Uses setValue instead of setState to avoid React re-renders (60fps without lag)
   useEffect(() => {
-    // Gentle floating bob
-    Animated.loop(
+    const friendId = friend.id;
+
+    // Clean up any existing listeners for this friend before adding new ones
+    if (activeListeners.has(friendId)) {
+      activeListeners.get(friendId)?.cleanup();
+      activeListeners.delete(friendId);
+    }
+
+    const updatePosition = () => {
+      const now = Date.now();
+      // Throttle to 16ms (~60fps) - smooth animation without React re-renders
+      if (now - lastUpdateTime.current < 16) return;
+      
+      lastUpdateTime.current = now;
+      const parentAngle = (orbitAngle as any)._value || 0;
+      const localOffset = (localOrbitAnim as any)._value || 0;
+      
+      // Combine parent orbit rotation with local oscillation
+      const angle = baseAngle + parentAngle + localOffset;
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+      
+      // Use setValue - no React re-render, direct animation update
+      translateXAnim.setValue(x);
+      translateYAnim.setValue(y);
+      localOffsetRef.current = localOffset;
+    };
+    
+    const orbitListener = orbitAngle.addListener(updatePosition);
+    const localListener = localOrbitAnim.addListener(updatePosition);
+
+    const cleanup = () => {
+      orbitAngle.removeListener(orbitListener);
+      localOrbitAnim.removeListener(localListener);
+      activeListeners.delete(friendId);
+    };
+
+    activeListeners.set(friendId, { orbitListener, localListener, cleanup });
+
+    return cleanup;
+  }, [friend.id, baseAngle, radius, orbitAngle, localOrbitAnim]);
+
+  // Lightweight animations - native-driven for performance
+  useEffect(() => {
+    // Very subtle bounce - minimal overhead
+    const bounceAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(bounceAnim, {
           toValue: 1,
-          duration: 2000 + index * 150,
-          easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
-          useNativeDriver: true, // Can use native driver now since orbit is separate
+          duration: 3000 + index * 300,
+          easing: Easing.ease,
+          useNativeDriver: true,
         }),
         Animated.timing(bounceAnim, {
           toValue: 0,
-          duration: 2000 + index * 150,
-          easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
+          duration: 3000 + index * 300,
+          easing: Easing.ease,
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    bounceAnimation.start();
 
-    // More noticeable pulse for online friends
+    // Gentle pulse for online friends only
+    let pulseAnimation: Animated.CompositeAnimation | null = null;
     if (friend.is_online) {
-      Animated.loop(
+      pulseAnimation = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
             toValue: 1,
-            duration: 1500,
-            easing: Easing.bezier(0.4, 0, 0.2, 1),
+            duration: 2000,
+            easing: Easing.ease,
             useNativeDriver: true,
           }),
           Animated.timing(pulseAnim, {
             toValue: 0,
-            duration: 1500,
-            easing: Easing.bezier(0.4, 0, 0.2, 1),
+            duration: 2000,
+            easing: Easing.ease,
             useNativeDriver: true,
           }),
         ])
-      ).start();
+      );
+      pulseAnimation.start();
     }
+
+    // Cleanup on unmount
+    return () => {
+      bounceAnimation.stop();
+      pulseAnimation?.stop();
+    };
   }, [friend.is_online, index]);
 
   useEffect(() => {
+    let flareAnimation: Animated.CompositeAnimation | null = null;
+    
     if (hasActiveFlare) {
-      Animated.loop(
+      flareAnimation = Animated.loop(
         Animated.timing(flareAnim, {
           toValue: 1,
           duration: 350,
-          easing: Easing.inOut(Easing.ease),
+          easing: Easing.ease,
           useNativeDriver: true,
         })
-      ).start();
+      );
+      flareAnimation.start();
     } else {
       flareAnim.setValue(0);
     }
+
+    // Cleanup on unmount
+    return () => {
+      flareAnimation?.stop();
+    };
   }, [hasActiveFlare]);
 
   const handlePress = () => {
@@ -192,16 +222,16 @@ export function FriendParticle({
       .slice(0, 2);
   };
 
-  // Gentle floating animation
+  // Very subtle floating animation
   const bounceTranslate = bounceAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, -4],
+    outputRange: [0, -3],
   });
 
-  // More prominent glow for online friends
+  // Subtle glow for online friends
   const glowOpacity = pulseAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.3, 0.5],
+    outputRange: [0.25, 0.4],
   });
 
   const flareScale = flareAnim.interpolate({
@@ -214,21 +244,16 @@ export function FriendParticle({
     outputRange: [0, 0.9],
   });
 
-  const trailOpacity = pulseAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.15, 0.35],
-  });
-
   return (
-    <View
+    <Animated.View
       style={[
         styles.container,
         {
           left: centerX - PARTICLE_SIZE / 2,
           top: centerY - PARTICLE_SIZE / 2,
           transform: [
-            { translateX: translateX },
-            { translateY: translateY },
+            { translateX: translateXAnim },
+            { translateY: translateYAnim },
           ],
         },
       ]}
@@ -340,7 +365,7 @@ export function FriendParticle({
         {friend.display_name}
       </Text>
       </Animated.View>
-    </View>
+    </Animated.View>
   );
 }
 

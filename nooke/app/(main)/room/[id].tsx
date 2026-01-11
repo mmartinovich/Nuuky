@@ -61,7 +61,6 @@ export default function RoomScreen() {
   };
 
   const handleSettingsPress = () => {
-    console.log('Opening settings modal');
     setShowSettings(true);
   };
 

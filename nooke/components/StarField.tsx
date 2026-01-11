@@ -45,17 +45,26 @@ function StarParticle({ star }: StarParticleProps) {
   const twinkleAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    let twinkleAnimation: Animated.CompositeAnimation | null = null;
+    
     // Start twinkling after delay
-    setTimeout(() => {
-      Animated.loop(
+    const timeout = setTimeout(() => {
+      twinkleAnimation = Animated.loop(
         Animated.timing(twinkleAnim, {
           toValue: 1,
           duration: 4000,
-          easing: Easing.inOut(Easing.ease),
+          easing: Easing.ease,
           useNativeDriver: true,
         })
-      ).start();
+      );
+      twinkleAnimation.start();
     }, star.delay);
+
+    // Cleanup on unmount
+    return () => {
+      clearTimeout(timeout);
+      twinkleAnimation?.stop();
+    };
   }, []);
 
   const opacity = twinkleAnim.interpolate({

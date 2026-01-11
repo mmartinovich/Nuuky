@@ -15,9 +15,11 @@ export const FriendOrb: React.FC<FriendOrbProps> = ({ friend, onPress }) => {
   const moodColors = getMoodColor(friend.mood);
 
   useEffect(() => {
+    let pulseAnimation: Animated.CompositeAnimation | null = null;
+    
     if (friend.is_online) {
       // Pulse animation for online friends
-      Animated.loop(
+      pulseAnimation = Animated.loop(
         Animated.sequence([
           Animated.parallel([
             Animated.timing(pulseAnim, {
@@ -44,8 +46,14 @@ export const FriendOrb: React.FC<FriendOrbProps> = ({ friend, onPress }) => {
             }),
           ]),
         ])
-      ).start();
+      );
+      pulseAnimation.start();
     }
+
+    // Cleanup on unmount
+    return () => {
+      pulseAnimation?.stop();
+    };
   }, [friend.is_online]);
 
   return (

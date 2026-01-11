@@ -34,7 +34,7 @@ export default function LoginScreen() {
 
   useEffect(() => {
     // Start pulse animation
-    Animated.loop(
+    const pulseAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
           toValue: 1.1,
@@ -47,7 +47,13 @@ export default function LoginScreen() {
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    pulseAnimation.start();
+
+    // Cleanup on unmount
+    return () => {
+      pulseAnimation.stop();
+    };
   }, []);
 
   const fetchUserProfile = async (userId: string) => {

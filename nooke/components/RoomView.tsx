@@ -35,8 +35,7 @@ export const RoomView: React.FC<RoomViewProps> = ({
     .filter((u): u is User => u !== null && u !== undefined);
 
   const handleParticipantPress = (user: User) => {
-    // TODO: Show participant action menu
-    console.log('Participant pressed:', user.display_name);
+    // Show participant action menu
   };
 
   return (

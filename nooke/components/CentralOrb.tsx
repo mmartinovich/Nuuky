@@ -36,7 +36,7 @@ export function CentralOrb({
 
   useEffect(() => {
     // Refined breathing animation - slower, more elegant (4s cycle)
-    Animated.loop(
+    const breatheAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(breatheAnim, {
           toValue: 1,
@@ -51,10 +51,11 @@ export function CentralOrb({
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    breatheAnimation.start();
 
     // Gentle bounce animation
-    Animated.loop(
+    const bounceAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(bounceAnim, {
           toValue: 1,
@@ -69,76 +70,104 @@ export function CentralOrb({
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    bounceAnimation.start();
 
     // Pulse animation for depth
-    Animated.loop(
+    const pulseAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
           toValue: 1,
           duration: 1500,
-          easing: Easing.out(Easing.ease),
+          easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 0,
           duration: 1500,
-          easing: Easing.in(Easing.ease),
+          easing: Easing.in(Easing.quad),
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    pulseAnimation.start();
+
+    // Cleanup on unmount
+    return () => {
+      breatheAnimation.stop();
+      bounceAnimation.stop();
+      pulseAnimation.stop();
+    };
   }, []);
 
   useEffect(() => {
+    let flareAnimation: Animated.CompositeAnimation | null = null;
+    
     if (hasActiveFlare) {
-      Animated.loop(
+      flareAnimation = Animated.loop(
         Animated.timing(flareAnim, {
           toValue: 1,
           duration: 400,
-          easing: Easing.inOut(Easing.ease),
+          easing: Easing.ease,
           useNativeDriver: true,
         })
-      ).start();
+      );
+      flareAnimation.start();
     } else {
       flareAnim.setValue(0);
     }
+
+    // Cleanup on unmount
+    return () => {
+      flareAnimation?.stop();
+    };
   }, [hasActiveFlare]);
 
   // Hint ring animation - pulses outward
   useEffect(() => {
+    let hintAnimation: Animated.CompositeAnimation | null = null;
+    let fadeAnimation: Animated.CompositeAnimation | null = null;
+
     if (showHint) {
       // Start pulsing animation
-      Animated.loop(
+      hintAnimation = Animated.loop(
         Animated.sequence([
           Animated.timing(hintAnim, {
             toValue: 1,
             duration: 1500,
-            easing: Easing.out(Easing.ease),
+            easing: Easing.out(Easing.quad),
             useNativeDriver: true,
           }),
           Animated.timing(hintAnim, {
             toValue: 0,
             duration: 1500,
-            easing: Easing.in(Easing.ease),
+            easing: Easing.in(Easing.quad),
             useNativeDriver: true,
           }),
         ])
-      ).start();
+      );
+      hintAnimation.start();
 
       // Ensure opacity is visible
       hintOpacity.setValue(1);
     } else {
       // Fade out hint ring
-      Animated.timing(hintOpacity, {
+      fadeAnimation = Animated.timing(hintOpacity, {
         toValue: 0,
         duration: 500,
-        easing: Easing.out(Easing.ease),
+        easing: Easing.out(Easing.quad),
         useNativeDriver: true,
-      }).start(() => {
+      });
+      fadeAnimation.start(() => {
         hintAnim.setValue(0);
       });
     }
+
+    // Cleanup on unmount
+    return () => {
+      hintAnimation?.stop();
+      fadeAnimation?.stop();
+    };
   }, [showHint]);
 
   const handlePress = () => {

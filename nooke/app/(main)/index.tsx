@@ -36,6 +36,9 @@ try {
 import { useAppStore } from "../../stores/appStore";
 import { User } from "../../types";
 import { MoodPicker } from "../../components/MoodPicker";
+
+// Module-level subscription tracking to prevent duplicates
+let activePresenceSubscription: { cleanup: () => void; userId: string } | null = null;
 import { useMood } from "../../hooks/useMood";
 import { useNudge } from "../../hooks/useNudge";
 import { useFlare } from "../../hooks/useFlare";
@@ -95,6 +98,7 @@ export default function QuantumOrbitScreen() {
   const lastAngleRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(Date.now());
   const decayAnimationRef = useRef<RNAnimated.CompositeAnimation | null>(null);
+  const decayListenerRef = useRef<string | null>(null); // Track decay listener for cleanup
 
   // Pan gesture handler for drag-to-spin rotation
   const panResponder = useRef(
@@ -108,9 +112,14 @@ export default function QuantumOrbitScreen() {
       onShouldBlockNativeResponder: () => false,
       onPanResponderGrant: (event) => {
         lastTimeRef.current = Date.now();
+        // Clean up any existing decay animation and its listener
         if (decayAnimationRef.current) {
           decayAnimationRef.current.stop();
           decayAnimationRef.current = null;
+        }
+        if (decayListenerRef.current) {
+          orbitAngle.removeListener(decayListenerRef.current);
+          decayListenerRef.current = null;
         }
         orbitVelocity.current = 0;
         const touchX = event.nativeEvent.pageX;
@@ -147,14 +156,17 @@ export default function QuantumOrbitScreen() {
           decayAnimationRef.current = RNAnimated.timing(orbitAngle, {
             toValue: targetValue,
             duration: Math.min(Math.abs(velocity) * 800, 2000),
-            useNativeDriver: false,
+            useNativeDriver: true, // Run on native thread for smooth 60fps animation
             easing: Easing.out(Easing.cubic),
           });
+          // Store listener reference for cleanup
           const listenerId = orbitAngle.addListener(({ value }) => {
             orbitAngleValueRef.current = value;
           });
+          decayListenerRef.current = listenerId;
           decayAnimationRef.current.start(() => {
             orbitAngle.removeListener(listenerId);
+            decayListenerRef.current = null;
             orbitVelocity.current = 0;
             decayAnimationRef.current = null;
           });
@@ -619,6 +631,16 @@ export default function QuantumOrbitScreen() {
   const setupRealtimeSubscription = () => {
     if (!currentUser) return () => {};
 
+    // Prevent duplicate subscriptions
+    if (activePresenceSubscription && activePresenceSubscription.userId === currentUser.id) {
+      return () => {};
+    }
+
+    if (activePresenceSubscription) {
+      activePresenceSubscription.cleanup();
+      activePresenceSubscription = null;
+    }
+
     const channel = supabase
       .channel("presence-changes")
       .on(
@@ -635,9 +657,14 @@ export default function QuantumOrbitScreen() {
       )
       .subscribe();
 
-    return () => {
+    const cleanup = () => {
       supabase.removeChannel(channel);
+      activePresenceSubscription = null;
     };
+
+    activePresenceSubscription = { cleanup, userId: currentUser.id };
+
+    return cleanup;
   };
 
   const handleFriendPress = (friend: User, friendIndex: number) => {

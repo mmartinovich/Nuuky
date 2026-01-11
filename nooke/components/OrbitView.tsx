@@ -89,7 +89,7 @@ export const OrbitView: React.FC<OrbitViewProps> = ({
           decayAnimationRef.current = RNAnimated.timing(orbitAngle, {
             toValue: targetValue,
             duration: Math.min(Math.abs(velocity) * 800, 2000),
-            useNativeDriver: false,
+            useNativeDriver: true, // Run on native thread for smooth animation
             easing: Easing.out(Easing.cubic),
           });
           const listenerId = orbitAngle.addListener(({ value }) => {

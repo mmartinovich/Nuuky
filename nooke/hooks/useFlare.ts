@@ -5,6 +5,9 @@ import { supabase } from '../lib/supabase';
 import { useAppStore } from '../stores/appStore';
 import { Flare } from '../types';
 
+// Module-level subscription tracking to prevent duplicates
+let activeFlareSubscription: { cleanup: () => void; userId: string } | null = null;
+
 export const useFlare = () => {
   const { currentUser } = useAppStore();
   const [loading, setLoading] = useState(false);
@@ -14,7 +17,8 @@ export const useFlare = () => {
   useEffect(() => {
     if (currentUser) {
       loadActiveFlares();
-      setupRealtimeSubscription();
+      const cleanup = setupRealtimeSubscription();
+      return cleanup;
     }
   }, [currentUser]);
 
@@ -63,6 +67,18 @@ export const useFlare = () => {
   };
 
   const setupRealtimeSubscription = () => {
+    if (!currentUser) return () => {};
+
+    // Prevent duplicate subscriptions
+    if (activeFlareSubscription && activeFlareSubscription.userId === currentUser.id) {
+      return () => {};
+    }
+
+    if (activeFlareSubscription) {
+      activeFlareSubscription.cleanup();
+      activeFlareSubscription = null;
+    }
+
     const channel = supabase
       .channel('flares-changes')
       .on(
@@ -83,9 +99,14 @@ export const useFlare = () => {
       )
       .subscribe();
 
-    return () => {
+    const cleanup = () => {
       supabase.removeChannel(channel);
+      activeFlareSubscription = null;
     };
+
+    activeFlareSubscription = { cleanup, userId: currentUser.id };
+
+    return cleanup;
   };
 
   const sendFlare = async (): Promise<boolean> => {

@@ -4,6 +4,9 @@ import { supabase } from '../lib/supabase';
 import { useAppStore } from '../stores/appStore';
 import { Friendship } from '../types';
 
+// Module-level subscription tracking to prevent duplicates
+let activeFriendsSubscription: { cleanup: () => void; userId: string } | null = null;
+
 /**
  * TESTING MODE TOGGLE
  *
@@ -155,15 +158,14 @@ const MOCK_PENDING_REQUESTS: Friendship[] = [
 ];
 
 export const useFriends = () => {
-  const { currentUser, friends, setFriends, addFriend, removeFriend } = useAppStore();
+  const { currentUser, friends, setFriends, removeFriend } = useAppStore();
   const [loading, setLoading] = useState(false);
-  const [pendingRequests, setPendingRequests] = useState<Friendship[]>([]);
 
   useEffect(() => {
     if (currentUser) {
       loadFriends();
-      loadPendingRequests();
-      setupRealtimeSubscription();
+      const cleanup = setupRealtimeSubscription();
+      return cleanup;
     }
   }, [currentUser]);
 
@@ -200,41 +202,19 @@ export const useFriends = () => {
     }
   };
 
-  const loadPendingRequests = async () => {
-    if (!currentUser) return;
-
-    try {
-      // Use mocked data if enabled
-      if (USE_MOCK_DATA) {
-        setPendingRequests(MOCK_PENDING_REQUESTS);
-        return;
-      }
-
-      // Get requests sent TO me
-      const { data, error } = await supabase
-        .from('friendships')
-        .select(`
-          *,
-          friend:user_id (
-            id,
-            display_name,
-            mood,
-            is_online,
-            avatar_url
-          )
-        `)
-        .eq('friend_id', currentUser.id)
-        .eq('status', 'pending');
-
-      if (error) throw error;
-      setPendingRequests(data || []);
-    } catch (error: any) {
-      console.error('Error loading pending requests:', error);
-    }
-  };
 
   const setupRealtimeSubscription = () => {
-    if (!currentUser) return;
+    if (!currentUser) return () => {};
+
+    // Prevent duplicate subscriptions
+    if (activeFriendsSubscription && activeFriendsSubscription.userId === currentUser.id) {
+      return () => {};
+    }
+
+    if (activeFriendsSubscription) {
+      activeFriendsSubscription.cleanup();
+      activeFriendsSubscription = null;
+    }
 
     const channel = supabase
       .channel('friendships-changes')
@@ -244,11 +224,10 @@ export const useFriends = () => {
           event: '*',
           schema: 'public',
           table: 'friendships',
-          filter: `user_id=eq.${currentUser.id},friend_id=eq.${currentUser.id}`,
+          filter: `user_id=eq.${currentUser.id}`,
         },
         () => {
           loadFriends();
-          loadPendingRequests();
         }
       )
       .on(
@@ -264,12 +243,17 @@ export const useFriends = () => {
       )
       .subscribe();
 
-    return () => {
+    const cleanup = () => {
       supabase.removeChannel(channel);
+      activeFriendsSubscription = null;
     };
+
+    activeFriendsSubscription = { cleanup, userId: currentUser.id };
+
+    return cleanup;
   };
 
-  const sendFriendRequest = async (phone: string): Promise<boolean> => {
+  const addFriend = async (userId: string): Promise<boolean> => {
     if (!currentUser) {
       Alert.alert('Error', 'You must be logged in');
       return false;
@@ -279,151 +263,59 @@ export const useFriends = () => {
     try {
       // Mock mode: just show success
       if (USE_MOCK_DATA) {
-        Alert.alert('Success', `Friend request sent (mock mode)`);
+        Alert.alert('Success', 'Friend added (mock mode)');
         setLoading(false);
         return true;
       }
 
-      // Find user by phone
-      const { data: targetUser, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('phone', phone)
-        .single();
-
-      if (userError || !targetUser) {
-        Alert.alert('Not Found', 'No user found with that phone number');
-        return false;
-      }
-
-      if (targetUser.id === currentUser.id) {
+      if (userId === currentUser.id) {
         Alert.alert('Error', 'You cannot add yourself as a friend');
         return false;
       }
 
-      // Check if friendship already exists
+      // Check if friendship already exists (one-way check)
       const { data: existing } = await supabase
         .from('friendships')
         .select('*')
-        .or(`and(user_id.eq.${currentUser.id},friend_id.eq.${targetUser.id}),and(user_id.eq.${targetUser.id},friend_id.eq.${currentUser.id})`)
+        .eq('user_id', currentUser.id)
+        .eq('friend_id', userId)
         .maybeSingle();
 
       if (existing) {
-        if (existing.status === 'accepted') {
-          Alert.alert('Already Friends', 'You are already friends with this user');
-        } else {
-          Alert.alert('Request Pending', 'Friend request already sent');
-        }
+        Alert.alert('Already Added', 'You have already added this friend');
         return false;
       }
 
-      // Create friendship request
+      // Get user details for confirmation message
+      const { data: targetUser } = await supabase
+        .from('users')
+        .select('display_name')
+        .eq('id', userId)
+        .single();
+
+      // Create instant one-way friendship (no pending state)
       const { error: insertError } = await supabase
         .from('friendships')
         .insert({
           user_id: currentUser.id,
-          friend_id: targetUser.id,
-          status: 'pending',
+          friend_id: userId,
+          status: 'accepted',
         });
 
       if (insertError) throw insertError;
 
-      Alert.alert('Success', `Friend request sent to ${targetUser.display_name}`);
-      return true;
-    } catch (error: any) {
-      console.error('Error sending friend request:', error);
-      Alert.alert('Error', error.message || 'Failed to send friend request');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const acceptFriendRequest = async (friendshipId: string): Promise<boolean> => {
-    if (!currentUser) return false;
-
-    setLoading(true);
-    try {
-      // Mock mode: move from pending to friends list
-      if (USE_MOCK_DATA) {
-        const request = pendingRequests.find(r => r.id === friendshipId);
-        if (request && request.friend) {
-          // Remove from pending requests
-          setPendingRequests(prev => prev.filter(r => r.id !== friendshipId));
-
-          // Add to friends list
-          const newFriend: Friendship = {
-            ...request,
-            status: 'accepted',
-          };
-          setFriends([...friends, newFriend]);
-        }
-        setLoading(false);
-        return true;
-      }
-
-      // Update the existing request to accepted
-      const { error: updateError } = await supabase
-        .from('friendships')
-        .update({ status: 'accepted' })
-        .eq('id', friendshipId);
-
-      if (updateError) throw updateError;
-
-      // Create the reverse friendship (both directions)
-      const request = pendingRequests.find(r => r.id === friendshipId);
-      if (request) {
-        const { error: insertError } = await supabase
-          .from('friendships')
-          .insert({
-            user_id: currentUser.id,
-            friend_id: request.user_id,
-            status: 'accepted',
-          });
-
-        if (insertError) throw insertError;
-      }
-
       await loadFriends();
-      await loadPendingRequests();
-
+      Alert.alert('Success', `${targetUser?.display_name || 'Friend'} added!`);
       return true;
     } catch (error: any) {
-      console.error('Error accepting friend request:', error);
-      Alert.alert('Error', 'Failed to accept friend request');
+      console.error('Error adding friend:', error);
+      Alert.alert('Error', error.message || 'Failed to add friend');
       return false;
     } finally {
       setLoading(false);
     }
   };
 
-  const declineFriendRequest = async (friendshipId: string): Promise<boolean> => {
-    setLoading(true);
-    try {
-      // Mock mode: just remove from pending list
-      if (USE_MOCK_DATA) {
-        setPendingRequests(prev => prev.filter(r => r.id !== friendshipId));
-        setLoading(false);
-        return true;
-      }
-
-      const { error } = await supabase
-        .from('friendships')
-        .delete()
-        .eq('id', friendshipId);
-
-      if (error) throw error;
-
-      await loadPendingRequests();
-      return true;
-    } catch (error: any) {
-      console.error('Error declining friend request:', error);
-      Alert.alert('Error', 'Failed to decline friend request');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const removeFriendship = async (friendId: string): Promise<boolean> => {
     if (!currentUser) return false;
@@ -458,11 +350,8 @@ export const useFriends = () => {
 
   return {
     friends,
-    pendingRequests,
     loading,
-    sendFriendRequest,
-    acceptFriendRequest,
-    declineFriendRequest,
+    addFriend,
     removeFriendship,
     refreshFriends: loadFriends,
   };

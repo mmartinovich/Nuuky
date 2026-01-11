@@ -1,8 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../stores/appStore';
 import { Room, RoomParticipant } from '../types';
+
+// Module-level subscription tracking to prevent duplicates across hook instances
+let activeRoomSubscription: { cleanup: () => void; userId: string } | null = null;
+
+// Throttle mechanism to prevent excessive API calls
+let lastRoomsRefresh = 0;
+let lastParticipantsRefresh = 0;
+const REFRESH_THROTTLE_MS = 2000; // Only allow refresh every 2 seconds
 
 /**
  * TESTING MODE TOGGLE
@@ -114,7 +122,8 @@ export const useRoom = () => {
     if (currentUser) {
       loadActiveRooms();
       loadMyRooms();
-      setupRealtimeSubscription();
+      const cleanup = setupRealtimeSubscription();
+      return cleanup;
     }
   }, [currentUser]);
 
@@ -256,7 +265,37 @@ export const useRoom = () => {
   };
 
   const setupRealtimeSubscription = () => {
-    if (!currentUser) return;
+    if (!currentUser) return () => {};
+
+    // Prevent duplicate subscriptions across hook instances
+    if (activeRoomSubscription && activeRoomSubscription.userId === currentUser.id) {
+      // Subscription already exists for this user, return no-op
+      return () => {};
+    }
+
+    // Clean up any existing subscription for a different user
+    if (activeRoomSubscription) {
+      activeRoomSubscription.cleanup();
+      activeRoomSubscription = null;
+    }
+
+    // Throttled refresh function
+    const throttledRefresh = () => {
+      const now = Date.now();
+      if (now - lastRoomsRefresh < REFRESH_THROTTLE_MS) return;
+      lastRoomsRefresh = now;
+      loadActiveRooms();
+      loadMyRooms();
+    };
+
+    const throttledParticipantsRefresh = () => {
+      const now = Date.now();
+      if (now - lastParticipantsRefresh < REFRESH_THROTTLE_MS) return;
+      lastParticipantsRefresh = now;
+      if (currentRoom) {
+        loadParticipants();
+      }
+    };
 
     // Subscribe to room changes
     const roomsChannel = supabase
@@ -268,9 +307,7 @@ export const useRoom = () => {
           schema: 'public',
           table: 'rooms',
         },
-        () => {
-          loadActiveRooms();
-        }
+        throttledRefresh
       )
       .subscribe();
 
@@ -285,19 +322,21 @@ export const useRoom = () => {
           table: 'room_participants',
         },
         () => {
-          if (currentRoom) {
-            loadParticipants();
-          }
-          loadActiveRooms();
-          loadMyRooms();
+          throttledParticipantsRefresh();
+          throttledRefresh();
         }
       )
       .subscribe();
 
-    return () => {
+    const cleanup = () => {
       supabase.removeChannel(roomsChannel);
       supabase.removeChannel(participantsChannel);
+      activeRoomSubscription = null;
     };
+
+    activeRoomSubscription = { cleanup, userId: currentUser.id };
+
+    return cleanup;
   };
 
   // Check if user can create a room (max 5 rooms)

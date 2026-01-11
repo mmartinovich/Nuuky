@@ -139,25 +139,27 @@ export default function ParticleSphere({
   // Auto-rotate animation
   useEffect(() => {
     // Rotation: 0 to 2π over 20 seconds, looping
-    Animated.loop(
+    const rotationAnimation = Animated.loop(
       Animated.timing(rotationY, {
         toValue: Math.PI * 2,
         duration: 20000,
         useNativeDriver: true,
       })
-    ).start();
+    );
+    rotationAnimation.start();
 
     // Color cycling: 0 to 4 over 24 seconds (6s per color)
-    Animated.loop(
+    const colorAnimation = Animated.loop(
       Animated.timing(colorIndexAnim, {
         toValue: 4,
         duration: 24000,
         useNativeDriver: true,
       })
-    ).start();
+    );
+    colorAnimation.start();
 
     // Subtle pulsing animation for breathing effect
-    Animated.loop(
+    const pulseAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
           toValue: 1.05,
@@ -170,7 +172,15 @@ export default function ParticleSphere({
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    pulseAnimation.start();
+
+    // Cleanup on unmount
+    return () => {
+      rotationAnimation.stop();
+      colorAnimation.stop();
+      pulseAnimation.stop();
+    };
   }, []);
 
   const handlePress = () => {

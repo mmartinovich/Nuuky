@@ -4,6 +4,9 @@ import { supabase } from '../lib/supabase';
 import { useAppStore } from '../stores/appStore';
 import { RoomInvite } from '../types';
 
+// Module-level subscription tracking to prevent duplicates
+let activeInvitesSubscription: { cleanup: () => void; userId: string } | null = null;
+
 export const useRoomInvites = () => {
   const { currentUser, roomInvites, setRoomInvites, addRoomInvite, removeRoomInvite } = useAppStore();
   const [loading, setLoading] = useState(false);
@@ -11,7 +14,8 @@ export const useRoomInvites = () => {
   useEffect(() => {
     if (currentUser) {
       loadMyInvites();
-      setupRealtimeSubscription();
+      const cleanup = setupRealtimeSubscription();
+      return cleanup;
     }
   }, [currentUser]);
 
@@ -315,7 +319,17 @@ export const useRoomInvites = () => {
 
   // Setup realtime subscription for invite changes
   const setupRealtimeSubscription = () => {
-    if (!currentUser) return;
+    if (!currentUser) return () => {};
+
+    // Prevent duplicate subscriptions
+    if (activeInvitesSubscription && activeInvitesSubscription.userId === currentUser.id) {
+      return () => {};
+    }
+
+    if (activeInvitesSubscription) {
+      activeInvitesSubscription.cleanup();
+      activeInvitesSubscription = null;
+    }
 
     const invitesChannel = supabase
       .channel('room-invites-changes')
@@ -328,23 +342,24 @@ export const useRoomInvites = () => {
           filter: `receiver_id=eq.${currentUser.id}`,
         },
         (payload) => {
-          console.log('Room invite change:', payload);
-
           if (payload.eventType === 'INSERT') {
-            // New invite received - reload to get full data with relations
             loadMyInvites();
           } else if (payload.eventType === 'DELETE' ||
                      (payload.eventType === 'UPDATE' && payload.new.status !== 'pending')) {
-            // Invite was declined/accepted or deleted
             removeRoomInvite(payload.old?.id || payload.new?.id);
           }
         }
       )
       .subscribe();
 
-    return () => {
+    const cleanup = () => {
       supabase.removeChannel(invitesChannel);
+      activeInvitesSubscription = null;
     };
+
+    activeInvitesSubscription = { cleanup, userId: currentUser.id };
+
+    return cleanup;
   };
 
   return {

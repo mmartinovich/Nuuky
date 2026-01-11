@@ -32,7 +32,6 @@ export const useDefaultRoom = () => {
   // Handle invalid default room (deleted or left)
   useEffect(() => {
     if (defaultRoomId && myRooms.length > 0 && !defaultRoom) {
-      console.log('Default room no longer valid, clearing...');
       clearDefaultRoom();
     }
   }, [defaultRoomId, myRooms, defaultRoom]);
