@@ -13,7 +13,7 @@ const CENTER_Y = height / 2 - ORB_SIZE / 2 - 20;
 interface CentralOrbProps {
   moodColor: string;
   glowColor: string;
-  onPress: () => void;
+  onPress?: () => void;
   hasActiveFlare: boolean;
   mood?: "good" | "neutral" | "not_great" | "reach_out";
   showHint?: boolean;
@@ -143,7 +143,7 @@ export function CentralOrb({
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onPress();
+    onPress?.();
   };
 
   // Enhanced outer glow - more prominent

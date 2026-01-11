@@ -339,7 +339,7 @@ export const useRoom = () => {
 
     setLoading(true);
     try {
-      // If user is creator, prompt to transfer ownership or delete
+      // If user is creator, check for other participants
       if (currentRoom.creator_id === currentUser.id) {
         const { data: otherParticipants } = await supabase
           .from('room_participants')
@@ -348,6 +348,7 @@ export const useRoom = () => {
           .neq('user_id', currentUser.id);
 
         if (otherParticipants && otherParticipants.length > 0) {
+          // Other participants exist - must transfer or delete
           Alert.alert(
             'Transfer or Delete',
             'You are the room creator. Transfer ownership to another member or delete the room.',
@@ -361,10 +362,14 @@ export const useRoom = () => {
             ]
           );
           return;
+        } else {
+          // No other participants - auto-delete the room
+          await deleteRoom(currentRoom.id);
+          return;
         }
       }
 
-      // Remove participant
+      // Non-creator can leave freely
       const { error: deleteError } = await supabase
         .from('room_participants')
         .delete()

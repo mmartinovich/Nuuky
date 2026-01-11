@@ -59,6 +59,7 @@ export default function RoomScreen() {
   };
 
   const handleSettingsPress = () => {
+    console.log('Opening settings modal');
     setShowSettings(true);
   };
 
@@ -100,7 +101,6 @@ export default function RoomScreen() {
         participants={participants}
         currentUser={currentUser}
         isCreator={currentRoom.creator_id === currentUser?.id}
-        onLeave={handleLeaveRoom}
         onSettingsPress={handleSettingsPress}
       />
 
@@ -111,6 +111,7 @@ export default function RoomScreen() {
         onClose={() => setShowSettings(false)}
         onRename={handleRename}
         onDelete={handleDelete}
+        onLeave={handleLeaveRoom}
         onInviteFriends={handleOpenInviteFriends}
       />
 

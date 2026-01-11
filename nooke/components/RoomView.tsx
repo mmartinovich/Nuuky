@@ -14,7 +14,7 @@ interface RoomViewProps {
   participants: RoomParticipant[];
   currentUser: User;
   isCreator: boolean;
-  onLeave: () => void;
+  onLeave?: () => void;
   onSettingsPress?: () => void;
 }
 
@@ -68,8 +68,8 @@ export const RoomView: React.FC<RoomViewProps> = ({
                 </Text>
               </View>
 
-              {/* Settings Button (Creator Only) */}
-              {isCreator && onSettingsPress && (
+              {/* Settings Button */}
+              {onSettingsPress ? (
                 <TouchableOpacity
                   style={styles.settingsButton}
                   onPress={onSettingsPress}
@@ -77,23 +77,11 @@ export const RoomView: React.FC<RoomViewProps> = ({
                 >
                   <Ionicons name="settings-outline" size={24} color={colors.text.primary} />
                 </TouchableOpacity>
+              ) : (
+                <View style={styles.settingsButton} />
               )}
-              {!isCreator && <View style={styles.settingsButton} />}
             </View>
           </BlurView>
-        }
-        footerContent={
-          <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
-            <TouchableOpacity onPress={onLeave} style={styles.leaveButton} activeOpacity={0.8}>
-              <LinearGradient
-                colors={['rgba(239, 68, 68, 0.3)', 'rgba(220, 38, 38, 0.3)']}
-                style={styles.leaveGradient}
-              >
-                <Ionicons name="exit-outline" size={20} color={colors.text.primary} />
-                <Text style={styles.leaveText}>Leave Room</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
         }
       />
     </View>
@@ -149,26 +137,5 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
     borderColor: colors.glass.border,
-  },
-  footer: {
-    padding: spacing.md,
-  },
-  leaveButton: {
-    borderRadius: radius.full,
-    overflow: 'hidden',
-  },
-  leaveGradient: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
-  },
-  leaveText: {
-    fontSize: typography.size.md,
-    fontWeight: typography.weight.bold as any,
-    color: colors.text.primary,
   },
 });

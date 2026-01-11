@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: '90%',
     maxWidth: 400,
-    maxHeight: '70%',
+    height: '60%',
     borderRadius: radius.xl,
     overflow: 'hidden',
     borderWidth: 1,

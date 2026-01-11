@@ -9,9 +9,12 @@ import {
   Alert,
   RefreshControl,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFriends } from '../../hooks/useFriends';
 import { useContactSync } from '../../hooks/useContactSync';
 import { useInvite } from '../../hooks/useInvite';
@@ -19,6 +22,9 @@ import { colors, gradients, typography, spacing, radius, getMoodColor } from '..
 import { User, PhoneContact, MatchedContact } from '../../types';
 
 export default function FriendsScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+
   const {
     friends,
     pendingRequests,
@@ -98,19 +104,32 @@ export default function FriendsScreen() {
   };
 
   return (
-    <LinearGradient colors={gradients.background} style={styles.gradient}>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={colors.text.secondary}
-          />
-        }
-      >
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      <LinearGradient colors={gradients.background} style={styles.gradient}>
+        {/* Header */}
+        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.8}>
+            <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
+          </TouchableOpacity>
+
+          <Text style={styles.headerTitle}>Friends</Text>
+
+          <View style={styles.placeholderButton} />
+        </View>
+
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.text.secondary}
+            />
+          }
+        >
         {/* Add Friend Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Add Friend</Text>
@@ -392,19 +411,52 @@ export default function FriendsScreen() {
           )}
         </View>
       </ScrollView>
-    </LinearGradient>
+      </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.bg.primary,
+  },
   gradient: {
     flex: 1,
   },
-  container: {
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.glass.border,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: colors.glass.border,
+  },
+  headerTitle: {
+    fontSize: typography.size['2xl'],
+    fontWeight: typography.weight.bold as any,
+    color: colors.text.primary,
+  },
+  placeholderButton: {
+    width: 40,
+    height: 40,
+  },
+  scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: spacing.lg,
+    padding: spacing.md,
     paddingBottom: spacing['3xl'],
   },
   section: {

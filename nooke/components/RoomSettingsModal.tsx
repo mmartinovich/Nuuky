@@ -21,6 +21,7 @@ interface RoomSettingsModalProps {
   onClose: () => void;
   onRename: (newName: string) => Promise<void>;
   onDelete: () => Promise<void>;
+  onLeave: () => void;
   onInviteFriends: () => void;
 }
 
@@ -31,6 +32,7 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
   onClose,
   onRename,
   onDelete,
+  onLeave,
   onInviteFriends,
 }) => {
   const [isRenaming, setIsRenaming] = useState(false);
@@ -91,13 +93,12 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
     onClose();
   };
 
+  console.log('RoomSettingsModal render, visible:', visible);
+  
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <View style={styles.overlay}>
-        <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
-
         <View style={styles.modalContainer}>
-          <BlurView intensity={80} tint="dark" style={styles.modal}>
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.title}>Room Settings</Text>
@@ -110,7 +111,11 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.content}
+              contentContainerStyle={styles.contentContainer}
+              showsVerticalScrollIndicator={false}
+            >
               {/* Room Name Section */}
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>ROOM NAME</Text>
@@ -187,6 +192,26 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                   </View>
                   <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
                 </TouchableOpacity>
+
+                {/* Leave Room */}
+                <TouchableOpacity
+                  style={[styles.settingItem, styles.leaveItem]}
+                  onPress={() => {
+                    onLeave();
+                    onClose();
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.settingInfo}>
+                    <Ionicons
+                      name="exit-outline"
+                      size={24}
+                      color={colors.mood.reachOut.base}
+                    />
+                    <Text style={styles.leaveLabel}>Leave Room</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
+                </TouchableOpacity>
               </View>
 
               {/* Danger Zone (Creator Only) */}
@@ -210,7 +235,6 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                 </View>
               )}
             </ScrollView>
-          </BlurView>
         </View>
       </View>
     </Modal>
@@ -227,14 +251,12 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: '90%',
     maxWidth: 400,
-    maxHeight: '80%',
+    height: '70%',
     borderRadius: radius.xl,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: colors.glass.border,
-  },
-  modal: {
-    flex: 1,
+    backgroundColor: colors.bg.secondary,
   },
   header: {
     flexDirection: 'row',
@@ -260,6 +282,8 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  contentContainer: {
     padding: spacing.lg,
   },
   section: {
@@ -302,6 +326,14 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
   },
   dangerLabel: {
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.medium as any,
+    color: colors.mood.reachOut.base,
+  },
+  leaveItem: {
+    marginTop: spacing.sm,
+  },
+  leaveLabel: {
     fontSize: typography.size.md,
     fontWeight: typography.weight.medium as any,
     color: colors.mood.reachOut.base,

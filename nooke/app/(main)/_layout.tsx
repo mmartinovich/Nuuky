@@ -40,11 +40,7 @@ export default function MainLayout() {
       <Stack.Screen
         name="friends"
         options={{
-          title: 'Friends',
-          headerStyle: {
-            backgroundColor: '#0a0a20',
-          },
-          headerTintColor: '#ffffff',
+          headerShown: false,
         }}
       />
       <Stack.Screen
