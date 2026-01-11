@@ -23,7 +23,8 @@ export default {
     },
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.nooke.app"
+      bundleIdentifier: "com.nooke.app",
+      usesAppleSignIn: true
     },
     android: {
       adaptiveIcon: {
@@ -38,7 +39,8 @@ export default {
       favicon: "./assets/favicon.png"
     },
     plugins: [
-      "expo-router"
+      "expo-router",
+      "expo-apple-authentication"
     ],
     extra: {
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://ezbamrqoewrbvdvbypyd.supabase.co',

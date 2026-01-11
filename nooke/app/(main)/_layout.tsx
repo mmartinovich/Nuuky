@@ -6,6 +6,16 @@ export default function MainLayout() {
       screenOptions={{
         headerShown: true,
         headerBackTitleVisible: false,
+        headerStyle: {
+          backgroundColor: '#0a0a20',
+        },
+        headerTintColor: '#ffffff',
+        headerTitleStyle: {
+          fontWeight: '600',
+          fontSize: 20,
+          color: '#ffffff',
+        },
+        headerShadowVisible: false,
       }}
     >
       <Stack.Screen
@@ -25,6 +35,16 @@ export default function MainLayout() {
         name="settings"
         options={{
           title: 'Settings',
+        }}
+      />
+      <Stack.Screen
+        name="friends"
+        options={{
+          title: 'Friends',
+          headerStyle: {
+            backgroundColor: '#0a0a20',
+          },
+          headerTintColor: '#ffffff',
         }}
       />
       <Stack.Screen

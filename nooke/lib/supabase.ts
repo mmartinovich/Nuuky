@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import Constants from 'expo-constants';
+import * as SecureStore from 'expo-secure-store';
 
 // Get Supabase credentials from environment variables or app.config.js fallbacks
 const supabaseUrl = Constants.expoConfig?.extra?.supabaseUrl || '';
@@ -12,9 +13,23 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+// Custom storage for auth tokens using Expo Secure Store
+const ExpoSecureStoreAdapter = {
+  getItem: async (key: string) => {
+    return await SecureStore.getItemAsync(key);
+  },
+  setItem: async (key: string, value: string) => {
+    await SecureStore.setItemAsync(key, value);
+  },
+  removeItem: async (key: string) => {
+    await SecureStore.deleteItemAsync(key);
+  },
+};
+
 // Create Supabase client
 export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
+    storage: ExpoSecureStoreAdapter,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,

@@ -1,33 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
   Alert,
   Animated,
+  TextInput,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as WebBrowser from 'expo-web-browser';
+import * as Crypto from 'expo-crypto';
 import { supabase } from '../../lib/supabase';
 import { useAppStore } from '../../stores/appStore';
 import { colors, gradients, typography, spacing, radius } from '../../lib/theme';
 
-const DEV_MODE = true; // Set to false in production
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
-  const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showDevLogin, setShowDevLogin] = useState(false);
   const router = useRouter();
   const { setCurrentUser } = useAppStore();
 
   // Subtle pulse animation for the orb
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
 
-  React.useEffect(() => {
+  useEffect(() => {
+    // Start pulse animation
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -44,129 +50,262 @@ export default function LoginScreen() {
     ).start();
   }, []);
 
-  const handleSendOTP = async () => {
-    if (!phone) {
-      Alert.alert('Phone Required', 'Please enter your phone number');
-      return;
+  const fetchUserProfile = async (userId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    let { data: userData, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (!userData && user) {
+      // Create profile for OAuth user (fallback if trigger doesn't work)
+      const { data: newUser } = await supabase
+        .from('users')
+        .insert({
+          id: userId,
+          email: user.email!,
+          display_name: user.user_metadata?.full_name ||
+                        user.user_metadata?.name ||
+                        user.email?.split('@')[0] ||
+                        'User',
+          avatar_url: user.user_metadata?.avatar_url ||
+                      user.user_metadata?.picture,
+          auth_provider: user.app_metadata?.provider || 'google',
+          is_online: true,
+        })
+        .select()
+        .single();
+      userData = newUser;
     }
 
-    const formattedPhone = phone.startsWith('+') ? phone : `+${phone}`;
+    if (userData) {
+      setCurrentUser(userData);
+    }
+  };
 
+  const handleAppleSignIn = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: formattedPhone,
+      // Check if Apple Authentication is available
+      const isAvailable = await AppleAuthentication.isAvailableAsync();
+      if (!isAvailable) {
+        Alert.alert('Not Available', 'Sign in with Apple is not available on this device.');
+        return;
+      }
+
+      // Generate nonce for security
+      const nonce = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        Crypto.getRandomBytes(32).toString()
+      );
+
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+        nonce,
+      });
+
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'apple',
+        token: credential.identityToken!,
+        nonce,
       });
 
       if (error) throw error;
 
-      router.push({
-        pathname: '/(auth)/verify',
-        params: { phone: formattedPhone },
-      });
+      // Fetch or create user profile
+      await fetchUserProfile(data.user.id);
+      router.replace('/(main)');
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to send verification code');
+      if (error.code === 'ERR_REQUEST_CANCELED') {
+        // User cancelled the sign-in
+        return;
+      }
+      console.error('Apple Sign-In Error:', error);
+      Alert.alert('Sign In Failed', error.message || 'Failed to sign in with Apple');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: 'nooke://auth/callback',
+          skipBrowserRedirect: false,
+        },
+      });
+
+      if (error) throw error;
+
+      // Note: The actual session will be handled by the OAuth callback
+      // which is set up in your app configuration
+    } catch (error: any) {
+      console.error('Google Sign-In Error:', error);
+      Alert.alert('Sign In Failed', error.message || 'Failed to sign in with Google');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDevLogin = async () => {
+    if (!email.trim()) {
+      Alert.alert('Email Required', 'Please enter an email address');
+      return;
+    }
+
+    if (!password.trim()) {
+      Alert.alert('Password Required', 'Please enter a password');
+      return;
+    }
+
     setLoading(true);
     try {
-      // Dev credentials - use email/password for proper auth session
-      const DEV_EMAIL = 'dev@nooke.local';
-      const DEV_PASSWORD = 'devpassword123'; // Only for local dev
-      const DEV_PHONE = '+1234567890';
-
-      // Try to sign in first
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: DEV_EMAIL,
-        password: DEV_PASSWORD,
+      // Try to sign in with password
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password.trim(),
       });
 
-      if (signInError) {
-        // If sign in fails, try to create the account
-        console.log('Dev user not found, creating...');
+      if (error) {
+        // If user doesn't exist, create them
+        if (error.message.includes('Invalid login credentials')) {
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email: email.trim(),
+            password: password.trim(),
+            options: {
+              emailRedirectTo: undefined,
+              data: {
+                display_name: email.split('@')[0],
+              },
+            },
+          });
 
+          if (signUpError) {
+            // Check if it's the email confirmation error
+            if (signUpError.message.includes('Database error')) {
+              Alert.alert(
+                'Setup Required',
+                'Please disable email confirmation in Supabase:\n\n' +
+                '1. Go to Authentication → Settings\n' +
+                '2. Disable "Confirm email"\n' +
+                '3. Save and try again\n\n' +
+                'See configure-dev-auth.md for details',
+                [{ text: 'OK' }]
+              );
+              return;
+            }
+            throw signUpError;
+          }
+
+          // Check if user was created successfully
+          if (signUpData.user && !signUpData.session) {
+            Alert.alert(
+              'Email Confirmation Required',
+              'Email confirmation is enabled. Please check configure-dev-auth.md to disable it for dev mode.',
+              [{ text: 'OK' }]
+            );
+            return;
+          }
+
+          if (signUpData.user) {
+            await fetchUserProfile(signUpData.user.id);
+            Alert.alert('Success', 'Account created and logged in!');
+            router.replace('/(main)');
+            return;
+          }
+        }
+        throw error;
+      }
+
+      if (data.user) {
+        await fetchUserProfile(data.user.id);
+        router.replace('/(main)');
+      }
+    } catch (error: any) {
+      console.error('Dev Login Error:', error);
+      Alert.alert(
+        'Sign In Failed',
+        error.message || 'Failed to sign in. Check configure-dev-auth.md for setup instructions.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleQuickDevLogin = async () => {
+    setLoading(true);
+    try {
+      const testEmail = 'dev@nooke.app';
+      const testPassword = 'devpass123';
+
+      // Try to sign in
+      let { data, error } = await supabase.auth.signInWithPassword({
+        email: testEmail,
+        password: testPassword,
+      });
+
+      // If user doesn't exist, create them
+      if (error?.message.includes('Invalid login credentials')) {
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: DEV_EMAIL,
-          password: DEV_PASSWORD,
+          email: testEmail,
+          password: testPassword,
           options: {
+            emailRedirectTo: undefined,
             data: {
               display_name: 'Dev User',
-              phone: DEV_PHONE,
             },
-            emailRedirectTo: undefined, // Skip email confirmation in dev
-          }
+          },
         });
 
         if (signUpError) {
-          throw new Error(`Failed to create dev user: ${signUpError.message}`);
+          // Check if it's the email confirmation error
+          if (signUpError.message.includes('Database error')) {
+            Alert.alert(
+              'Setup Required',
+              'Please disable email confirmation in Supabase:\n\n' +
+              '1. Go to Authentication → Settings\n' +
+              '2. Disable "Confirm email"\n' +
+              '3. Save and try again\n\n' +
+              'See configure-dev-auth.md for details',
+              [{ text: 'OK' }]
+            );
+            return;
+          }
+          throw signUpError;
         }
 
-        // After signup, try to sign in again
-        const { error: retrySignInError } = await supabase.auth.signInWithPassword({
-          email: DEV_EMAIL,
-          password: DEV_PASSWORD,
-        });
-
-        if (retrySignInError) {
-          // Might need email confirmation - try to get session anyway
-          console.log('Sign in after signup failed, checking session...');
-        }
-      }
-
-      // Get the current session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session) {
-        throw new Error('Failed to get authenticated session. You may need to confirm the email or check Supabase auth settings.');
-      }
-
-      // Fetch or create user profile from users table
-      let { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', session.user.id)
-        .maybeSingle();
-
-      if (userError && userError.code !== 'PGRST116') {
-        throw new Error(`Failed to fetch user profile: ${userError.message}`);
-      }
-
-      // If user doesn't exist in users table, create it
-      if (!userData) {
-        const { data: newUser, error: insertError } = await supabase
-          .from('users')
-          .insert({
-            id: session.user.id,
-            phone: DEV_PHONE,
-            display_name: 'Dev User',
-            mood: 'neutral',
-            is_online: true,
-          })
-          .select()
-          .single();
-
-        if (insertError) {
-          throw new Error(`Failed to create user profile: ${insertError.message}`);
+        // Check if user was created successfully
+        if (signUpData.user && !signUpData.session) {
+          Alert.alert(
+            'Email Confirmation Required',
+            'Email confirmation is enabled. Please check configure-dev-auth.md to disable it for dev mode.',
+            [{ text: 'OK' }]
+          );
+          return;
         }
 
-        userData = newUser;
+        data = signUpData;
+      } else if (error) {
+        throw error;
       }
 
-      // Set the user in the store
-      setCurrentUser(userData);
-
-      // Navigate to main app
-      router.replace('/(main)');
-
-      console.log('✅ Dev login successful:', userData.display_name);
+      if (data.user) {
+        await fetchUserProfile(data.user.id);
+        router.replace('/(main)');
+      }
     } catch (error: any) {
-      console.error('❌ Dev login error:', error);
+      console.error('Quick Dev Login Error:', error);
       Alert.alert(
-        'Dev Login Failed',
-        error.message || 'Failed to login. Check console for details.'
+        'Sign In Failed',
+        error.message || 'Failed to sign in. Check configure-dev-auth.md for setup instructions.'
       );
     } finally {
       setLoading(false);
@@ -201,56 +340,107 @@ export default function LoginScreen() {
             </Text>
           </View>
 
-          {/* Input section */}
-          <View style={styles.inputSection}>
-            <Text style={styles.label}>Phone Number</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.input}
-                placeholder="+1 234 567 8900"
-                placeholderTextColor={colors.text.tertiary}
-                keyboardType="phone-pad"
-                autoComplete="tel"
-                value={phone}
-                onChangeText={setPhone}
-                editable={!loading}
-                selectionColor={colors.text.accent}
+          {/* OAuth Buttons */}
+          <View style={styles.authButtons}>
+            {/* Apple Sign-In - Temporarily disabled until Apple Developer enrollment is complete */}
+            {/* Uncomment this section once you have your personal Apple Developer account set up */}
+            {/* {Platform.OS === 'ios' && (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+                cornerRadius={parseInt(radius.lg)}
+                style={styles.appleButton}
+                onPress={handleAppleSignIn}
               />
-            </View>
-            <Text style={styles.hint}>
-              We'll send you a verification code
-            </Text>
-          </View>
+            )} */}
 
-          {/* Continue button */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handleSendOTP}
-            disabled={loading}
-          >
-            <LinearGradient
-              colors={gradients.button}
-              style={[styles.button, loading && styles.buttonDisabled]}
-            >
-              <Text style={styles.buttonText}>
-                {loading ? 'Sending...' : 'Continue'}
-              </Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* Dev Login Button */}
-          {DEV_MODE && (
+            {/* Google Sign-In */}
             <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={handleDevLogin}
+              activeOpacity={0.8}
+              onPress={handleGoogleSignIn}
               disabled={loading}
-              style={styles.devButton}
+              style={styles.googleButtonContainer}
             >
-              <Text style={styles.devButtonText}>
-                🔧 Dev Login (Skip Auth)
+              <View style={[styles.googleButton, loading && styles.buttonDisabled]}>
+                <Text style={styles.googleIcon}>G</Text>
+                <Text style={styles.googleButtonText}>
+                  {loading ? 'Signing in...' : 'Continue with Google'}
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Development Login Toggle */}
+            <TouchableOpacity
+              onPress={() => setShowDevLogin(!showDevLogin)}
+              style={styles.devToggle}
+            >
+              <Text style={styles.devToggleText}>
+                {showDevLogin ? '− Hide Dev Login' : '+ Dev Login (Testing)'}
               </Text>
             </TouchableOpacity>
-          )}
+
+            {/* Development Email Login */}
+            {showDevLogin && (
+              <View style={styles.devLoginContainer}>
+                {/* Quick Login Button */}
+                <TouchableOpacity
+                  onPress={handleQuickDevLogin}
+                  disabled={loading}
+                  style={[styles.quickLoginButton, loading && styles.buttonDisabled]}
+                >
+                  <Text style={styles.quickLoginButtonText}>
+                    {loading ? 'Logging in...' : '⚡ Quick Dev Login'}
+                  </Text>
+                </TouchableOpacity>
+
+                <View style={styles.divider}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>or use custom account</Text>
+                  <View style={styles.dividerLine} />
+                </View>
+
+                <Text style={styles.devLoginLabel}>Email</Text>
+                <TextInput
+                  style={styles.devInput}
+                  placeholder="your.email@example.com"
+                  placeholderTextColor={colors.text.tertiary}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!loading}
+                />
+
+                <Text style={styles.devLoginLabel}>Password</Text>
+                <TextInput
+                  style={styles.devInput}
+                  placeholder="password (auto-creates if new)"
+                  placeholderTextColor={colors.text.tertiary}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!loading}
+                />
+
+                <TouchableOpacity
+                  onPress={handleDevLogin}
+                  disabled={loading}
+                  style={[styles.devLoginButton, loading && styles.buttonDisabled]}
+                >
+                  <Text style={styles.devLoginButtonText}>
+                    {loading ? 'Signing in...' : 'Sign In / Sign Up'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          <Text style={styles.privacyText}>
+            By continuing, you agree to our terms and privacy policy
+          </Text>
         </View>
 
         {/* Subtle grain texture overlay */}
@@ -307,52 +497,117 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
   },
-  inputSection: {
+  authButtons: {
+    gap: spacing.md,
     marginBottom: spacing.xl,
   },
-  label: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.medium,
-    color: colors.text.secondary,
-    marginBottom: spacing.sm,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
+  appleButton: {
+    width: '100%',
+    height: 56,
   },
-  inputWrapper: {
-    backgroundColor: colors.ui.card,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.ui.border,
-    overflow: 'hidden',
+  googleButtonContainer: {
+    width: '100%',
   },
-  input: {
-    padding: spacing.lg,
-    fontSize: typography.size.xl,
-    color: colors.text.primary,
-    fontWeight: typography.weight.medium,
-  },
-  hint: {
-    fontSize: typography.size.sm,
-    color: colors.text.tertiary,
-    marginTop: spacing.sm,
-    paddingLeft: spacing.xs,
-  },
-  button: {
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.ui.border,
+  googleButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: parseInt(radius.lg),
+    height: 56,
+    borderWidth: 1,
+    borderColor: colors.ui.border,
+    gap: spacing.sm,
+  },
+  googleIcon: {
+    fontSize: 20,
+    fontWeight: typography.weight.bold,
+    color: '#4285F4',
+  },
+  googleButtonText: {
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: '#000000',
   },
   buttonDisabled: {
     opacity: 0.5,
   },
-  buttonText: {
-    fontSize: typography.size.lg,
-    fontWeight: typography.weight.semibold,
+  devToggle: {
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  devToggleText: {
+    fontSize: typography.size.sm,
+    color: colors.text.secondary,
+    fontWeight: typography.weight.medium,
+  },
+  devLoginContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: parseInt(radius.lg),
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.ui.border,
+  },
+  devLoginLabel: {
+    fontSize: typography.size.sm,
+    color: colors.text.secondary,
+    marginBottom: spacing.xs,
+    fontWeight: typography.weight.medium,
+  },
+  devInput: {
+    backgroundColor: colors.ui.background,
+    borderRadius: parseInt(radius.md),
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: typography.size.base,
     color: colors.text.primary,
-    letterSpacing: 0.3,
+    borderWidth: 1,
+    borderColor: colors.ui.border,
+    marginBottom: spacing.md,
+  },
+  devLoginButton: {
+    backgroundColor: colors.mood.reachOut.base,
+    borderRadius: parseInt(radius.md),
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  devLoginButtonText: {
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: '#FFFFFF',
+  },
+  quickLoginButton: {
+    backgroundColor: '#00D9FF',
+    borderRadius: parseInt(radius.md),
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  quickLoginButtonText: {
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.bold,
+    color: '#000000',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: spacing.md,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.ui.border,
+  },
+  dividerText: {
+    fontSize: typography.size.xs,
+    color: colors.text.tertiary,
+    marginHorizontal: spacing.sm,
+  },
+  privacyText: {
+    fontSize: typography.size.xs,
+    color: colors.text.tertiary,
+    textAlign: 'center',
+    marginTop: spacing.md,
   },
   grain: {
     position: 'absolute',
@@ -362,21 +617,5 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(255, 255, 255, 0.01)',
     opacity: 0.5,
-  },
-  devButton: {
-    marginTop: spacing.xl,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.ui.border,
-    backgroundColor: 'rgba(255, 193, 7, 0.1)',
-    alignItems: 'center',
-  },
-  devButtonText: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.medium,
-    color: '#ffc107',
-    letterSpacing: 0.5,
   },
 });

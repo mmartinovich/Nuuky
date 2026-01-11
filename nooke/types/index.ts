@@ -1,7 +1,8 @@
 // User types
 export interface User {
   id: string;
-  phone: string;
+  phone?: string;           // Optional (legacy field for existing data)
+  email?: string;            // Required for OAuth users
   display_name: string;
   avatar_url?: string;
   mood: 'good' | 'neutral' | 'not_great' | 'reach_out';
@@ -10,6 +11,7 @@ export interface User {
   ghost_mode_until?: string;
   take_break_until?: string;
   fcm_token?: string;
+  auth_provider?: 'google' | 'apple' | 'email';  // OAuth provider
   created_at: string;
 }
 

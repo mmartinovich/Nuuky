@@ -44,13 +44,34 @@ export const useAuth = () => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+
+      let { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
+      // If user doesn't exist, create profile (fallback if trigger doesn't work)
+      if (error && error.code === 'PGRST116' && user) {
+        const { data: newUser } = await supabase
+          .from('users')
+          .insert({
+            id: userId,
+            email: user.email!,
+            display_name: user.user_metadata?.full_name ||
+                          user.user_metadata?.name ||
+                          user.email?.split('@')[0] ||
+                          'User',
+            avatar_url: user.user_metadata?.avatar_url ||
+                        user.user_metadata?.picture,
+            auth_provider: user.app_metadata?.provider || 'google',
+            is_online: true,
+          })
+          .select()
+          .single();
+        data = newUser;
+      }
 
       if (data) {
         setCurrentUser(data as User);
