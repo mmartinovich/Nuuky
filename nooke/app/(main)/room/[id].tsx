@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRoom } from '../../../hooks/useRoom';
-import { useDefaultRoom } from '../../../hooks/useDefaultRoom';
 import { RoomView } from '../../../components/RoomView';
 import { RoomSettingsModal } from '../../../components/RoomSettingsModal';
 import { InviteFriendsModal } from '../../../components/InviteFriendsModal';
@@ -12,7 +11,7 @@ import { useAppStore } from '../../../stores/appStore';
 export default function RoomScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { currentUser, friends, setCurrentRoom } = useAppStore();
+  const { currentUser, friends, setCurrentRoom, setRoomParticipants } = useAppStore();
   const {
     currentRoom,
     participants,
@@ -23,7 +22,6 @@ export default function RoomScreen() {
     inviteFriendToRoom,
     loading,
   } = useRoom();
-  const { isDefaultRoom, setAsDefaultRoom } = useDefaultRoom();
   const [showSettings, setShowSettings] = useState(false);
   const [showInviteFriends, setShowInviteFriends] = useState(false);
 
@@ -35,9 +33,10 @@ export default function RoomScreen() {
 
     // Clear current room when navigating away (but don't leave the room)
     return () => {
-      // Clear the current room state when navigating away
+      // Clear the current room state and participants when navigating away
       // Users should explicitly leave via the leave button
       setCurrentRoom(null);
+      setRoomParticipants([]);
     };
   }, [id]);
 
@@ -66,7 +65,10 @@ export default function RoomScreen() {
 
   const handleRename = async (newName: string) => {
     if (!currentRoom) return;
-    await updateRoomName(currentRoom.id, newName);
+    const success = await updateRoomName(currentRoom.id, newName);
+    if (!success) {
+      throw new Error('Failed to rename room');
+    }
   };
 
   const handleDelete = async () => {
@@ -85,11 +87,6 @@ export default function RoomScreen() {
   const handleOpenInviteFriends = () => {
     setShowSettings(false);
     setShowInviteFriends(true);
-  };
-
-  const handleSetDefault = async () => {
-    if (!currentRoom) return;
-    await setAsDefaultRoom(currentRoom.id);
   };
 
   if (!currentRoom || loading || !currentUser) {
@@ -115,13 +112,11 @@ export default function RoomScreen() {
         roomName={currentRoom.name || 'Room'}
         roomId={currentRoom.id}
         isCreator={currentRoom.creator_id === currentUser?.id}
-        isDefault={isDefaultRoom(currentRoom.id)}
         onClose={() => setShowSettings(false)}
         onRename={handleRename}
         onDelete={handleDelete}
         onLeave={handleLeaveRoom}
         onInviteFriends={handleOpenInviteFriends}
-        onSetDefault={handleSetDefault}
       />
 
       <InviteFriendsModal

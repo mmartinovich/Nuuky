@@ -28,6 +28,7 @@ interface AppState {
   setActiveRooms: (rooms: Room[]) => void;
   setMyRooms: (rooms: Room[]) => void;
   addMyRoom: (room: Room) => void;
+  updateMyRoom: (roomId: string, updates: Partial<Room>) => void;
   removeMyRoom: (roomId: string) => void;
   setCurrentRoom: (room: Room | null) => void;
   setIsInRoom: (inRoom: boolean) => void;
@@ -56,7 +57,13 @@ export const useAppStore = create<AppState>((set) => ({
   // Actions
   setCurrentUser: (user) => set({ currentUser: user, isAuthenticated: !!user }),
 
-  setFriends: (friends) => set({ friends }),
+  setFriends: (friends) => {
+    console.log(`[Store] setFriends called with ${friends.length} friends`);
+    if (friends.length > 0) {
+      console.log('[Store] First friend:', JSON.stringify(friends[0], null, 2));
+    }
+    set({ friends });
+  },
 
   addFriend: (friend) => set((state) => ({
     friends: [...state.friends, friend]
@@ -72,6 +79,12 @@ export const useAppStore = create<AppState>((set) => ({
 
   addMyRoom: (room) => set((state) => ({
     myRooms: [...state.myRooms, room]
+  })),
+
+  updateMyRoom: (roomId, updates) => set((state) => ({
+    myRooms: state.myRooms.map(room =>
+      room.id === roomId ? { ...room, ...updates } : room
+    )
   })),
 
   removeMyRoom: (roomId) => set((state) => ({

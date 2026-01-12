@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFriends } from '../../hooks/useFriends';
 import { useContactSync } from '../../hooks/useContactSync';
 import { useInvite } from '../../hooks/useInvite';
+import { useAppStore } from '../../stores/appStore';
 import { colors, gradients, typography, spacing, radius, getMoodColor } from '../../lib/theme';
 import { User, MatchedContact } from '../../types';
 
@@ -27,10 +28,14 @@ export default function FriendsScreen() {
   const {
     friends,
     loading,
+    initialLoading,
+    hasLoadedOnce,
     addFriend: addFriendHook,
     removeFriendship,
     refreshFriends,
   } = useFriends();
+
+  const { setFriends } = useAppStore();
 
   const {
     loading: syncLoading,
@@ -44,17 +49,39 @@ export default function FriendsScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [addedContacts, setAddedContacts] = useState<Set<string>>(new Set());
+  const [isMounted, setIsMounted] = useState(false);
+  const hasEverHadFriends = useRef(friends.length > 0);
+
+  useEffect(() => {
+    console.log('[Friends Screen] Friends changed, count:', friends.length);
+    if (friends.length > 0) {
+      console.log('[Friends Screen] First friend ID:', friends[0].friend_id);
+      hasEverHadFriends.current = true;
+    }
+  }, [friends.length]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsMounted(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSyncContacts = async () => {
     await syncContacts();
   };
 
   const handleAddFromContacts = async (contact: MatchedContact) => {
+    console.log('=== ADD FRIEND CLICKED ===');
+    console.log('Contact:', contact.name, 'UserId:', contact.userId);
     if (contact.userId) {
+      console.log('Calling addFriendHook with userId:', contact.userId);
       const success = await addFriendHook(contact.userId);
+      console.log('addFriendHook returned:', success);
       if (success) {
+        console.log('Adding to addedContacts set');
         setAddedContacts(prev => new Set(prev).add(contact.userId!));
       }
+    } else {
+      console.log('ERROR: contact.userId is missing!');
     }
   };
 
@@ -64,11 +91,14 @@ export default function FriendsScreen() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
+    // Clear store first to ensure fresh data
+    setFriends([]);
     await refreshFriends();
     setRefreshing(false);
   };
 
-  const handleRemoveFriend = (friend: User) => {
+  const handleRemoveFriend = (friendship: any) => {
+    const friend = friendship.friend as User;
     Alert.alert(
       'Remove Friend',
       `Remove ${friend.display_name} from your friends?`,
@@ -95,7 +125,23 @@ export default function FriendsScreen() {
 
           <Text style={styles.headerTitle}>Friends</Text>
 
-          <View style={styles.placeholderButton} />
+          <TouchableOpacity
+            style={styles.debugButton}
+            onPress={async () => {
+              console.log('=== MANUAL REFRESH TRIGGERED ===');
+              console.log('Current friends count before clear:', friends.length);
+              if (friends.length > 0) {
+                console.log('First friend before clear:', JSON.stringify(friends[0], null, 2));
+              }
+              setFriends([]);
+              console.log('Friends cleared, now calling refreshFriends');
+              await refreshFriends();
+              console.log('=== MANUAL REFRESH COMPLETED ===');
+            }}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="refresh" size={20} color={colors.text.secondary} />
+          </TouchableOpacity>
         </View>
 
         <ScrollView
@@ -110,8 +156,14 @@ export default function FriendsScreen() {
             />
           }
         >
+        {initialLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.text.secondary} />
+          </View>
+        ) : (
+          <>
         {/* Hero Section */}
-        {!hasSynced && friends.length === 0 && (
+        {isMounted && hasLoadedOnce && !hasSynced && friends.length === 0 && !hasEverHadFriends.current && (
           <View style={styles.heroSection}>
             <View style={styles.heroIconContainer}>
               <LinearGradient colors={gradients.neonCyan} style={styles.heroIconGradient}>
@@ -179,22 +231,28 @@ export default function FriendsScreen() {
         </View>
 
         {/* Contacts on Nūūky */}
-        {hasSynced && matches.onNuuky.length > 0 && (
+        {hasSynced && (() => {
+          const notYetAddedContacts = matches.onNuuky.filter((contact) => {
+            const isAlreadyFriend = addedContacts.has(contact.userId || '') ||
+                                   friends.some(f => f.friend_id === contact.userId);
+            return !isAlreadyFriend;
+          });
+
+          if (notYetAddedContacts.length === 0) return null;
+
+          return (
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
               <View>
                 <Text style={styles.sectionTitle}>People on Nūūky</Text>
                 <Text style={styles.sectionSubtitle}>
-                  {matches.onNuuky.length} {matches.onNuuky.length === 1 ? 'contact' : 'contacts'} found
+                  {notYetAddedContacts.length} {notYetAddedContacts.length === 1 ? 'contact' : 'contacts'} found
                 </Text>
               </View>
             </View>
 
             <View style={styles.contactsList}>
-              {matches.onNuuky.map((contact) => {
-                const isAdded = addedContacts.has(contact.userId || '') || 
-                               friends.some(f => f.friend_id === contact.userId);
-                
+              {notYetAddedContacts.map((contact) => {
                 return (
                   <View key={contact.id} style={styles.contactCardWrapper}>
                     <LinearGradient
@@ -216,32 +274,27 @@ export default function FriendsScreen() {
                         </View>
                       </View>
 
-                      {isAdded ? (
-                        <View style={styles.addedBadge}>
-                          <Ionicons name="checkmark-circle" size={20} color={colors.mood.good.base} />
-                        </View>
-                      ) : (
-                        <TouchableOpacity
-                          onPress={() => handleAddFromContacts(contact)}
-                          disabled={loading}
-                          style={styles.addContactButtonWrapper}
-                          activeOpacity={0.7}
+                      <TouchableOpacity
+                        onPress={() => handleAddFromContacts(contact)}
+                        disabled={loading}
+                        style={styles.addContactButtonWrapper}
+                        activeOpacity={0.7}
+                      >
+                        <LinearGradient
+                          colors={gradients.neonCyan}
+                          style={styles.addContactButton}
                         >
-                          <LinearGradient
-                            colors={gradients.button}
-                            style={styles.addContactButton}
-                          >
-                            <Ionicons name="add" size={20} color={colors.text.primary} />
-                          </LinearGradient>
-                        </TouchableOpacity>
-                      )}
+                          <Text style={styles.addButtonText}>Add</Text>
+                        </LinearGradient>
+                      </TouchableOpacity>
                     </LinearGradient>
                   </View>
                 );
               })}
             </View>
           </View>
-        )}
+          );
+        })()}
 
         {/* Friends List */}
         <View style={styles.section}>
@@ -314,7 +367,7 @@ export default function FriendsScreen() {
                       </View>
 
                       <TouchableOpacity
-                        onPress={() => handleRemoveFriend(friend)}
+                        onPress={() => handleRemoveFriend(friendship)}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         style={styles.removeButtonWrapper}
                         activeOpacity={0.7}
@@ -330,6 +383,8 @@ export default function FriendsScreen() {
             </View>
           )}
         </View>
+        </>
+        )}
       </ScrollView>
       </LinearGradient>
     </View>
@@ -373,11 +428,26 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
   },
+  debugButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: colors.glass.border,
+  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     padding: spacing.lg,
+  },
+  loadingContainer: {
+    paddingVertical: spacing['3xl'],
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   // Hero Section
   heroSection: {
@@ -531,21 +601,35 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   addContactButton: {
-    width: 40,
-    height: 40,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     borderRadius: radius.md,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(0, 240, 255, 0.3)',
   },
+  addButtonText: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold as any,
+    color: colors.text.primary,
+    letterSpacing: -0.2,
+  },
   addedBadge: {
-    width: 40,
-    height: 40,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     borderRadius: radius.md,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(34, 197, 94, 0.1)',
+  },
+  addedText: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold as any,
+    color: colors.mood.good.base,
+    letterSpacing: -0.2,
   },
   // Friends List
   friendsList: {

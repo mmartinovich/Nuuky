@@ -36,9 +36,14 @@ try {
 import { useAppStore } from "../../stores/appStore";
 import { User } from "../../types";
 import { MoodPicker } from "../../components/MoodPicker";
+import { Asset } from "expo-asset";
 
 // Module-level subscription tracking to prevent duplicates
 let activePresenceSubscription: { cleanup: () => void; userId: string } | null = null;
+
+// Throttle mechanism for presence updates
+let lastPresenceRefresh = 0;
+const PRESENCE_REFRESH_THROTTLE_MS = 3000; // Only refresh every 3 seconds
 import { useMood } from "../../hooks/useMood";
 import { useNudge } from "../../hooks/useNudge";
 import { useFlare } from "../../hooks/useFlare";
@@ -54,6 +59,7 @@ import {
   spacing,
   radius,
   typography,
+  getAllMoodImages,
 } from "../../lib/theme";
 import { CentralOrb } from "../../components/CentralOrb";
 import { FriendParticle } from "../../components/FriendParticle";
@@ -71,12 +77,12 @@ const CENTER_Y = height / 2;
 export default function QuantumOrbitScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { currentUser, friends, setFriends } = useAppStore();
+  const { currentUser, friends } = useAppStore();
   const { currentMood, changeMood } = useMood();
   const { sendNudge } = useNudge();
   const { sendFlare, activeFlares, myActiveFlare } = useFlare();
   const { updateActivity } = usePresence(); // Track presence while app is active
-  const { activeRooms, createRoom, joinRoom: joinRoomFn, updateRoomName, deleteRoom, inviteFriendToRoom, participants } = useRoom();
+  const { activeRooms, createRoom, joinRoom: joinRoomFn, updateRoomName, deleteRoom, inviteFriendToRoom, participants, removeParticipant } = useRoom();
   const { roomInvites } = useRoomInvites();
   const { defaultRoom, defaultRoomId, isDefaultRoom, setAsDefaultRoom } = useDefaultRoom();
   const [loading, setLoading] = useState(false); // Start with false - friends from Zustand show immediately
@@ -156,7 +162,7 @@ export default function QuantumOrbitScreen() {
           decayAnimationRef.current = RNAnimated.timing(orbitAngle, {
             toValue: targetValue,
             duration: Math.min(Math.abs(velocity) * 800, 2000),
-            useNativeDriver: true, // Run on native thread for smooth 60fps animation
+            useNativeDriver: false, // Must be false - FriendParticles read _value on JS thread
             easing: Easing.out(Easing.cubic),
           });
           // Store listener reference for cleanup
@@ -318,6 +324,19 @@ export default function QuantumOrbitScreen() {
       return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
     });
   }, [orbitPositions]);
+
+  // Preload mood images for instant display
+  useEffect(() => {
+    const preloadImages = async () => {
+      try {
+        const images = getAllMoodImages();
+        await Asset.loadAsync(images);
+      } catch (error) {
+        console.error("Error preloading mood images:", error);
+      }
+    };
+    preloadImages();
+  }, []);
 
   // Join default room when it's set
   useEffect(() => {
@@ -508,118 +527,17 @@ export default function QuantumOrbitScreen() {
         },
       ];
 
-      // Use mock friends for now (comment out the real data line)
-      // Always set mock friends to ensure they're available
-      setFriends(mockFriends);
-      // setFriends(data || []);
+      // Use real friends data from database
+      // setFriends(mockFriends); // DISABLED: Using useFriends hook instead
+      // setFriends(data || []); // DISABLED: Using useFriends hook instead
 
       // Ensure loading is false after setting friends
       setLoading(false);
     } catch (error: any) {
       console.error("Error loading friends:", error);
-      // Only show error friends if we don't already have friends in store
-      if (friends.length === 0) {
-        // Even on error, show mock friends with avatars
-        const mockFriends: any[] = [
-          {
-            id: "mock-1",
-            user_id: currentUser.id,
-            friend_id: "friend-1",
-            status: "accepted",
-            visibility: "full",
-            created_at: new Date().toISOString(),
-            last_interaction_at: new Date().toISOString(),
-            friend: {
-              id: "friend-1",
-              phone: "+1234567890",
-              display_name: "Alex",
-              mood: "good",
-              is_online: true,
-              last_seen_at: new Date().toISOString(),
-              avatar_url: "https://i.pravatar.cc/150?img=1",
-              created_at: new Date().toISOString(),
-            },
-          },
-          {
-            id: "mock-2",
-            user_id: currentUser.id,
-            friend_id: "friend-2",
-            status: "accepted",
-            visibility: "full",
-            created_at: new Date().toISOString(),
-            last_interaction_at: new Date().toISOString(),
-            friend: {
-              id: "friend-2",
-              phone: "+1234567891",
-              display_name: "Sam",
-              mood: "neutral",
-              is_online: false,
-              last_seen_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-              avatar_url: "https://i.pravatar.cc/150?img=5",
-              created_at: new Date().toISOString(),
-            },
-          },
-          {
-            id: "mock-3",
-            user_id: currentUser.id,
-            friend_id: "friend-3",
-            status: "accepted",
-            visibility: "full",
-            created_at: new Date().toISOString(),
-            last_interaction_at: new Date().toISOString(),
-            friend: {
-              id: "friend-3",
-              phone: "+1234567892",
-              display_name: "Jordan",
-              mood: "not_great",
-              is_online: true,
-              last_seen_at: new Date().toISOString(),
-              avatar_url: "https://i.pravatar.cc/150?img=12",
-              created_at: new Date().toISOString(),
-            },
-          },
-          {
-            id: "mock-4",
-            user_id: currentUser.id,
-            friend_id: "friend-4",
-            status: "accepted",
-            visibility: "full",
-            created_at: new Date().toISOString(),
-            last_interaction_at: new Date().toISOString(),
-            friend: {
-              id: "friend-4",
-              phone: "+1234567893",
-              display_name: "Taylor",
-              mood: "reach_out",
-              is_online: false,
-              last_seen_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-              avatar_url: "https://i.pravatar.cc/150?img=47",
-              created_at: new Date().toISOString(),
-            },
-          },
-          {
-            id: "mock-5",
-            user_id: currentUser.id,
-            friend_id: "friend-5",
-            status: "accepted",
-            visibility: "full",
-            created_at: new Date().toISOString(),
-            last_interaction_at: new Date().toISOString(),
-            friend: {
-              id: "friend-5",
-              phone: "+1234567894",
-              display_name: "Riley",
-              mood: "good",
-              is_online: true,
-              last_seen_at: new Date().toISOString(),
-              avatar_url: "https://i.pravatar.cc/150?img=33",
-              created_at: new Date().toISOString(),
-            },
-          },
-        ];
-        setFriends(mockFriends);
-        setLoading(false);
-      }
+      // DISABLED: Using useFriends hook instead
+      // Don't set mock friends on error - let useFriends hook handle friends data
+      setLoading(false);
     } finally {
       // Only update loading state if not a silent refresh
       if (!silent) {
@@ -641,6 +559,15 @@ export default function QuantumOrbitScreen() {
       activePresenceSubscription = null;
     }
 
+    // Throttled refresh to prevent excessive API calls
+    const throttledLoadFriends = () => {
+      const now = Date.now();
+      if (now - lastPresenceRefresh < PRESENCE_REFRESH_THROTTLE_MS) return;
+      lastPresenceRefresh = now;
+      // Silent refresh on realtime updates - don't show loading
+      loadFriends(true);
+    };
+
     const channel = supabase
       .channel("presence-changes")
       .on(
@@ -650,10 +577,7 @@ export default function QuantumOrbitScreen() {
           schema: "public",
           table: "users",
         },
-        () => {
-          // Silent refresh on realtime updates - don't show loading
-          loadFriends(true);
-        }
+        throttledLoadFriends
       )
       .subscribe();
 
@@ -963,9 +887,16 @@ export default function QuantumOrbitScreen() {
           roomName={defaultRoom.name || 'Room'}
           roomId={defaultRoom.id}
           isCreator={defaultRoom.creator_id === currentUser?.id}
-          isDefault={true}
+          creatorId={defaultRoom.creator_id}
+          participants={participants}
+          currentUserId={currentUser?.id || ''}
           onClose={() => setShowRoomSettings(false)}
-          onRename={async (name) => await updateRoomName(defaultRoom.id, name)}
+          onRename={async (name) => {
+            const success = await updateRoomName(defaultRoom.id, name);
+            if (!success) {
+              throw new Error('Failed to rename room');
+            }
+          }}
           onDelete={async () => await deleteRoom(defaultRoom.id)}
           onLeave={() => {
             // Can't leave default room - would need to set another as default first
@@ -975,8 +906,9 @@ export default function QuantumOrbitScreen() {
             setShowRoomSettings(false);
             setShowInviteFriendsFromDefault(true);
           }}
-          onSetDefault={async () => {
-            // Already default, no-op
+          onRemoveParticipant={async (userId, userName) => {
+            await removeParticipant(defaultRoom.id, userId);
+            Alert.alert('Removed', `${userName} has been removed from the room`);
           }}
         />
       )}

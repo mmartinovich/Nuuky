@@ -96,6 +96,7 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                           <Image
                             source={getMoodImage(mood)}
                             style={styles.moodImage}
+                            fadeDuration={0}
                           />
                         </View>
 

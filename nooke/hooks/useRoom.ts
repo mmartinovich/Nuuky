@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Alert } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../stores/appStore';
 import { Room, RoomParticipant } from '../types';
 
 // Module-level subscription tracking to prevent duplicates across hook instances
-let activeRoomSubscription: { cleanup: () => void; userId: string } | null = null;
+let activeRoomSubscription: { cleanup: () => void; userId: string; channelIds: string[] } | null = null;
+let subscriptionCounter = 0;
 
 // Throttle mechanism to prevent excessive API calls
 let lastRoomsRefresh = 0;
@@ -113,10 +114,27 @@ const MOCK_PARTICIPANTS: RoomParticipant[] = [
 ];
 
 export const useRoom = () => {
-  const { currentUser, currentRoom, setCurrentRoom, setActiveRooms, myRooms, setMyRooms, addMyRoom, removeMyRoom } = useAppStore();
-  const [participants, setParticipants] = useState<RoomParticipant[]>([]);
+  const { currentUser, currentRoom, setCurrentRoom, setActiveRooms, myRooms, setMyRooms, addMyRoom, updateMyRoom, removeMyRoom, setRoomParticipants, roomParticipants } = useAppStore();
   const [activeRooms, setActiveRoomsList] = useState<Room[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Derive participants directly from myRooms to avoid stale state
+  // This ensures participants are always in sync with the current room
+  // Memoized to prevent recalculation on every render
+  const participants: RoomParticipant[] = useMemo(() => {
+    if (!currentRoom) return [];
+
+    if (USE_MOCK_DATA) {
+      const room = myRooms.find(r => r.id === currentRoom.id);
+      if (room && room.participants && room.participants.length > 0) {
+        return room.participants;
+      }
+      return MOCK_PARTICIPANTS;
+    }
+
+    // For real data, use the global store
+    return roomParticipants;
+  }, [currentRoom?.id, myRooms, roomParticipants]);
 
   useEffect(() => {
     if (currentUser) {
@@ -131,7 +149,7 @@ export const useRoom = () => {
     if (currentRoom) {
       loadParticipants();
     }
-  }, [currentRoom]);
+  }, [currentRoom?.id]);
 
   const loadActiveRooms = async () => {
     if (!currentUser) return;
@@ -182,11 +200,21 @@ export const useRoom = () => {
     try {
       // Use mocked data if enabled - add mock participants to existing rooms
       if (USE_MOCK_DATA && myRooms.length > 0) {
-        const roomsWithMockParticipants = myRooms.map(room => ({
-          ...room,
-          participants: MOCK_PARTICIPANTS,
-        }));
-        setMyRooms(roomsWithMockParticipants);
+        // Check if any room needs mock participants added
+        const needsUpdate = myRooms.some(room =>
+          room.participants === undefined || room.participants.length <= 1
+        );
+
+        // Only update state if something actually needs to change
+        if (needsUpdate) {
+          const roomsWithMockParticipants = myRooms.map(room => ({
+            ...room,
+            participants: (room.participants === undefined || room.participants.length <= 1)
+              ? MOCK_PARTICIPANTS
+              : room.participants,
+          }));
+          setMyRooms(roomsWithMockParticipants);
+        }
         return;
       }
 
@@ -239,7 +267,15 @@ export const useRoom = () => {
     try {
       // Use mocked data if enabled
       if (USE_MOCK_DATA) {
-        setParticipants(MOCK_PARTICIPANTS);
+        // In mock mode, participants are derived from myRooms
+        // Only update myRooms if the room doesn't have participants yet
+        const room = myRooms.find(r => r.id === currentRoom.id);
+
+        if (!room || !room.participants || room.participants.length <= 1) {
+          // Initialize with mock data only if needed
+          updateMyRoom(currentRoom.id, { participants: MOCK_PARTICIPANTS });
+        }
+        // No need to call setRoomParticipants - participants are derived from myRooms
         return;
       }
 
@@ -258,7 +294,9 @@ export const useRoom = () => {
         .eq('room_id', currentRoom.id);
 
       if (error) throw error;
-      setParticipants(data || []);
+      const participantsData = data || [];
+      // Update the global store
+      setRoomParticipants(participantsData);
     } catch (error: any) {
       console.error('Error loading participants:', error);
     }
@@ -278,6 +316,11 @@ export const useRoom = () => {
       activeRoomSubscription.cleanup();
       activeRoomSubscription = null;
     }
+
+    // Use unique channel names to prevent duplicate listeners
+    const subscriptionId = ++subscriptionCounter;
+    const roomsChannelName = `rooms-changes-${subscriptionId}`;
+    const participantsChannelName = `participants-changes-${subscriptionId}`;
 
     // Throttled refresh function
     const throttledRefresh = () => {
@@ -299,7 +342,7 @@ export const useRoom = () => {
 
     // Subscribe to room changes
     const roomsChannel = supabase
-      .channel('rooms-changes')
+      .channel(roomsChannelName)
       .on(
         'postgres_changes',
         {
@@ -313,7 +356,7 @@ export const useRoom = () => {
 
     // Subscribe to participant changes
     const participantsChannel = supabase
-      .channel('participants-changes')
+      .channel(participantsChannelName)
       .on(
         'postgres_changes',
         {
@@ -334,7 +377,11 @@ export const useRoom = () => {
       activeRoomSubscription = null;
     };
 
-    activeRoomSubscription = { cleanup, userId: currentUser.id };
+    activeRoomSubscription = {
+      cleanup,
+      userId: currentUser.id,
+      channelIds: [roomsChannelName, participantsChannelName]
+    };
 
     return cleanup;
   };
@@ -459,6 +506,8 @@ export const useRoom = () => {
           .single();
 
         if (room) {
+          // Load myRooms first to ensure we have fresh participant data
+          await loadMyRooms();
           setCurrentRoom(room);
           return true;
         }
@@ -484,9 +533,9 @@ export const useRoom = () => {
 
       if (roomError) throw roomError;
 
+      // Load rooms data first to ensure we have fresh participant data
+      await Promise.all([loadActiveRooms(), loadMyRooms()]);
       setCurrentRoom(room);
-      await loadActiveRooms();
-      await loadMyRooms();
 
       return true;
     } catch (error: any) {
@@ -543,7 +592,7 @@ export const useRoom = () => {
       if (deleteError) throw deleteError;
 
       setCurrentRoom(null);
-      setParticipants([]);
+      setRoomParticipants([]);
       await loadActiveRooms();
       await loadMyRooms();
     } catch (error: any) {
@@ -613,7 +662,7 @@ export const useRoom = () => {
       // Clear current room if it was deleted
       if (currentRoom?.id === roomId) {
         setCurrentRoom(null);
-        setParticipants([]);
+        setRoomParticipants([]);
       }
 
       removeMyRoom(roomId);
@@ -650,6 +699,13 @@ export const useRoom = () => {
         return false;
       }
 
+      // Optimistic update: Update local state immediately
+      if (currentRoom?.id === roomId) {
+        setCurrentRoom({ ...currentRoom, name: newName });
+      }
+      updateMyRoom(roomId, { name: newName });
+
+      // Update database
       const { error } = await supabase
         .from('rooms')
         .update({ name: newName })
@@ -657,18 +713,19 @@ export const useRoom = () => {
 
       if (error) throw error;
 
-      // Update current room if it's the one being renamed
-      if (currentRoom?.id === roomId) {
-        setCurrentRoom({ ...currentRoom, name: newName });
-      }
-
-      await loadActiveRooms();
-      await loadMyRooms();
+      // Don't immediately refresh - optimistic update is sufficient
+      // The realtime subscription will sync any changes from other clients
+      // Immediate refresh can cause race conditions that revert the name
 
       return true;
     } catch (error: any) {
       console.error('Error updating room name:', error);
       Alert.alert('Error', 'Failed to update room name');
+
+      // Rollback optimistic update on error by reloading from database
+      await loadActiveRooms();
+      await loadMyRooms();
+
       return false;
     } finally {
       setLoading(false);
@@ -681,6 +738,21 @@ export const useRoom = () => {
 
     try {
       setLoading(true);
+
+      // MOCK MODE: Handle removal locally
+      if (USE_MOCK_DATA) {
+        // Get current participants from the room in myRooms
+        const room = myRooms.find(r => r.id === roomId);
+        const currentParticipants = room?.participants || participants;
+        const updatedParticipants = currentParticipants.filter(p => p.user_id !== userId);
+
+        // Update the room in myRooms - this will automatically update derived participants
+        updateMyRoom(roomId, { participants: updatedParticipants });
+        // Also update global store for components that use it directly
+        setRoomParticipants(updatedParticipants);
+
+        return true;
+      }
 
       // Verify user is creator
       const { data: room } = await supabase

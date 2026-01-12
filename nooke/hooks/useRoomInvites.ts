@@ -7,6 +7,10 @@ import { RoomInvite } from '../types';
 // Module-level subscription tracking to prevent duplicates
 let activeInvitesSubscription: { cleanup: () => void; userId: string } | null = null;
 
+// Throttle mechanism for invite updates
+let lastInvitesRefresh = 0;
+const INVITES_REFRESH_THROTTLE_MS = 2000; // Only refresh every 2 seconds
+
 export const useRoomInvites = () => {
   const { currentUser, roomInvites, setRoomInvites, addRoomInvite, removeRoomInvite } = useAppStore();
   const [loading, setLoading] = useState(false);
@@ -331,6 +335,14 @@ export const useRoomInvites = () => {
       activeInvitesSubscription = null;
     }
 
+    // Throttled invite load
+    const throttledLoadInvites = () => {
+      const now = Date.now();
+      if (now - lastInvitesRefresh < INVITES_REFRESH_THROTTLE_MS) return;
+      lastInvitesRefresh = now;
+      loadMyInvites();
+    };
+
     const invitesChannel = supabase
       .channel('room-invites-changes')
       .on(
@@ -343,7 +355,7 @@ export const useRoomInvites = () => {
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            loadMyInvites();
+            throttledLoadInvites();
           } else if (payload.eventType === 'DELETE' ||
                      (payload.eventType === 'UPDATE' && payload.new.status !== 'pending')) {
             removeRoomInvite(payload.old?.id || payload.new?.id);
