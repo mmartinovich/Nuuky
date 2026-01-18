@@ -27,8 +27,11 @@ export const MuteButton: React.FC<MuteButtonProps> = ({
   const { theme, isDark } = useTheme();
 
   const handlePress = () => {
+    console.log('[MuteButton] Button pressed', { isMuted, isConnecting });
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    console.log('[MuteButton] Calling onPress handler');
     onPress();
+    console.log('[MuteButton] onPress handler called');
   };
 
   const iconSize = size * 0.45;

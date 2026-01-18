@@ -72,7 +72,7 @@ export const useAppStore = create<AppState>()(
   roomParticipants: [],
   roomInvites: [],
   defaultRoomId: null,
-  themeMode: 'system' as ThemeMode,
+  themeMode: 'dark' as ThemeMode,
   audioConnectionStatus: 'disconnected' as AudioConnectionStatus,
   audioError: null,
   speakingParticipants: new Set<string>(),

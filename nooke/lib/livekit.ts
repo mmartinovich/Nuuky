@@ -1,3 +1,5 @@
+import { registerGlobals } from '@livekit/react-native-webrtc';
+import { AudioSession } from '@livekit/react-native';
 import {
   Room,
   RoomEvent,
@@ -7,8 +9,6 @@ import {
   LocalParticipant,
   Participant,
 } from 'livekit-client';
-import { registerGlobals } from '@livekit/react-native-webrtc';
-import { AudioSession } from '@livekit/react-native';
 import { supabase } from './supabase';
 import Constants from 'expo-constants';
 import { LiveKitTokenResponse } from '../types';
@@ -17,7 +17,15 @@ import { LiveKitTokenResponse } from '../types';
 let globalsRegistered = false;
 export const initializeLiveKit = () => {
   if (!globalsRegistered) {
+    // Register WebRTC globals first
     registerGlobals();
+
+    // Polyfill navigator.userAgent for browser detection
+    if (typeof navigator !== 'undefined' && !navigator.userAgent) {
+      // @ts-ignore - Adding polyfill for React Native
+      navigator.userAgent = 'ReactNative';
+    }
+
     globalsRegistered = true;
     console.log('[LiveKit] WebRTC globals registered');
   }
@@ -26,7 +34,37 @@ export const initializeLiveKit = () => {
 // Singleton room instance
 let currentRoom: Room | null = null;
 let silenceTimer: ReturnType<typeof setTimeout> | null = null;
-const SILENCE_TIMEOUT_MS = 30000; // 30 seconds
+
+// Configurable silence timeout (default: 30 seconds)
+export let SILENCE_TIMEOUT_MS = 30000;
+
+// Function to update timeout at runtime
+export const setSilenceTimeout = (milliseconds: number) => {
+  SILENCE_TIMEOUT_MS = milliseconds;
+  console.log('[LiveKit] Silence timeout updated to', milliseconds / 1000, 'seconds');
+};
+
+// Presets for easy configuration
+export const SilenceTimeoutPresets = {
+  AGGRESSIVE: 30000,   // 30s - current, lowest cost
+  BALANCED: 120000,    // 2 min - good balance
+  RELAXED: 300000,     // 5 min - near-instant reconnect
+  NEVER: Infinity,     // Never disconnect - Discord-style
+} as const;
+
+// Token caching (1-hour TTL)
+let cachedToken: LiveKitTokenResponse | null = null;
+let tokenExpiryTime: number = 0;
+let cachedRoomId: string | null = null;
+const TOKEN_CACHE_TTL = 3600000; // 1 hour in milliseconds
+
+// Helper to invalidate token cache
+export const invalidateTokenCache = () => {
+  cachedToken = null;
+  tokenExpiryTime = 0;
+  cachedRoomId = null;
+  console.log('[LiveKit] Token cache invalidated');
+};
 
 // Event callbacks
 type AudioEventCallbacks = {
@@ -52,17 +90,34 @@ export const requestLiveKitToken = async (
   roomId: string
 ): Promise<LiveKitTokenResponse | null> => {
   try {
+    const now = Date.now();
+
+    // Return cached token if valid and for same room
+    if (cachedToken &&
+        cachedRoomId === roomId &&
+        now < tokenExpiryTime) {
+      console.log('[LiveKit] Using cached token (expires in',
+        Math.round((tokenExpiryTime - now) / 1000), 'seconds)');
+      return cachedToken;
+    }
+
     const {
       data: { session },
     } = await supabase.auth.getSession();
     if (!session?.access_token) {
+      console.error('[LiveKit] No active session found');
       throw new Error('No active session');
     }
 
-    console.log('[LiveKit] Requesting token for room:', roomId);
+    console.log('[LiveKit] Requesting new token for room:', roomId);
+    console.log('[LiveKit] Session user:', session.user?.id);
 
+    // Explicitly pass the authorization header
     const { data, error } = await supabase.functions.invoke('livekit-token', {
       body: { roomId },
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
     });
 
     if (error) {
@@ -70,7 +125,12 @@ export const requestLiveKitToken = async (
       throw error;
     }
 
-    console.log('[LiveKit] Token received successfully');
+    // Cache the token
+    cachedToken = data;
+    cachedRoomId = roomId;
+    tokenExpiryTime = now + TOKEN_CACHE_TTL;
+
+    console.log('[LiveKit] Token received and cached for 1 hour');
     return data;
   } catch (error) {
     console.error('[LiveKit] Failed to get token:', error);
@@ -82,32 +142,40 @@ export const requestLiveKitToken = async (
 // Connect to LiveKit room
 export const connectToAudioRoom = async (roomId: string): Promise<boolean> => {
   try {
-    // Start audio session (required for iOS)
-    await AudioSession.startAudioSession();
-    console.log('[LiveKit] Audio session started');
-
     eventCallbacks?.onConnectionStatusChange('connecting');
 
-    // Get token
-    const tokenData = await requestLiveKitToken(roomId);
+    // OPTIMIZATION: Run audio session and token request in parallel
+    console.log('[LiveKit] Starting audio session and requesting token in parallel');
+    const [, tokenData] = await Promise.all([
+      AudioSession.startAudioSession(),
+      requestLiveKitToken(roomId),
+    ]);
+
+    console.log('[LiveKit] Audio session started and token received');
+
     if (!tokenData) {
       eventCallbacks?.onConnectionStatusChange('error');
       return false;
     }
 
-    // Create room instance
-    currentRoom = new Room({
-      adaptiveStream: true,
-      dynacast: true,
-      audioCaptureDefaults: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-      },
-    });
+    // OPTIMIZATION: Reuse room instance if exists, create new one if not
+    if (!currentRoom) {
+      console.log('[LiveKit] Creating new Room instance');
+      currentRoom = new Room({
+        adaptiveStream: true,
+        dynacast: true,
+        audioCaptureDefaults: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
 
-    // Set up event listeners
-    setupRoomEventListeners(currentRoom);
+      // Set up event listeners only once
+      setupRoomEventListeners(currentRoom);
+    } else {
+      console.log('[LiveKit] Reusing existing Room instance');
+    }
 
     // Connect
     console.log('[LiveKit] Connecting to room:', tokenData.roomName);
@@ -139,12 +207,13 @@ export const disconnectFromAudioRoom = async (): Promise<void> => {
 
   if (currentRoom) {
     await currentRoom.disconnect();
-    currentRoom = null;
+    // OPTIMIZATION: Don't null the room - reuse it on reconnect
+    // currentRoom = null;
   }
 
   await AudioSession.stopAudioSession();
   eventCallbacks?.onConnectionStatusChange('disconnected');
-  console.log('[LiveKit] Disconnected');
+  console.log('[LiveKit] Disconnected (room instance preserved for reuse)');
 };
 
 // Toggle local microphone
@@ -157,7 +226,18 @@ export const setLocalMicrophoneEnabled = async (
   }
 
   console.log('[LiveKit] Setting microphone enabled:', enabled);
+  console.log('[LiveKit] Current mic state BEFORE:', currentRoom.localParticipant.isMicrophoneEnabled);
+
   await currentRoom.localParticipant.setMicrophoneEnabled(enabled);
+
+  console.log('[LiveKit] Current mic state AFTER:', currentRoom.localParticipant.isMicrophoneEnabled);
+  console.log('[LiveKit] Microphone tracks:',
+    Array.from(currentRoom.localParticipant.audioTrackPublications.values()).map(pub => ({
+      trackSid: pub.trackSid,
+      isMuted: pub.isMuted,
+      trackName: pub.trackName
+    }))
+  );
 
   if (enabled) {
     // Reset silence timer when unmuting
@@ -298,4 +378,9 @@ export const getCurrentRoom = (): Room | null => currentRoom;
 // Check if connected
 export const isConnected = (): boolean => {
   return currentRoom?.state === ConnectionState.Connected;
+};
+
+// Get current microphone state
+export const isMicrophoneEnabled = (): boolean => {
+  return currentRoom?.localParticipant?.isMicrophoneEnabled || false;
 };

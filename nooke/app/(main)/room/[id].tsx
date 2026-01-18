@@ -82,11 +82,24 @@ export default function RoomScreen() {
 
   // Toggle mute - connects to audio on first unmute
   const handleToggleMute = async () => {
-    if (!currentRoom || !currentUser) return;
+    console.log('[Room] handleToggleMute called', {
+      hasRoom: !!currentRoom,
+      hasUser: !!currentUser,
+      isMuted,
+      roomId: currentRoom?.id,
+      userId: currentUser?.id,
+    });
+
+    if (!currentRoom || !currentUser) {
+      console.warn('[Room] Missing currentRoom or currentUser, cannot toggle mute');
+      return;
+    }
 
     if (isMuted) {
       // User is unmuting - connect to audio
+      console.log('[Room] User is unmuting, calling audioUnmute()');
       const success = await audioUnmute();
+      console.log('[Room] audioUnmute result:', success);
       if (success) {
         setIsMuted(false);
         // Update database
@@ -95,9 +108,13 @@ export default function RoomScreen() {
           .update({ is_muted: false })
           .eq('room_id', currentRoom.id)
           .eq('user_id', currentUser.id);
+        console.log('[Room] Database updated: is_muted = false');
+      } else {
+        console.error('[Room] Failed to unmute audio');
       }
     } else {
       // User is muting
+      console.log('[Room] User is muting, calling audioMute()');
       await audioMute();
       setIsMuted(true);
       // Update database
@@ -106,6 +123,7 @@ export default function RoomScreen() {
         .update({ is_muted: true })
         .eq('room_id', currentRoom.id)
         .eq('user_id', currentUser.id);
+      console.log('[Room] Database updated: is_muted = true');
     }
   };
 

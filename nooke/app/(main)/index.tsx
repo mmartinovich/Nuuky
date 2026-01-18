@@ -53,6 +53,7 @@ import { useRoom } from "../../hooks/useRoom";
 import { useRoomInvites } from "../../hooks/useRoomInvites";
 import { useDefaultRoom } from "../../hooks/useDefaultRoom";
 import { useTheme } from "../../hooks/useTheme";
+import { useAudio } from "../../hooks/useAudio";
 import {
   getMoodColor,
   getVibeText,
@@ -69,6 +70,7 @@ import { RoomListModal } from "../../components/RoomListModal";
 import { CreateRoomModal } from "../../components/CreateRoomModal";
 import { RoomSettingsModal } from "../../components/RoomSettingsModal";
 import { InviteFriendsModal } from "../../components/InviteFriendsModal";
+import { AudioConnectionBadge } from "../../components/AudioConnectionBadge";
 
 const { width, height } = Dimensions.get("window");
 const CENTER_X = width / 2;
@@ -86,6 +88,16 @@ export default function QuantumOrbitScreen() {
   const { activeRooms, createRoom, joinRoom: joinRoomFn, updateRoomName, deleteRoom, inviteFriendToRoom, participants, removeParticipant, myRooms, currentRoom } = useRoom();
   const { roomInvites } = useRoomInvites();
   const { defaultRoom, defaultRoomId, isDefaultRoom, setAsDefaultRoom } = useDefaultRoom();
+
+  // Audio integration - connect to default room's audio when available
+  const {
+    connectionStatus: audioConnectionStatus,
+    isConnecting: isAudioConnecting,
+    unmute: audioUnmute,
+    mute: audioMute,
+    disconnect: audioDisconnect,
+  } = useAudio(defaultRoom?.id || null);
+
   const [loading, setLoading] = useState(false); // Start with false - friends from Zustand show immediately
   const [showMoodPicker, setShowMoodPicker] = useState(false);
   const [showHint, setShowHint] = useState(true); // Show hint by default until user interacts
@@ -812,6 +824,13 @@ export default function QuantumOrbitScreen() {
         ) : (
           <Text style={[styles.moodText, { color: theme.colors.text.secondary }]}>{currentVibe}</Text>
         )}
+
+        {/* Audio Status Badge */}
+        {audioConnectionStatus !== 'disconnected' && defaultRoom && (
+          <View style={{ marginTop: 8 }}>
+            <AudioConnectionBadge status={audioConnectionStatus} />
+          </View>
+        )}
       </View>
 
       {/* Bottom Navigation Bar */}
@@ -819,14 +838,43 @@ export default function QuantumOrbitScreen() {
         {/* Floating center button wrapper */}
         <View style={styles.floatingButtonWrapper} pointerEvents="box-none">
           <TouchableOpacity
-            onPress={() => {
-              setIsMuted(!isMuted);
+            onPress={async () => {
+              console.log('[Orbit] Mic button pressed', { isMuted, hasDefaultRoom: !!defaultRoom });
+
+              if (!defaultRoom) {
+                Alert.alert('No Room', 'Please join or create a room first to use voice chat.');
+                return;
+              }
+
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+              if (isMuted) {
+                // User is unmuting - connect to audio
+                console.log('[Orbit] Unmuting, calling audioUnmute()');
+                const success = await audioUnmute();
+                console.log('[Orbit] audioUnmute result:', success);
+                if (success) {
+                  setIsMuted(false);
+                }
+              } else {
+                // User is muting
+                console.log('[Orbit] Muting, calling audioMute()');
+                await audioMute();
+                setIsMuted(true);
+              }
             }}
             activeOpacity={0.85}
-            style={styles.floatingButton}
+            style={[
+              styles.floatingButton,
+              isAudioConnecting && { opacity: 0.7 },
+            ]}
+            disabled={isAudioConnecting}
           >
-            <Ionicons name={isMuted ? "mic-off" : "mic"} size={28} color="#FFFFFF" />
+            {isAudioConnecting ? (
+              <Ionicons name="hourglass" size={28} color="#FFFFFF" />
+            ) : (
+              <Ionicons name={isMuted ? "mic-off" : "mic"} size={28} color="#FFFFFF" />
+            )}
           </TouchableOpacity>
         </View>
 
@@ -961,7 +1009,6 @@ export default function QuantumOrbitScreen() {
           }}
           onRemoveParticipant={async (userId, userName) => {
             await removeParticipant(defaultRoom.id, userId);
-            Alert.alert('Removed', `${userName} has been removed from the room`);
           }}
         />
       )}
