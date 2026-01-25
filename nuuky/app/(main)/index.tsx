@@ -819,18 +819,18 @@ export default function QuantumOrbitScreen() {
 
       {/* Bottom Navigation Bar */}
       <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 8) }]} pointerEvents="box-none">
-        {/* Floating center button wrapper */}
+        {/* Floating center button */}
         <View style={styles.floatingButtonWrapper} pointerEvents="box-none">
           <RNAnimated.View
             style={[
               styles.floatingButton,
               {
                 transform: [{ scale: buttonScaleAnim }],
-                backgroundColor: isMuted ? theme.colors.neon.purple : theme.colors.neon.cyan,
-                shadowColor: isMuted ? theme.colors.neon.purple : theme.colors.neon.cyan,
+                backgroundColor: "#A855F7",
+                shadowColor: "#A855F7",
                 shadowOpacity: buttonGlowAnim.interpolate({
                   inputRange: [1, 1.6],
-                  outputRange: [0.5, 0.8],
+                  outputRange: [0.4, 0.6],
                 }),
                 shadowRadius: buttonGlowAnim.interpolate({
                   inputRange: [1, 1.6],
@@ -846,17 +846,11 @@ export default function QuantumOrbitScreen() {
                   Alert.alert("No Room", "Please join or create a room first to use voice chat.");
                   return;
                 }
-
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
                 if (isMuted) {
-                  // User is unmuting - connect to audio
                   const success = await audioUnmute();
-                  if (success) {
-                    setIsMuted(false);
-                  }
+                  if (success) setIsMuted(false);
                 } else {
-                  // User is muting
                   await audioMute();
                   setIsMuted(true);
                 }
@@ -874,45 +868,67 @@ export default function QuantumOrbitScreen() {
           </RNAnimated.View>
         </View>
 
-        {/* Navigation bar */}
-        <View style={styles.navBar}>
-          {/* Left section */}
-          <View style={styles.navSection}>
-            <TouchableOpacity
-              onPress={handleFlarePress}
-              activeOpacity={0.7}
-              disabled={!!myActiveFlare}
-              style={styles.navTab}
-            >
-              <Ionicons name="flame" size={26} color="#FF3B30" />
-              <Text style={styles.navLabel}>Flare</Text>
-            </TouchableOpacity>
+        {/* Navigation bar with SVG shape */}
+        <View style={styles.navBarWrapper}>
+          {/* Background fill below nav bar */}
+          <View style={styles.navBarFill} />
+          
+          <Image 
+            source={require("../../assets/nav-bar-shape.png")} 
+            style={styles.navBarShape}
+            resizeMode="stretch"
+          />
+          <View style={styles.navBarContent}>
+            {/* Left icons */}
+            <View style={styles.navSection}>
+              <TouchableOpacity
+                onPress={handleFlarePress}
+                activeOpacity={0.7}
+                disabled={!!myActiveFlare}
+                style={styles.navTab}
+              >
+                <Ionicons name="flame" size={26} color="#FF3B30" />
+                <Text style={styles.navLabel}>Flare</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => router.push("/(main)/friends")} activeOpacity={0.7} style={styles.navTab}>
-              <Feather name="users" size={24} color="rgba(255, 255, 255, 0.85)" />
-              <Text style={styles.navLabel}>Friends</Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity 
+                onPress={() => router.push("/(main)/friends")} 
+                activeOpacity={0.7} 
+                style={styles.navTab}
+              >
+                <Feather name="users" size={24} color="rgba(255, 255, 255, 0.85)" />
+                <Text style={styles.navLabel}>Friends</Text>
+              </TouchableOpacity>
+            </View>
 
-          {/* Center gap for button */}
-          <View style={styles.centerGap} />
+            {/* Center gap */}
+            <View style={styles.centerGap} />
 
-          {/* Right section */}
-          <View style={styles.navSection}>
-            <TouchableOpacity onPress={handleOpenRooms} activeOpacity={0.7} style={styles.navTab}>
-              <Ionicons name="grid-outline" size={24} color="rgba(255, 255, 255, 0.85)" />
-              {roomInvites.length > 0 && (
-                <View style={[styles.roomBadge, { backgroundColor: theme.colors.mood.neutral.base }]}>
-                  <Text style={[styles.roomBadgeText, { color: theme.colors.text.primary }]}>{roomInvites.length}</Text>
-                </View>
-              )}
-              <Text style={styles.navLabel}>Rooms</Text>
-            </TouchableOpacity>
+            {/* Right icons */}
+            <View style={styles.navSection}>
+              <TouchableOpacity 
+                onPress={handleOpenRooms} 
+                activeOpacity={0.7} 
+                style={styles.navTab}
+              >
+                <Ionicons name="grid-outline" size={24} color="rgba(255, 255, 255, 0.85)" />
+                {roomInvites.length > 0 && (
+                  <View style={[styles.roomBadge, { backgroundColor: theme.colors.mood.neutral.base }]}>
+                    <Text style={[styles.roomBadgeText, { color: theme.colors.text.primary }]}>{roomInvites.length}</Text>
+                  </View>
+                )}
+                <Text style={styles.navLabel}>Rooms</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => router.push("/(main)/settings")} activeOpacity={0.7} style={styles.navTab}>
-              <Feather name="settings" size={24} color="rgba(255, 255, 255, 0.7)" />
-              <Text style={styles.navLabel}>Settings</Text>
-            </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => router.push("/(main)/settings")} 
+                activeOpacity={0.7} 
+                style={styles.navTab}
+              >
+                <Feather name="settings" size={24} color="rgba(255, 255, 255, 0.7)" />
+                <Text style={styles.navLabel}>Settings</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
@@ -1112,16 +1128,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     alignItems: "center",
   },
-  navBar: {
-    flexDirection: "row",
-    backgroundColor: "#1a1a2e",
-    height: 60,
-    borderRadius: 30,
-    alignItems: "center",
+  navBarWrapper: {
     width: "100%",
-    borderWidth: 1.5,
-    borderColor: "rgba(139, 92, 246, 0.25)",
-    zIndex: 10,
+    height: 70,
+    position: "relative",
+  },
+  navBarFill: {
+    position: "absolute",
+    top: 40,
+    left: -16,
+    right: -16,
+    bottom: -100,
+    backgroundColor: "#1C1C1E",
+  },
+  navBarShape: {
+    position: "absolute",
+    top: 0,
+    left: -16,
+    right: -16,
+    bottom: 0,
+    width: Dimensions.get("window").width,
+    height: "100%",
+    tintColor: "#1C1C1E",
+  },
+  navBarContent: {
+    position: "absolute",
+    top: 8,
+    left: 0,
+    right: 0,
+    height: 60,
+    flexDirection: "row",
+    alignItems: "center",
   },
   navSection: {
     flex: 1,
@@ -1135,7 +1172,7 @@ const styles = StyleSheet.create({
   },
   floatingButtonWrapper: {
     position: "absolute",
-    top: -24,
+    top: -18,
     left: 0,
     right: 0,
     alignItems: "center",
@@ -1155,7 +1192,7 @@ const styles = StyleSheet.create({
     height: "100%",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 32,
+    borderRadius: 27,
   },
   navTab: {
     alignItems: "center",
@@ -1184,10 +1221,6 @@ const styles = StyleSheet.create({
     color: "rgba(255, 255, 255, 0.65)",
     letterSpacing: 0.1,
     marginTop: 2,
-  },
-  navLabelActive: {
-    color: "rgba(255, 255, 255, 0.95)",
-    fontWeight: "600",
   },
   flaresAlert: {
     position: "absolute",
