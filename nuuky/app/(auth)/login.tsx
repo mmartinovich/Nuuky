@@ -8,7 +8,6 @@ import {
   Platform,
   Alert,
   Animated,
-  TextInput,
   Image,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -16,6 +15,7 @@ import { useRouter } from "expo-router";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as WebBrowser from "expo-web-browser";
 import * as Crypto from "expo-crypto";
+import { AntDesign } from "@expo/vector-icons";
 import { supabase } from "../../lib/supabase";
 import { useAppStore } from "../../stores/appStore";
 import { colors, gradients, typography, spacing, radius } from "../../lib/theme";
@@ -24,9 +24,6 @@ WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showDevLogin, setShowDevLogin] = useState(false);
   const router = useRouter();
   const { setCurrentUser } = useAppStore();
 
@@ -62,7 +59,7 @@ export default function LoginScreen() {
       data: { user },
     } = await supabase.auth.getUser();
 
-    let { data: userData, error } = await supabase.from("users").select("*").eq("id", userId).single();
+    let { data: userData } = await supabase.from("users").select("*").eq("id", userId).single();
 
     if (!userData && user) {
       // Create profile for OAuth user (fallback if trigger doesn't work)
@@ -98,10 +95,16 @@ export default function LoginScreen() {
         return;
       }
 
-      // Generate nonce for security
-      const nonce = await Crypto.digestStringAsync(
+      // Generate a random nonce (unhashed)
+      const randomBytes = Crypto.getRandomBytes(32);
+      const randomString = Array.from(randomBytes)
+        .map((byte) => byte.toString(16).padStart(2, '0'))
+        .join('');
+
+      // Hash the nonce with SHA-256
+      const hashedNonce = await Crypto.digestStringAsync(
         Crypto.CryptoDigestAlgorithm.SHA256,
-        Crypto.getRandomBytes(32).toString(),
+        randomString
       );
 
       const credential = await AppleAuthentication.signInAsync({
@@ -109,13 +112,14 @@ export default function LoginScreen() {
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
-        nonce,
+        nonce: hashedNonce,
       });
 
+      // Use the original unhashed nonce for Supabase
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: "apple",
         token: credential.identityToken!,
-        nonce,
+        nonce: randomString,
       });
 
       if (error) throw error;
@@ -139,291 +143,123 @@ export default function LoginScreen() {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
+      console.log("[Google OAuth] Initiating sign-in...");
+
+      // Generate the OAuth URL
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: "nooke://auth/callback",
-          skipBrowserRedirect: false,
+          redirectTo: "nuuky://",
+          skipBrowserRedirect: true, // We'll handle the redirect manually
         },
       });
 
       if (error) throw error;
 
-      // Note: The actual session will be handled by the OAuth callback
-      // which is set up in your app configuration
+      console.log("[Google OAuth] Opening browser:", data.url);
+
+      // Open browser for OAuth
+      const result = await WebBrowser.openAuthSessionAsync(
+        data.url,
+        "nuuky://"
+      );
+
+      console.log("[Google OAuth] Browser result:", result);
+
+      if (result.type === "success") {
+        console.log("[Google OAuth] Success! URL:", result.url);
+        // The deep link handler in _layout.tsx will handle the session
+      } else if (result.type === "cancel") {
+        console.log("[Google OAuth] User cancelled");
+      }
     } catch (error: any) {
-      console.error("Google Sign-In Error:", error);
+      console.error("[Google OAuth] Error:", error);
       Alert.alert("Sign In Failed", error.message || "Failed to sign in with Google");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDevLogin = async () => {
-    if (!email.trim()) {
-      Alert.alert("Email Required", "Please enter an email address");
-      return;
-    }
-
-    if (!password.trim()) {
-      Alert.alert("Password Required", "Please enter a password");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // Try to sign in with password
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: password.trim(),
-      });
-
-      if (error) {
-        // If user doesn't exist, create them
-        if (error.message.includes("Invalid login credentials")) {
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email: email.trim(),
-            password: password.trim(),
-            options: {
-              emailRedirectTo: undefined,
-              data: {
-                display_name: email.split("@")[0],
-              },
-            },
-          });
-
-          if (signUpError) {
-            // Check if it's the email confirmation error
-            if (signUpError.message.includes("Database error")) {
-              Alert.alert(
-                "Setup Required",
-                "Please disable email confirmation in Supabase:\n\n" +
-                  "1. Go to Authentication → Settings\n" +
-                  '2. Disable "Confirm email"\n' +
-                  "3. Save and try again\n\n" +
-                  "See configure-dev-auth.md for details",
-                [{ text: "OK" }],
-              );
-              return;
-            }
-            throw signUpError;
-          }
-
-          // Check if user was created successfully
-          if (signUpData.user && !signUpData.session) {
-            Alert.alert(
-              "Email Confirmation Required",
-              "Email confirmation is enabled. Please check configure-dev-auth.md to disable it for dev mode.",
-              [{ text: "OK" }],
-            );
-            return;
-          }
-
-          if (signUpData.user) {
-            await fetchUserProfile(signUpData.user.id);
-            Alert.alert("Success", "Account created and logged in!");
-            router.replace("/");
-            return;
-          }
-        }
-        throw error;
-      }
-
-      if (data.user) {
-        await fetchUserProfile(data.user.id);
-        router.replace("/");
-      }
-    } catch (error: any) {
-      console.error("Dev Login Error:", error);
-      Alert.alert(
-        "Sign In Failed",
-        error.message || "Failed to sign in. Check configure-dev-auth.md for setup instructions.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleQuickDevLogin = async () => {
-    setLoading(true);
-    try {
-      const testEmail = "dev@nooke.app";
-      const testPassword = "devpass123";
-
-      // Try to sign in
-      let { data, error } = await supabase.auth.signInWithPassword({
-        email: testEmail,
-        password: testPassword,
-      });
-
-      // If user doesn't exist, create them
-      if (error?.message.includes("Invalid login credentials")) {
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: testEmail,
-          password: testPassword,
-          options: {
-            emailRedirectTo: undefined,
-            data: {
-              display_name: "Dev User",
-            },
-          },
-        });
-
-        if (signUpError) {
-          // Check if it's the email confirmation error
-          if (signUpError.message.includes("Database error")) {
-            Alert.alert(
-              "Setup Required",
-              "Please disable email confirmation in Supabase:\n\n" +
-                "1. Go to Authentication → Settings\n" +
-                '2. Disable "Confirm email"\n' +
-                "3. Save and try again\n\n" +
-                "See configure-dev-auth.md for details",
-              [{ text: "OK" }],
-            );
-            return;
-          }
-          throw signUpError;
-        }
-
-        // Check if user was created successfully
-        if (signUpData.user && !signUpData.session) {
-          Alert.alert(
-            "Email Confirmation Required",
-            "Email confirmation is enabled. Please check configure-dev-auth.md to disable it for dev mode.",
-            [{ text: "OK" }],
-          );
-          return;
-        }
-
-        data = signUpData;
-      } else if (error) {
-        throw error;
-      }
-
-      if (data.user) {
-        await fetchUserProfile(data.user.id);
-        router.replace("/");
-      }
-    } catch (error: any) {
-      console.error("Quick Dev Login Error:", error);
-      Alert.alert(
-        "Sign In Failed",
-        error.message || "Failed to sign in. Check configure-dev-auth.md for setup instructions.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <LinearGradient colors={gradients.background} style={styles.gradient}>
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <View style={styles.content}>
-          {/* Decorative orb with glow */}
-          <View style={styles.orbContainer}>
-            <Animated.View
-              style={[
-                styles.orbGlow,
-                {
-                  transform: [{ scale: pulseAnim }],
-                },
-              ]}
-            />
-            <View style={styles.orb} />
-          </View>
-
-          {/* Title */}
+          {/* Title - Centered */}
           <View style={styles.header}>
             <Image source={require("../../assets/wordmark.png")} style={styles.wordmark} resizeMode="contain" />
             <Text style={styles.subtitle}>Feel connected without{"\n"}the pressure of communicating</Text>
           </View>
+        </View>
 
-          {/* OAuth Buttons */}
+        {/* OAuth Buttons - Bottom */}
+        <View style={styles.bottomSection}>
           <View style={styles.authButtons}>
-            {/* Apple Sign-In - Temporarily disabled until Apple Developer enrollment is complete */}
-            {/* Uncomment this section once you have your personal Apple Developer account set up */}
-            {/* {Platform.OS === 'ios' && (
-              <AppleAuthentication.AppleAuthenticationButton
-                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
-                cornerRadius={parseInt(radius.lg)}
-                style={styles.appleButton}
+            {/* Apple Sign-In */}
+            {Platform.OS === 'ios' && (
+              <TouchableOpacity
+                activeOpacity={0.8}
                 onPress={handleAppleSignIn}
-              />
-            )} */}
+                disabled={loading}
+              >
+                <LinearGradient
+                  colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.08)']}
+                  style={styles.authButton}
+                >
+                  {/* Neon border glow */}
+                  <View style={[styles.buttonBorder, { borderColor: 'rgba(255, 255, 255, 0.3)' }]} />
+
+                  {/* Apple Icon */}
+                  <View style={styles.iconContainer}>
+                    <AntDesign name="apple" size={24} color={colors.text.primary} />
+                  </View>
+
+                  <Text style={styles.buttonText}>
+                    {loading ? "Signing in..." : "Continue with Apple"}
+                  </Text>
+
+                  {/* Subtle shine effect */}
+                  <LinearGradient
+                    colors={['rgba(255, 255, 255, 0.15)', 'transparent']}
+                    style={styles.buttonShine}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  />
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
 
             {/* Google Sign-In */}
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={handleGoogleSignIn}
               disabled={loading}
-              style={styles.googleButtonContainer}
             >
-              <View style={[styles.googleButton, loading && styles.buttonDisabled]}>
-                <Text style={styles.googleIcon}>G</Text>
-                <Text style={styles.googleButtonText}>{loading ? "Signing in..." : "Continue with Google"}</Text>
-              </View>
-            </TouchableOpacity>
+              <LinearGradient
+                colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.08)']}
+                style={styles.authButton}
+              >
+                {/* Neon border glow */}
+                <View style={[styles.buttonBorder, { borderColor: 'rgba(0, 240, 255, 0.4)' }]} />
 
-            {/* Development Login Toggle */}
-            <TouchableOpacity onPress={() => setShowDevLogin(!showDevLogin)} style={styles.devToggle}>
-              <Text style={styles.devToggleText}>{showDevLogin ? "− Hide Dev Login" : "+ Dev Login (Testing)"}</Text>
-            </TouchableOpacity>
-
-            {/* Development Email Login */}
-            {showDevLogin && (
-              <View style={styles.devLoginContainer}>
-                {/* Quick Login Button */}
-                <TouchableOpacity
-                  onPress={handleQuickDevLogin}
-                  disabled={loading}
-                  style={[styles.quickLoginButton, loading && styles.buttonDisabled]}
-                >
-                  <Text style={styles.quickLoginButtonText}>{loading ? "Logging in..." : "⚡ Quick Dev Login"}</Text>
-                </TouchableOpacity>
-
-                <View style={styles.divider}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>or use custom account</Text>
-                  <View style={styles.dividerLine} />
+                {/* Google Icon */}
+                <View style={styles.iconContainer}>
+                  <AntDesign name="google" size={24} color="#4285F4" />
                 </View>
 
-                <Text style={styles.devLoginLabel}>Email</Text>
-                <TextInput
-                  style={styles.devInput}
-                  placeholder="your.email@example.com"
-                  placeholderTextColor={colors.text.tertiary}
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!loading}
-                />
+                <Text style={styles.buttonText}>
+                  {loading ? "Signing in..." : "Continue with Google"}
+                </Text>
 
-                <Text style={styles.devLoginLabel}>Password</Text>
-                <TextInput
-                  style={styles.devInput}
-                  placeholder="password (auto-creates if new)"
-                  placeholderTextColor={colors.text.tertiary}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!loading}
+                {/* Subtle shine effect */}
+                <LinearGradient
+                  colors={['rgba(0, 240, 255, 0.1)', 'transparent']}
+                  style={styles.buttonShine}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
                 />
-
-                <TouchableOpacity
-                  onPress={handleDevLogin}
-                  disabled={loading}
-                  style={[styles.devLoginButton, loading && styles.buttonDisabled]}
-                >
-                  <Text style={styles.devLoginButtonText}>{loading ? "Signing in..." : "Sign In / Sign Up"}</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
 
           <Text style={styles.privacyText}>By continuing, you agree to our terms and privacy policy</Text>
@@ -448,26 +284,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     justifyContent: "center",
   },
-  orbContainer: {
-    alignItems: "center",
-    marginBottom: spacing["2xl"],
-  },
-  orb: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.mood.reachOut.base,
-  },
-  orbGlow: {
-    position: "absolute",
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: colors.mood.reachOut.glow,
-    opacity: 0.6,
-  },
   header: {
-    marginBottom: spacing["2xl"],
     alignItems: "center",
   },
   wordmark: {
@@ -488,111 +305,49 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 24,
   },
+  bottomSection: {
+    padding: spacing.xl,
+    paddingBottom: spacing["2xl"],
+  },
   authButtons: {
     gap: spacing.md,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.md,
   },
-  appleButton: {
-    width: "100%",
-    height: 56,
-  },
-  googleButtonContainer: {
-    width: "100%",
-  },
-  googleButton: {
+  authButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: parseInt(radius.lg),
     height: 56,
+    borderRadius: radius.lg,
+    overflow: "hidden",
+    position: "relative",
+  },
+  buttonBorder: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.ui.border,
-    gap: spacing.sm,
+    borderColor: "rgba(0, 240, 255, 0.3)",
   },
-  googleIcon: {
-    fontSize: 20,
-    fontWeight: typography.weight.bold,
-    color: "#4285F4",
+  buttonShine: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "50%",
+    height: "100%",
+    pointerEvents: "none",
   },
-  googleButtonText: {
+  iconContainer: {
+    marginRight: spacing.sm,
+  },
+  buttonText: {
     fontSize: typography.size.base,
     fontWeight: typography.weight.semibold,
-    color: "#000000",
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  devToggle: {
-    paddingVertical: spacing.sm,
-    alignItems: "center",
-  },
-  devToggleText: {
-    fontSize: typography.size.sm,
-    color: colors.text.secondary,
-    fontWeight: typography.weight.medium,
-  },
-  devLoginContainer: {
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    borderRadius: parseInt(radius.lg),
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.ui.border,
-  },
-  devLoginLabel: {
-    fontSize: typography.size.sm,
-    color: colors.text.secondary,
-    marginBottom: spacing.xs,
-    fontWeight: typography.weight.medium,
-  },
-  devInput: {
-    backgroundColor: colors.ui.background,
-    borderRadius: parseInt(radius.md),
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: typography.size.base,
     color: colors.text.primary,
-    borderWidth: 1,
-    borderColor: colors.ui.border,
-    marginBottom: spacing.md,
-  },
-  devLoginButton: {
-    backgroundColor: colors.mood.reachOut.base,
-    borderRadius: parseInt(radius.md),
-    paddingVertical: spacing.sm,
-    alignItems: "center",
-  },
-  devLoginButtonText: {
-    fontSize: typography.size.base,
-    fontWeight: typography.weight.semibold,
-    color: "#FFFFFF",
-  },
-  quickLoginButton: {
-    backgroundColor: "#00D9FF",
-    borderRadius: parseInt(radius.md),
-    paddingVertical: spacing.md,
-    alignItems: "center",
-    marginBottom: spacing.md,
-  },
-  quickLoginButtonText: {
-    fontSize: typography.size.base,
-    fontWeight: typography.weight.bold,
-    color: "#000000",
-  },
-  divider: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: spacing.md,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.ui.border,
-  },
-  dividerText: {
-    fontSize: typography.size.xs,
-    color: colors.text.tertiary,
-    marginHorizontal: spacing.sm,
+    letterSpacing: 0.2,
   },
   privacyText: {
     fontSize: typography.size.xs,

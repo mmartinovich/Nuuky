@@ -2,16 +2,16 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../stores/appStore';
-import { User } from '../types';
+import { PresetMood } from '../types';
 
 // MOCK MODE FLAG - should match useRoom.ts
 const USE_MOCK_DATA = true;
 
 export const useMood = () => {
-  const { currentUser, updateUserMood } = useAppStore();
+  const { currentUser, updateUserMood, setActiveCustomMood } = useAppStore();
   const [loading, setLoading] = useState(false);
 
-  const changeMood = async (mood: User['mood']): Promise<boolean> => {
+  const changeMood = async (mood: PresetMood): Promise<boolean> => {
     if (!currentUser) {
       Alert.alert('Error', 'You must be logged in');
       return false;
@@ -20,20 +20,23 @@ export const useMood = () => {
     // MOCK MODE: Skip Supabase query, just update local state
     if (USE_MOCK_DATA) {
       updateUserMood(mood);
+      setActiveCustomMood(null);
       return true;
     }
 
     setLoading(true);
     try {
+      // Clear custom mood when selecting preset mood
       const { error } = await supabase
         .from('users')
-        .update({ mood })
+        .update({ mood, custom_mood_id: null })
         .eq('id', currentUser.id);
 
       if (error) throw error;
 
       // Update local state
       updateUserMood(mood);
+      setActiveCustomMood(null);
 
       return true;
     } catch (error: any) {

@@ -1,3 +1,16 @@
+// Mood types
+export type PresetMood = 'good' | 'neutral' | 'not_great' | 'reach_out';
+
+export interface CustomMood {
+  id: string;
+  user_id: string;
+  emoji: string;
+  text: string;
+  color: string;
+  created_at: string;
+  last_used_at: string;
+}
+
 // User types
 export interface User {
   id: string;
@@ -5,7 +18,9 @@ export interface User {
   email?: string;            // Required for OAuth users
   display_name: string;
   avatar_url?: string;
-  mood: 'good' | 'neutral' | 'not_great' | 'reach_out';
+  mood: PresetMood;
+  custom_mood_id?: string;
+  custom_mood?: CustomMood;  // Joined custom mood data
   is_online: boolean;
   last_seen_at: string;
   ghost_mode_until?: string;

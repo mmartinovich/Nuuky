@@ -1,18 +1,18 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Image, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { User } from '../types';
-import { colors, gradients, getMoodColor, getMoodImage, typography, spacing, radius } from '../lib/theme';
+import { PresetMood } from '../types';
+import { colors, gradients, getMoodImage, typography, spacing, radius } from '../lib/theme';
 
 interface MoodPickerProps {
   visible: boolean;
-  currentMood: User['mood'];
-  onSelectMood: (mood: User['mood']) => void;
+  currentMood: PresetMood;
+  onSelectMood: (mood: PresetMood) => void;
   onClose: () => void;
 }
 
-const MOODS: Array<{ mood: User['mood']; label: string; description: string }> = [
+const MOODS: Array<{ mood: PresetMood; label: string; description: string }> = [
   {
     mood: 'good',
     label: 'Feeling good',
@@ -41,7 +41,7 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
   onSelectMood,
   onClose,
 }) => {
-  const handleSelectMood = (mood: User['mood']) => {
+  const handleSelectMood = (mood: PresetMood) => {
     onSelectMood(mood);
     onClose();
   };
@@ -64,66 +64,70 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
             onStartShouldSetResponder={() => true}
           >
             <LinearGradient colors={gradients.card} style={styles.modal}>
-              {/* Header */}
-              <View style={styles.header}>
-                <Text style={styles.title}>How are you feeling?</Text>
-                <Text style={styles.subtitle}>
-                  Your friends will see this
-                </Text>
-              </View>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                bounces={false}
+              >
+                {/* Header */}
+                <View style={styles.header}>
+                  <Text style={styles.title}>How are you feeling?</Text>
+                  <Text style={styles.subtitle}>
+                    Your friends will see this
+                  </Text>
+                </View>
 
-              {/* Mood options */}
-              <View style={styles.moodList}>
-                {MOODS.map(({ mood, label, description }) => {
-                  const moodColors = getMoodColor(mood);
-                  const isSelected = currentMood === mood;
+                {/* Preset Mood options */}
+                <View style={styles.moodList}>
+                  {MOODS.map(({ mood, label, description }) => {
+                    const isSelected = currentMood === mood;
 
-                  return (
-                    <TouchableOpacity
-                      key={mood}
-                      activeOpacity={0.7}
-                      onPress={() => handleSelectMood(mood)}
-                    >
-                      <LinearGradient
-                        colors={isSelected ? gradients.button : gradients.card}
-                        style={[
-                          styles.moodOption,
-                          isSelected && styles.moodOptionSelected,
-                        ]}
+                    return (
+                      <TouchableOpacity
+                        key={mood}
+                        activeOpacity={0.7}
+                        onPress={() => handleSelectMood(mood)}
                       >
-                        {/* Mood Creature Image */}
-                        <View style={styles.imageWrapper}>
-                          <Image
-                            source={getMoodImage(mood)}
-                            style={styles.moodImage}
-                            fadeDuration={0}
-                          />
-                        </View>
-
-                        {/* Text */}
-                        <View style={styles.moodText}>
-                          <Text style={styles.moodLabel}>{label}</Text>
-                          <Text style={styles.moodDescription}>
-                            {description}
-                          </Text>
-                        </View>
-
-                        {/* Check mark */}
-                        {isSelected && (
-                          <View style={styles.checkmark}>
-                            <Text style={styles.checkmarkText}>✓</Text>
+                        <LinearGradient
+                          colors={isSelected ? gradients.button : gradients.card}
+                          style={[
+                            styles.moodOption,
+                            isSelected && styles.moodOptionSelected,
+                          ]}
+                        >
+                          {/* Mood Creature Image */}
+                          <View style={styles.imageWrapper}>
+                            <Image
+                              source={getMoodImage(mood)}
+                              style={styles.moodImage}
+                              fadeDuration={0}
+                            />
                           </View>
-                        )}
-                      </LinearGradient>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
 
-              {/* Cancel button */}
-              <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
+                          {/* Text */}
+                          <View style={styles.moodText}>
+                            <Text style={styles.moodLabel}>{label}</Text>
+                            <Text style={styles.moodDescription}>
+                              {description}
+                            </Text>
+                          </View>
+
+                          {/* Check mark */}
+                          {isSelected && (
+                            <View style={styles.checkmark}>
+                              <Text style={styles.checkmarkText}>✓</Text>
+                            </View>
+                          )}
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* Cancel button */}
+                <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+              </ScrollView>
             </LinearGradient>
           </View>
         </TouchableOpacity>

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import { User } from '../types';
-import { colors, getMoodColor, spacing, radius } from '../lib/theme';
+import { colors, getMoodColor, getMoodDisplay, spacing, radius } from '../lib/theme';
 
 interface FriendOrbProps {
   friend: User;
@@ -12,7 +12,9 @@ export const FriendOrb: React.FC<FriendOrbProps> = ({ friend, onPress }) => {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0.6)).current;
 
-  const moodColors = getMoodColor(friend.mood);
+  // Get mood display (handles both preset and custom moods)
+  const moodDisplay = getMoodDisplay(friend, friend.custom_mood);
+  const moodColors = moodDisplay.type === 'custom' ? moodDisplay.color : getMoodColor(friend.mood);
 
   useEffect(() => {
     let pulseAnimation: Animated.CompositeAnimation | null = null;
@@ -96,7 +98,12 @@ export const FriendOrb: React.FC<FriendOrbProps> = ({ friend, onPress }) => {
               opacity: friend.is_online ? 1 : 0.5,
             },
           ]}
-        />
+        >
+          {/* Custom mood emoji */}
+          {moodDisplay.type === 'custom' && (
+            <Text style={styles.customEmoji}>{moodDisplay.emoji}</Text>
+          )}
+        </View>
 
         {/* Online indicator */}
         {friend.is_online && (
@@ -147,6 +154,12 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  customEmoji: {
+    fontSize: 28,
+    textAlign: 'center',
   },
   onlineRing: {
     position: 'absolute',

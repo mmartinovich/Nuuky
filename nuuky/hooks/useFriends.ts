@@ -209,9 +209,16 @@ export const useFriends = () => {
             id,
             display_name,
             mood,
+            custom_mood_id,
             is_online,
             last_seen_at,
-            avatar_url
+            avatar_url,
+            custom_mood:custom_mood_id (
+              id,
+              emoji,
+              text,
+              color
+            )
           )
         `)
         .eq('user_id', currentUser.id)
@@ -220,13 +227,26 @@ export const useFriends = () => {
       if (error) throw error;
 
       console.log(`Loaded ${data?.length || 0} friends from database`);
-      if (data && data.length > 0) {
-        console.log('First friend:', JSON.stringify(data[0], null, 2));
-        console.log('All friend IDs:', data.map(f => f.friend_id).join(', '));
+
+      // Fetch blocks to filter out blocked users
+      const { data: blocks } = await supabase
+        .from('blocks')
+        .select('blocked_id')
+        .eq('blocker_id', currentUser.id);
+
+      const blockedIds = new Set(blocks?.map(b => b.blocked_id) || []);
+
+      // Filter out blocked friends
+      const filteredFriends = data?.filter(f => !blockedIds.has(f.friend_id)) || [];
+
+      console.log(`After filtering blocks: ${filteredFriends.length} friends`);
+      if (filteredFriends.length > 0) {
+        console.log('First friend:', JSON.stringify(filteredFriends[0], null, 2));
+        console.log('All friend IDs:', filteredFriends.map(f => f.friend_id).join(', '));
       }
 
       console.log('Setting friends in store...');
-      setFriends(data || []);
+      setFriends(filteredFriends);
       setHasLoadedOnce(true);
       console.log('========== LOAD FRIENDS END (success) ==========');
     } catch (error: any) {

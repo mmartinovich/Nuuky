@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User, Friendship, Room, RoomParticipant, RoomInvite, AudioConnectionStatus } from '../types';
+import { User, Friendship, Room, RoomParticipant, RoomInvite, AudioConnectionStatus, CustomMood, PresetMood } from '../types';
 import { ThemeMode } from '../lib/theme';
 
 interface AppState {
@@ -31,6 +31,10 @@ interface AppState {
   audioError: string | null;
   speakingParticipants: Set<string>;
 
+  // Custom moods state
+  customMoods: CustomMood[];
+  activeCustomMood: CustomMood | null;
+
   // Actions
   setCurrentUser: (user: User | null) => void;
   setFriends: (friends: Friendship[]) => void;
@@ -47,7 +51,12 @@ interface AppState {
   setRoomInvites: (invites: RoomInvite[]) => void;
   addRoomInvite: (invite: RoomInvite) => void;
   removeRoomInvite: (inviteId: string) => void;
-  updateUserMood: (mood: User['mood']) => void;
+  updateUserMood: (mood: PresetMood) => void;
+  setCustomMoods: (moods: CustomMood[]) => void;
+  addCustomMood: (mood: CustomMood) => void;
+  updateCustomMood: (id: string, updates: Partial<CustomMood>) => void;
+  deleteCustomMood: (id: string) => void;
+  setActiveCustomMood: (mood: CustomMood | null) => void;
   setDefaultRoomId: (roomId: string | null) => void;
   setThemeMode: (mode: ThemeMode) => void;
   setAudioConnectionStatus: (status: AudioConnectionStatus) => void;
@@ -76,6 +85,8 @@ export const useAppStore = create<AppState>()(
   audioConnectionStatus: 'disconnected' as AudioConnectionStatus,
   audioError: null,
   speakingParticipants: new Set<string>(),
+  customMoods: [],
+  activeCustomMood: null,
 
   // Actions
   setCurrentUser: (user) => set({ currentUser: user, isAuthenticated: !!user }),
@@ -139,6 +150,28 @@ export const useAppStore = create<AppState>()(
       : null
   })),
 
+  setCustomMoods: (moods) => set({ customMoods: moods }),
+
+  addCustomMood: (mood) => set((state) => ({
+    customMoods: [...state.customMoods, mood]
+  })),
+
+  updateCustomMood: (id, updates) => set((state) => ({
+    customMoods: state.customMoods.map(mood =>
+      mood.id === id ? { ...mood, ...updates } : mood
+    )
+  })),
+
+  deleteCustomMood: (id) => set((state) => ({
+    customMoods: state.customMoods.filter(mood => mood.id !== id),
+    activeCustomMood: state.activeCustomMood?.id === id ? null : state.activeCustomMood
+  })),
+
+  setActiveCustomMood: (mood) => set({
+    activeCustomMood: mood,
+    currentUser: mood ? { ...useAppStore.getState().currentUser!, custom_mood_id: mood.id } : useAppStore.getState().currentUser
+  }),
+
   setDefaultRoomId: (roomId) => set({ defaultRoomId: roomId }),
 
   setThemeMode: (mode) => set({ themeMode: mode }),
@@ -176,6 +209,9 @@ export const useAppStore = create<AppState>()(
     audioConnectionStatus: 'disconnected' as AudioConnectionStatus,
     audioError: null,
     speakingParticipants: new Set<string>(),
+    // Reset custom moods
+    customMoods: [],
+    activeCustomMood: null,
     // Preserve theme preference on logout
     themeMode: state.themeMode,
   }))

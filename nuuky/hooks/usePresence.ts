@@ -21,11 +21,18 @@ export const usePresence = () => {
     // MOCK MODE: Skip Supabase query
     if (USE_MOCK_DATA) return;
 
+    // Force offline if ghost mode or break mode is active
+    const now = new Date();
+    const ghostActive = currentUser.ghost_mode_until && new Date(currentUser.ghost_mode_until) > now;
+    const breakActive = currentUser.take_break_until && new Date(currentUser.take_break_until) > now;
+
+    const effectiveOnlineStatus = (ghostActive || breakActive) ? false : isOnline;
+
     try {
       await supabase
         .from('users')
         .update({
-          is_online: isOnline,
+          is_online: effectiveOnlineStatus,
           last_seen_at: new Date().toISOString(),
         })
         .eq('id', currentUser.id);
@@ -96,6 +103,19 @@ export const usePresence = () => {
       subscription.remove();
     };
   }, [currentUser?.id]); // Use id to avoid re-running on mood change
+
+  // Immediately update presence when ghost/break mode changes
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const now = new Date();
+    const ghostActive = currentUser.ghost_mode_until && new Date(currentUser.ghost_mode_until) > now;
+    const breakActive = currentUser.take_break_until && new Date(currentUser.take_break_until) > now;
+
+    if (ghostActive || breakActive) {
+      updatePresence(false); // Immediately push offline status
+    }
+  }, [currentUser?.ghost_mode_until, currentUser?.take_break_until]);
 
   return {
     updateActivity: () => {

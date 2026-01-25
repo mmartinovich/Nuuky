@@ -358,3 +358,55 @@ export const getVibeText = (mood: 'good' | 'neutral' | 'not_great' | 'reach_out'
   const randomIndex = Math.floor(Math.random() * words.length);
   return words[randomIndex];
 };
+
+// ============================================
+// Custom Mood Support
+// ============================================
+
+// Custom mood color palette
+export const CUSTOM_MOOD_COLORS = [
+  '#3B82F6', // Blue (default)
+  '#22C55E', // Green
+  '#A855F7', // Purple
+  '#EC4899', // Pink
+  '#F59E0B', // Orange
+  '#EF4444', // Red
+];
+
+// Helper to get custom mood color with glow and soft variants
+export const getCustomMoodColor = (hexColor: string) => {
+  // Parse hex color to RGB
+  const hex = hexColor.replace('#', '');
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+
+  return {
+    base: hexColor,
+    glow: `rgba(${r}, ${g}, ${b}, 0.4)`,
+    soft: `rgba(${r}, ${g}, ${b}, 0.15)`,
+    gradient: [hexColor, hexColor] as const,
+  };
+};
+
+// Helper to get mood display (supports both preset and custom moods)
+export const getMoodDisplay = (
+  user: { mood: 'good' | 'neutral' | 'not_great' | 'reach_out'; custom_mood_id?: string },
+  customMood?: { id: string; emoji: string; text: string; color: string }
+) => {
+  if (customMood && user.custom_mood_id === customMood.id) {
+    return {
+      type: 'custom' as const,
+      emoji: customMood.emoji,
+      text: customMood.text,
+      color: getCustomMoodColor(customMood.color),
+    };
+  }
+
+  return {
+    type: 'preset' as const,
+    mood: user.mood,
+    image: getMoodImage(user.mood),
+    colors: getMoodColor(user.mood),
+  };
+};

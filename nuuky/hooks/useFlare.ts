@@ -125,6 +125,16 @@ export const useFlare = () => {
       return false;
     }
 
+    // Check if user is on break
+    const now = new Date();
+    if (currentUser.take_break_until && new Date(currentUser.take_break_until) > now) {
+      Alert.alert(
+        'Break Mode Active',
+        'You cannot send flares while on a break. End your break first if you need support.'
+      );
+      return false;
+    }
+
     // Check if user already has an active flare
     if (myActiveFlare) {
       const remainingMinutes = Math.ceil(
@@ -135,6 +145,16 @@ export const useFlare = () => {
         `You have an active flare for ${remainingMinutes} more minutes`
       );
       return false;
+    }
+
+    // MOCK MODE: Skip Supabase, just show success
+    if (USE_MOCK_DATA) {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert(
+        'Flare Sent! 🚨',
+        'Your friends have been notified. The flare will remain active for 30 minutes.'
+      );
+      return true;
     }
 
     // Confirm before sending
@@ -154,17 +174,68 @@ export const useFlare = () => {
             onPress: async () => {
               setLoading(true);
               try {
+                // Verify session exists before attempting insert
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+                if (sessionError || !session) {
+                  console.error('No active session:', sessionError);
+                  Alert.alert('Authentication Error', 'Please log in again to send flares.');
+                  setLoading(false);
+                  resolve(false);
+                  return;
+                }
+
+                console.log('🔐 Auth Debug:', {
+                  sessionUserId: session.user.id,
+                  currentUserId: currentUser.id,
+                  idsMatch: session.user.id === currentUser.id,
+                  sessionEmail: session.user.email,
+                });
+
+                // Test if auth.uid() works
+                const { data: authUidTest } = await supabase.rpc('auth_uid_test');
+                console.log('🔐 auth.uid() returns:', authUidTest);
+
                 // Flare expires in 30 minutes
                 const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
-                const { error } = await supabase
+                const { data: flareData, error } = await supabase
                   .from('flares')
                   .insert({
                     user_id: currentUser.id,
                     expires_at: expiresAt.toISOString(),
-                  });
+                  })
+                  .select()
+                  .single();
 
-                if (error) throw error;
+                if (error) {
+                  console.error('❌ Flare insert error details:', {
+                    code: error.code,
+                    message: error.message,
+                    details: error.details,
+                    hint: error.hint,
+                    userId: currentUser.id,
+                    sessionUserId: session.user.id,
+                    authUidTest: authUidTest,
+                  });
+                  throw error;
+                }
+
+                // Send push notifications to all friends via Edge Function
+                // (session already verified above)
+                try {
+                  if (flareData) {
+                    await supabase.functions.invoke('send-flare-notification', {
+                      body: {
+                        user_id: currentUser.id,
+                        flare_id: flareData.id,
+                      },
+                    });
+                  }
+                } catch (notifError) {
+                  console.error('Failed to send flare notifications:', notifError);
+                  // Don't fail the flare if notification fails
+                }
 
                 // Play strong haptic feedback
                 await Haptics.notificationAsync(

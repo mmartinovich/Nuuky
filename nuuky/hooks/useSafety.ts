@@ -7,7 +7,7 @@ import { Block, Anchor } from '../types';
 type Visibility = 'full' | 'limited' | 'minimal' | 'hidden';
 
 export const useSafety = () => {
-  const { currentUser } = useAppStore();
+  const { currentUser, setCurrentUser } = useAppStore();
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [anchors, setAnchors] = useState<Anchor[]>([]);
   const [isInGhostMode, setIsInGhostMode] = useState(false);
@@ -125,6 +125,9 @@ export const useSafety = () => {
 
       if (error) throw error;
 
+      // Sync to Zustand store so other hooks can react
+      setCurrentUser({ ...currentUser, ghost_mode_until: ghostUntil.toISOString() });
+
       setIsInGhostMode(true);
       Alert.alert('Ghost Mode Enabled', `You're invisible for ${durationMinutes} minutes`);
       return true;
@@ -148,6 +151,9 @@ export const useSafety = () => {
         .eq('id', currentUser.id);
 
       if (error) throw error;
+
+      // Sync to Zustand store
+      setCurrentUser({ ...currentUser, ghost_mode_until: undefined });
 
       setIsInGhostMode(false);
       return true;
@@ -177,6 +183,9 @@ export const useSafety = () => {
 
       if (error) throw error;
 
+      // Sync to Zustand store so other hooks can react
+      setCurrentUser({ ...currentUser, take_break_until: breakUntil.toISOString() });
+
       setIsOnBreak(true);
       Alert.alert('Break Mode Enabled', `Taking a break for ${durationHours} hours`);
       return true;
@@ -200,6 +209,9 @@ export const useSafety = () => {
         .eq('id', currentUser.id);
 
       if (error) throw error;
+
+      // Sync to Zustand store
+      setCurrentUser({ ...currentUser, take_break_until: undefined });
 
       setIsOnBreak(false);
       return true;
@@ -250,6 +262,18 @@ export const useSafety = () => {
           });
 
         if (error) throw error;
+      }
+
+      // For hard blocks, also delete the friendship
+      if (blockType === 'hard') {
+        const { error: deleteError } = await supabase
+          .from('friendships')
+          .delete()
+          .or(`and(user_id.eq.${currentUser.id},friend_id.eq.${userId}),and(user_id.eq.${userId},friend_id.eq.${currentUser.id})`);
+
+        if (deleteError) {
+          console.error('Error deleting friendship on hard block:', deleteError);
+        }
       }
 
       await loadBlocks();

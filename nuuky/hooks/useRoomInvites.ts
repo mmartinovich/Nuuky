@@ -77,6 +77,16 @@ export const useRoomInvites = () => {
     try {
       setLoading(true);
 
+      // Verify session exists before attempting insert
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError || !session) {
+        console.error('No active session:', sessionError);
+        Alert.alert('Authentication Error', 'Please log in again to send invites.');
+        setLoading(false);
+        return false;
+      }
+
       // Check if invite already exists
       const { data: existing } = await supabase
         .from('room_invites')
@@ -114,10 +124,32 @@ export const useRoomInvites = () => {
         `)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Room invite insert error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          userId: currentUser.id,
+          sessionUserId: session.user.id,
+        });
+        throw error;
+      }
 
-      // TODO: Send push notification to friendId
-      // This would call a Supabase Edge Function to send the notification
+      // Send push notification via Edge Function
+      // (session already verified above)
+      try {
+        await supabase.functions.invoke('send-room-invite-notification', {
+          body: {
+            room_id: roomId,
+            sender_id: currentUser.id,
+            receiver_ids: [friendId],
+          },
+        });
+      } catch (notifError) {
+        console.error('Failed to send notification:', notifError);
+        // Don't fail the invite if notification fails
+      }
 
       return true;
     } catch (error: any) {
@@ -135,6 +167,16 @@ export const useRoomInvites = () => {
 
     try {
       setLoading(true);
+
+      // Verify session exists before attempting insert
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError || !session) {
+        console.error('No active session:', sessionError);
+        Alert.alert('Authentication Error', 'Please log in again to send invites.');
+        setLoading(false);
+        return false;
+      }
 
       // Filter out friends who already have pending invites
       const { data: existingInvites } = await supabase
@@ -163,9 +205,32 @@ export const useRoomInvites = () => {
         .from('room_invites')
         .insert(invites);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Bulk room invite insert error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          userId: currentUser.id,
+          sessionUserId: session.user.id,
+        });
+        throw error;
+      }
 
-      // TODO: Send push notifications to all friendIds
+      // Send push notifications to all invited friends via Edge Function
+      // (session already verified above)
+      try {
+        await supabase.functions.invoke('send-room-invite-notification', {
+          body: {
+            room_id: roomId,
+            sender_id: currentUser.id,
+            receiver_ids: newFriendIds,
+          },
+        });
+      } catch (notifError) {
+        console.error('Failed to send notifications:', notifError);
+        // Don't fail the invites if notifications fail
+      }
 
       Alert.alert('Success', `Sent ${newFriendIds.length} invite(s)`);
       return true;

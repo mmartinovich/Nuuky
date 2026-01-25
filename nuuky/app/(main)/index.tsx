@@ -54,7 +54,7 @@ import { useRoomInvites } from "../../hooks/useRoomInvites";
 import { useDefaultRoom } from "../../hooks/useDefaultRoom";
 import { useTheme } from "../../hooks/useTheme";
 import { useAudio } from "../../hooks/useAudio";
-import { getMoodColor, getVibeText, spacing, radius, typography, getAllMoodImages } from "../../lib/theme";
+import { getMoodColor, getVibeText, getCustomMoodColor, spacing, radius, typography, getAllMoodImages } from "../../lib/theme";
 import { CentralOrb } from "../../components/CentralOrb";
 import { FriendParticle } from "../../components/FriendParticle";
 import { StarField } from "../../components/StarField";
@@ -73,7 +73,7 @@ export default function QuantumOrbitScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme, isDark } = useTheme();
-  const { currentUser, friends, speakingParticipants } = useAppStore();
+  const { currentUser, friends, speakingParticipants, activeCustomMood } = useAppStore();
   const { currentMood, changeMood } = useMood();
   const { sendNudge } = useNudge();
   const { sendFlare, activeFlares, myActiveFlare } = useFlare();
@@ -810,7 +810,10 @@ export default function QuantumOrbitScreen() {
   // Friends from Zustand store are always rendered immediately when they exist
   // This ensures avatars appear instantly when navigating back from other screens
 
-  const userMoodColors = getMoodColor(currentUser?.mood || "neutral");
+  // Use custom mood color if active, otherwise use preset mood color
+  const userMoodColors = activeCustomMood
+    ? getCustomMoodColor(activeCustomMood.color)
+    : getMoodColor(currentUser?.mood || "neutral");
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.bg.primary }]}>
@@ -836,6 +839,7 @@ export default function QuantumOrbitScreen() {
         }}
         hasActiveFlare={!!myActiveFlare}
         mood={currentUser?.mood}
+        customMood={activeCustomMood}
         showHint={showHint}
       />
 

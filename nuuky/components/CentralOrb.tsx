@@ -1,9 +1,10 @@
 import React, { useEffect, useRef } from "react";
-import { View, StyleSheet, Dimensions, TouchableOpacity, Animated, Easing, Image } from "react-native";
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Animated, Easing, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { getMoodImage } from "../lib/theme";
+import { CustomMood } from "../types";
 
 const { width, height } = Dimensions.get("window");
 const ORB_SIZE = 180;
@@ -16,6 +17,7 @@ interface CentralOrbProps {
   onPress?: () => void;
   hasActiveFlare: boolean;
   mood?: "good" | "neutral" | "not_great" | "reach_out";
+  customMood?: CustomMood | null;
   showHint?: boolean;
 }
 
@@ -25,6 +27,7 @@ export function CentralOrb({
   onPress,
   hasActiveFlare,
   mood = "neutral",
+  customMood,
   showHint = false,
 }: CentralOrbProps) {
   const breatheAnim = useRef(new Animated.Value(0)).current;
@@ -332,8 +335,12 @@ export function CentralOrb({
                 style={styles.highlight}
               />
 
-              {/* Mood creature image in center */}
-              <Image source={moodImage} style={styles.moodImage} />
+              {/* Show emoji for custom mood, creature image for preset mood */}
+              {customMood ? (
+                <Text style={styles.customMoodEmoji}>{customMood.emoji}</Text>
+              ) : (
+                <Image source={moodImage} style={styles.moodImage} />
+              )}
             </LinearGradient>
           </BlurView>
 
@@ -411,6 +418,11 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     resizeMode: 'contain',
+    zIndex: 10,
+  },
+  customMoodEmoji: {
+    fontSize: 80,
+    textAlign: 'center',
     zIndex: 10,
   },
   glassBorder: {
