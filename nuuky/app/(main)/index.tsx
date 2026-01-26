@@ -121,6 +121,11 @@ export default function QuantumOrbitScreen() {
   // Separate animated values: scale uses native driver, glow uses JS driver
   const buttonScaleAnim = useRef(new RNAnimated.Value(1)).current;
   const buttonGlowAnim = useRef(new RNAnimated.Value(1)).current;
+  // Animated rings for speaking visualization
+  const ring1Anim = useRef(new RNAnimated.Value(0)).current;
+  const ring2Anim = useRef(new RNAnimated.Value(0)).current;
+  const ring3Anim = useRef(new RNAnimated.Value(0)).current;
+  const ring4Anim = useRef(new RNAnimated.Value(0)).current;
 
   // Shared orbit angle for roulette rotation - all friends rotate together
   // Using React Native Animated API (works in Expo Go, can upgrade to Reanimated later)
@@ -447,6 +452,54 @@ export default function QuantumOrbitScreen() {
       // Reset to normal state when not speaking or muted
       buttonScaleAnim.setValue(1);
       buttonGlowAnim.setValue(1);
+    }
+  }, [isMuted, isCurrentUserSpeaking]);
+
+  // Animated rings that expand outward when speaking
+  useEffect(() => {
+    if (!isMuted && isCurrentUserSpeaking) {
+      // Create staggered ring animations - each ring expands and fades out
+      const createRingAnimation = (ringAnim: RNAnimated.Value, delay: number) => {
+        return RNAnimated.loop(
+          RNAnimated.sequence([
+            RNAnimated.delay(delay),
+            RNAnimated.timing(ringAnim, {
+              toValue: 1,
+              duration: 1200,
+              easing: Easing.out(Easing.ease),
+              useNativeDriver: false,
+            }),
+            RNAnimated.timing(ringAnim, {
+              toValue: 0,
+              duration: 0,
+              useNativeDriver: false,
+            }),
+          ])
+        );
+      };
+
+      const ring1Animation = createRingAnimation(ring1Anim, 0);
+      const ring2Animation = createRingAnimation(ring2Anim, 300);
+      const ring3Animation = createRingAnimation(ring3Anim, 600);
+      const ring4Animation = createRingAnimation(ring4Anim, 900);
+
+      ring1Animation.start();
+      ring2Animation.start();
+      ring3Animation.start();
+      ring4Animation.start();
+
+      return () => {
+        ring1Animation.stop();
+        ring2Animation.stop();
+        ring3Animation.stop();
+        ring4Animation.stop();
+      };
+    } else {
+      // Reset rings when not speaking
+      ring1Anim.setValue(0);
+      ring2Anim.setValue(0);
+      ring3Anim.setValue(0);
+      ring4Anim.setValue(0);
     }
   }, [isMuted, isCurrentUserSpeaking]);
 
@@ -821,21 +874,50 @@ export default function QuantumOrbitScreen() {
       <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 8) }]} pointerEvents="box-none">
         {/* Floating center button */}
         <View style={styles.floatingButtonWrapper} pointerEvents="box-none">
+          {/* Animated rings - only visible when speaking */}
+          {!isMuted && [ring1Anim, ring2Anim, ring3Anim, ring4Anim].map((ringAnim, index) => (
+            <RNAnimated.View
+              key={`ring-${index}`}
+              pointerEvents="none"
+              style={[
+                styles.speakingRing,
+                {
+                  transform: [
+                    {
+                      scale: ringAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1, 2.2 + index * 0.15],
+                      }),
+                    },
+                  ],
+                  opacity: ringAnim.interpolate({
+                    inputRange: [0, 0.3, 1],
+                    outputRange: [0.6, 0.4, 0],
+                  }),
+                },
+              ]}
+            />
+          ))}
           <RNAnimated.View
             style={[
               styles.floatingButton,
               {
                 transform: [{ scale: buttonScaleAnim }],
-                backgroundColor: "#A855F7",
+                backgroundColor: isMuted ? "transparent" : "#A855F7",
+                borderColor: "#A855F7",
                 shadowColor: "#A855F7",
-                shadowOpacity: buttonGlowAnim.interpolate({
-                  inputRange: [1, 1.6],
-                  outputRange: [0.4, 0.6],
-                }),
-                shadowRadius: buttonGlowAnim.interpolate({
-                  inputRange: [1, 1.6],
-                  outputRange: [12, 20],
-                }),
+                shadowOpacity: isMuted
+                  ? 0.2
+                  : buttonGlowAnim.interpolate({
+                      inputRange: [1, 1.6],
+                      outputRange: [0.6, 0.9],
+                    }),
+                shadowRadius: isMuted
+                  ? 8
+                  : buttonGlowAnim.interpolate({
+                      inputRange: [1, 1.6],
+                      outputRange: [15, 30],
+                    }),
               },
               isAudioConnecting && { opacity: 0.7 },
             ]}
@@ -860,9 +942,9 @@ export default function QuantumOrbitScreen() {
               disabled={isAudioConnecting}
             >
               {isAudioConnecting ? (
-                <Ionicons name="hourglass" size={28} color="#FFFFFF" />
+                <Ionicons name="hourglass" size={28} color={isMuted ? "#A855F7" : "#FFFFFF"} />
               ) : (
-                <Ionicons name={isMuted ? "mic-off" : "mic"} size={28} color="#FFFFFF" />
+                <Ionicons name={isMuted ? "mic-off" : "mic"} size={28} color={isMuted ? "#A855F7" : "#FFFFFF"} />
               )}
             </TouchableOpacity>
           </RNAnimated.View>
@@ -1184,8 +1266,16 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     shadowOffset: { width: 0, height: 6 },
     elevation: 10,
-    borderWidth: 4,
-    borderColor: "#0d0d1a",
+    borderWidth: 2,
+    borderColor: "#A855F7",
+  },
+  speakingRing: {
+    position: "absolute",
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 1.5,
+    borderColor: "#A855F7",
   },
   floatingButtonInner: {
     width: "100%",
