@@ -5,6 +5,15 @@
 // ============================================
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type ResolvedTheme = 'light' | 'dark';
+export type PresetMood = 'good' | 'neutral' | 'not_great' | 'reach_out';
+
+// Accent colors derived from mood
+export interface AccentColors {
+  primary: string;
+  soft: string;
+  glow: string;
+  gradient: readonly [string, string];
+}
 
 // ============================================
 // Shared Colors (same in both themes)
@@ -13,28 +22,28 @@ const sharedColors = {
   // Mood colors - Vibrant and energetic (work in both themes)
   mood: {
     good: {
-      base: '#22C55E', // Vibrant green
-      glow: 'rgba(34, 197, 94, 0.4)',
-      soft: 'rgba(34, 197, 94, 0.15)',
-      gradient: ['#22C55E', '#16A34A'] as const,
+      base: '#32D583', // Green
+      glow: 'rgba(50, 213, 131, 0.4)',
+      soft: 'rgba(50, 213, 131, 0.15)',
+      gradient: ['#32D583', '#28B870'] as const,
     },
     neutral: {
-      base: '#3B82F6', // Bright blue
-      glow: 'rgba(59, 130, 246, 0.4)',
-      soft: 'rgba(59, 130, 246, 0.15)',
-      gradient: ['#3B82F6', '#2563EB'] as const,
+      base: '#3FCBFF', // Cyan
+      glow: 'rgba(63, 203, 255, 0.4)',
+      soft: 'rgba(63, 203, 255, 0.15)',
+      gradient: ['#3FCBFF', '#2BB8EC'] as const,
     },
     notGreat: {
-      base: '#A855F7', // Vibrant purple
-      glow: 'rgba(168, 85, 247, 0.4)',
-      soft: 'rgba(168, 85, 247, 0.15)',
-      gradient: ['#A855F7', '#9333EA'] as const,
+      base: '#B06CF3', // Purple
+      glow: 'rgba(176, 108, 243, 0.4)',
+      soft: 'rgba(176, 108, 243, 0.15)',
+      gradient: ['#B06CF3', '#9A4FE0'] as const,
     },
     reachOut: {
-      base: '#EC4899', // Bright pink
-      glow: 'rgba(236, 72, 153, 0.45)',
-      soft: 'rgba(236, 72, 153, 0.18)',
-      gradient: ['#EC4899', '#DB2777'] as const,
+      base: '#FF4D6D', // Red
+      glow: 'rgba(255, 77, 109, 0.45)',
+      soft: 'rgba(255, 77, 109, 0.18)',
+      gradient: ['#FF4D6D', '#E6365A'] as const,
     },
   },
   // Neon accent colors (same in both themes)
@@ -81,11 +90,11 @@ const darkColors = {
     overlay: 'rgba(10, 10, 31, 0.85)',
     neonBorder: 'rgba(255, 26, 255, 0.5)',
   },
-  // Accent colors (new - for consistent interactive elements)
+  // Accent colors (default - used when no mood-based accent is available)
   accent: {
-    primary: '#A855F7', // Purple from mood.notGreat
-    soft: 'rgba(168, 85, 247, 0.15)', // Background for selected states
-    muted: 'rgba(168, 85, 247, 0.5)', // Borders for inactive states
+    primary: '#3FCBFF', // Default to neutral (cyan)
+    soft: 'rgba(63, 203, 255, 0.15)', // Background for selected states
+    muted: 'rgba(63, 203, 255, 0.5)', // Borders for inactive states
   },
   // BlurView tint
   blurTint: 'dark' as const,
@@ -125,11 +134,11 @@ const lightColors = {
     overlay: 'rgba(248, 246, 255, 0.95)',
     neonBorder: 'rgba(192, 38, 211, 0.4)',
   },
-  // Accent colors (matching dark theme)
+  // Accent colors (default - used when no mood-based accent is available)
   accent: {
-    primary: '#A855F7',
-    soft: 'rgba(168, 85, 247, 0.15)',
-    muted: 'rgba(168, 85, 247, 0.5)',
+    primary: '#3FCBFF', // Default to neutral (cyan)
+    soft: 'rgba(63, 203, 255, 0.15)',
+    muted: 'rgba(63, 203, 255, 0.5)',
   },
   // BlurView tint
   blurTint: 'light' as const,
@@ -323,8 +332,8 @@ export const elevation = {
 export const interactionStates = {
   pressed: 0.7, // activeOpacity for TouchableOpacity
   disabled: 0.4, // opacity for disabled elements
-  active: '#A855F7', // accent.primary for selected items
-  activeBackground: 'rgba(168, 85, 247, 0.15)', // accent.soft for selected backgrounds
+  active: '#3FCBFF', // accent.primary for selected items (default cyan)
+  activeBackground: 'rgba(63, 203, 255, 0.15)', // accent.soft for selected backgrounds
 };
 
 // Helper function to get mood color
@@ -341,6 +350,17 @@ export const getMoodColor = (mood: 'good' | 'neutral' | 'not_great' | 'reach_out
     default:
       return colors.mood.neutral;
   }
+};
+
+// Helper function to get accent colors from mood (for dynamic theming)
+export const getAccentFromMood = (mood?: PresetMood): AccentColors => {
+  const moodColors = getMoodColor(mood || 'neutral');
+  return {
+    primary: moodColors.base,
+    soft: moodColors.soft,
+    glow: moodColors.glow,
+    gradient: moodColors.gradient,
+  };
 };
 
 // Helper to get mood image - uses inline requires for New Architecture compatibility

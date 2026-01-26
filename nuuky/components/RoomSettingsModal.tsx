@@ -17,9 +17,6 @@ import { colors, getMoodColor, interactionStates } from '../lib/theme';
 import { useTheme } from '../hooks/useTheme';
 import { RoomParticipant } from '../types';
 
-// Friends page style constants
-const PURPLE_ACCENT = '#A855F7';
-
 interface RoomSettingsModalProps {
   visible: boolean;
   roomName: string;
@@ -51,7 +48,7 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
   onInviteFriends,
   onRemoveParticipant,
 }) => {
-  const { theme } = useTheme();
+  const { theme, accent } = useTheme();
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(roomName);
   const [loading, setLoading] = useState(false);
@@ -162,7 +159,7 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                 onPress={handleClose}
                 activeOpacity={interactionStates.pressed}
               >
-                <Ionicons name="close" size={24} color={PURPLE_ACCENT} />
+                <Ionicons name="close" size={24} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
 
@@ -197,7 +194,7 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                       <Text style={styles.cancelButtonText}>Cancel</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={styles.saveButton}
+                      style={[styles.saveButton, { backgroundColor: accent.primary }]}
                       onPress={handleRename}
                       disabled={loading}
                       activeOpacity={0.7}
@@ -215,9 +212,7 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                   disabled={!isCreator}
                   activeOpacity={0.7}
                 >
-                  <View style={styles.actionIconContainer}>
-                    <Ionicons name="chatbubble-outline" size={20} color={PURPLE_ACCENT} />
-                  </View>
+                  <Ionicons name="chatbubble-outline" size={22} color="#FFFFFF" />
                   <View style={styles.actionTextContainer}>
                     <Text style={styles.actionTitle}>{roomName}</Text>
                     {isCreator && (
@@ -271,11 +266,12 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                                 styles.memberAvatar,
                                 styles.memberAvatarPlaceholder,
                                 {
+                                  backgroundColor: accent.soft,
                                   borderColor: user.is_online ? moodColors.base : "rgba(255,255,255,0.1)",
                                 },
                               ]}
                             >
-                              <Ionicons name="person" size={20} color={PURPLE_ACCENT} />
+                              <Ionicons name="person" size={20} color={accent.primary} />
                             </View>
                           )}
                           {user.is_online && <View style={styles.onlineIndicator} />}
@@ -288,8 +284,8 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                               {user.display_name}{isCurrentUser ? ' (You)' : ''}
                             </Text>
                             {isRoomCreator && (
-                              <View style={styles.ownerBadge}>
-                                <Ionicons name="star" size={10} color={PURPLE_ACCENT} />
+                              <View style={[styles.ownerBadge, { backgroundColor: accent.soft }]}>
+                                <Ionicons name="star" size={10} color={accent.primary} />
                               </View>
                             )}
                           </View>
@@ -330,8 +326,8 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                   onPress={onInviteFriends}
                   activeOpacity={0.7}
                 >
-                  <View style={styles.actionIconContainer}>
-                    <Ionicons name="person-add-outline" size={20} color={PURPLE_ACCENT} />
+                  <View style={[styles.actionIconContainer, { backgroundColor: accent.soft }]}>
+                    <Ionicons name="person-add-outline" size={20} color={accent.primary} />
                   </View>
                   <View style={styles.actionTextContainer}>
                     <Text style={styles.actionTitle}>Invite Friends</Text>
@@ -435,7 +431,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(168, 85, 247, 0.1)',
   },
   content: {
     flex: 1,
@@ -463,7 +458,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   badge: {
-    backgroundColor: 'rgba(168, 85, 247, 0.15)',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
@@ -472,7 +466,6 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: PURPLE_ACCENT,
   },
   // Action cards - Friends page style
   actionCard: {
@@ -489,7 +482,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(168, 85, 247, 0.12)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -565,7 +557,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: PURPLE_ACCENT,
     borderRadius: 16,
     alignItems: 'center',
   },
@@ -608,7 +599,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   memberAvatarPlaceholder: {
-    backgroundColor: 'rgba(168, 85, 247, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -641,7 +631,6 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: 'rgba(168, 85, 247, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
   },

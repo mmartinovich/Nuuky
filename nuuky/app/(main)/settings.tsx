@@ -19,21 +19,9 @@ import { useTheme } from "../../hooks/useTheme";
 import { usePreferences } from "../../hooks/usePreferences";
 import { spacing, interactionStates } from "../../lib/theme";
 
-// Minimal monochrome icon styling (Loóna-inspired)
-const ICON_BACKGROUNDS = {
-  profile: "rgba(168, 85, 247, 0.15)", // Subtle purple
-  safety: "rgba(168, 85, 247, 0.15)",
-  nudges: "rgba(168, 85, 247, 0.15)",
-  flares: "rgba(168, 85, 247, 0.15)",
-  version: "rgba(255, 255, 255, 0.08)",
-  privacy: "rgba(255, 255, 255, 0.08)",
-  terms: "rgba(255, 255, 255, 0.08)",
-  logout: "rgba(239, 68, 68, 0.15)", // Subtle red for destructive
-};
 
 interface SettingsRowProps {
   icon: string;
-  iconBg: string;
   label: string;
   value?: string;
   showChevron?: boolean;
@@ -47,7 +35,6 @@ interface SettingsRowProps {
 
 const SettingsRow: React.FC<SettingsRowProps> = ({
   icon,
-  iconBg,
   label,
   value,
   showChevron = true,
@@ -63,7 +50,7 @@ const SettingsRow: React.FC<SettingsRowProps> = ({
       style={[
         styles.rowContainer,
         {
-          backgroundColor: 'rgba(255, 255, 255, 0.05)', // Subtle surface
+          backgroundColor: 'rgba(255, 255, 255, 0.05)',
           borderTopLeftRadius: isFirst ? 16 : 0,
           borderTopRightRadius: isFirst ? 16 : 0,
           borderBottomLeftRadius: isLast ? 16 : 0,
@@ -72,13 +59,12 @@ const SettingsRow: React.FC<SettingsRowProps> = ({
       ]}
     >
       <View style={styles.rowContent}>
-        <View style={[styles.iconWrapper, { backgroundColor: iconBg }]}>
-          <Ionicons 
-            name={icon as any} 
-            size={20} 
-            color={isDestructive ? "#EF4444" : theme.colors.accent?.primary || "#A855F7"} 
-          />
-        </View>
+        <Ionicons
+          name={icon as any}
+          size={22}
+          color={isDestructive ? "#EF4444" : "#FFFFFF"}
+          style={styles.rowIcon}
+        />
         <Text
           style={[
             styles.rowLabel,
@@ -230,7 +216,6 @@ export default function SettingsScreen() {
         <SettingsSection theme={theme}>
           <SettingsRow
             icon="person-circle"
-            iconBg={ICON_BACKGROUNDS.profile}
             label="Profile"
             onPress={() => router.push("/(main)/profile")}
             isFirst
@@ -243,7 +228,6 @@ export default function SettingsScreen() {
         <SettingsSection title="PRIVACY & SAFETY" theme={theme}>
           <SettingsRow
             icon="shield-checkmark"
-            iconBg={ICON_BACKGROUNDS.safety}
             label="Safety & Privacy"
             onPress={() => router.push("/(main)/safety")}
             isFirst
@@ -260,7 +244,6 @@ export default function SettingsScreen() {
         >
           <SettingsRow
             icon="hand-left"
-            iconBg={ICON_BACKGROUNDS.nudges}
             label="Nudges"
             showChevron={false}
             isFirst
@@ -282,7 +265,6 @@ export default function SettingsScreen() {
           </SettingsRow>
           <SettingsRow
             icon="flame"
-            iconBg={ICON_BACKGROUNDS.flares}
             label="Flares"
             showChevron={false}
             isLast
@@ -308,7 +290,6 @@ export default function SettingsScreen() {
         <SettingsSection title="ABOUT" theme={theme}>
           <SettingsRow
             icon="information-circle"
-            iconBg={ICON_BACKGROUNDS.version}
             label="Version"
             value="1.0.0"
             showChevron={false}
@@ -317,14 +298,12 @@ export default function SettingsScreen() {
           />
           <SettingsRow
             icon="document-text"
-            iconBg={ICON_BACKGROUNDS.privacy}
             label="Privacy Policy"
             onPress={() => {}}
             theme={theme}
           />
           <SettingsRow
             icon="reader"
-            iconBg={ICON_BACKGROUNDS.terms}
             label="Terms of Service"
             onPress={() => {}}
             isLast
@@ -336,7 +315,6 @@ export default function SettingsScreen() {
         <SettingsSection theme={theme}>
           <SettingsRow
             icon="log-out"
-            iconBg={ICON_BACKGROUNDS.logout}
             label="Sign Out"
             isDestructive
             showChevron={false}
@@ -427,12 +405,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14, // Updated: 11 → 14 for proper proportions with 56px height
     minHeight: 56, // Updated: 44 → 56
   },
-  iconWrapper: {
-    width: 32, // Updated: 29 → 32 for better proportions
-    height: 32,
-    borderRadius: 8, // Updated: 6 → 8 for more modern look
-    justifyContent: "center",
-    alignItems: "center",
+  rowIcon: {
     marginRight: 12,
   },
   rowLabel: {
@@ -454,7 +427,7 @@ const styles = StyleSheet.create({
     marginLeft: spacing.xs,
   },
   separatorContainer: {
-    paddingLeft: 57, // icon width (29) + margin (12) + padding (16)
+    paddingLeft: 50, // icon (22) + margin (12) + padding (16)
   },
   separator: {
     height: StyleSheet.hairlineWidth,

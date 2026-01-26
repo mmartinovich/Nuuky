@@ -6,9 +6,6 @@ import { PresetMood } from '../types';
 import { colors, getMoodImage, getMoodColor } from '../lib/theme';
 import { useTheme } from '../hooks/useTheme';
 
-// Purple accent to match Friends page
-const PURPLE_ACCENT = '#A855F7';
-
 // Moved outside component to prevent recreation on each render
 const MOODS: ReadonlyArray<{ mood: PresetMood; label: string; description: string }> = [
   {
@@ -46,7 +43,7 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
   onSelectMood,
   onClose,
 }) => {
-  const { theme } = useTheme();
+  const { theme, accent } = useTheme();
 
   const handleSelectMood = useCallback((mood: PresetMood) => {
     onSelectMood(mood);
@@ -83,11 +80,11 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                   <View style={styles.headerLeft} />
                   <Text style={styles.headerTitle}>How are you?</Text>
                   <TouchableOpacity
-                    style={styles.closeButton}
+                    style={[styles.closeButton, { backgroundColor: accent.soft }]}
                     onPress={onClose}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="close" size={24} color={PURPLE_ACCENT} />
+                    <Ionicons name="close" size={24} color={accent.primary} />
                   </TouchableOpacity>
                 </View>
 
@@ -199,7 +196,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(168, 85, 247, 0.1)',
   },
   subtitle: {
     fontSize: 14,

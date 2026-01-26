@@ -87,7 +87,7 @@ const FriendCard = memo(({ friendship, onLongPress, textPrimaryColor }: FriendCa
 export default function FriendsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { theme, isDark } = useTheme();
+  const { theme, isDark, accent } = useTheme();
 
   const {
     friends,
@@ -187,14 +187,14 @@ export default function FriendsScreen() {
           <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>Friends</Text>
 
           <TouchableOpacity
-            style={styles.refreshButton}
+            style={[styles.refreshButton, { backgroundColor: accent.soft }]}
             onPress={async () => {
               setFriends([]);
               await refreshFriends();
             }}
             activeOpacity={interactionStates.pressed}
           >
-            <Ionicons name="refresh" size={24} color="#A855F7" />
+            <Ionicons name="refresh" size={24} color={accent.primary} />
           </TouchableOpacity>
         </View>
 
@@ -228,8 +228,8 @@ export default function FriendsScreen() {
                 {/* Hero Section */}
                 {isMounted && hasLoadedOnce && !hasSynced && friends.length === 0 && !hasEverHadFriends.current && (
                   <View style={styles.heroSection}>
-                    <View style={styles.heroIconContainer}>
-                      <Ionicons name="people" size={32} color="#A855F7" />
+                    <View style={[styles.heroIconContainer, { backgroundColor: accent.soft }]}>
+                      <Ionicons name="people" size={32} color={accent.primary} />
                     </View>
                     <Text style={[styles.heroTitle, { color: theme.colors.text.primary }]}>Connect with Friends</Text>
                     <Text style={styles.heroSubtitle}>
@@ -247,11 +247,11 @@ export default function FriendsScreen() {
                     disabled={syncLoading}
                     style={[styles.actionCard, syncLoading && styles.buttonDisabled]}
                   >
-                    <View style={styles.actionIconContainer}>
+                    <View style={[styles.actionIconContainer, { backgroundColor: accent.soft }]}>
                       {syncLoading ? (
-                        <ActivityIndicator size="small" color="#A855F7" />
+                        <ActivityIndicator size="small" color={accent.primary} />
                       ) : (
-                        <Ionicons name="search" size={20} color="#A855F7" />
+                        <Ionicons name="search" size={20} color={accent.primary} />
                       )}
                     </View>
                     <View style={styles.actionTextContainer}>
@@ -270,8 +270,8 @@ export default function FriendsScreen() {
                     disabled={sending}
                     style={[styles.actionCard, sending && styles.buttonDisabled]}
                   >
-                    <View style={styles.actionIconContainer}>
-                      <Ionicons name="share-social-outline" size={20} color="#A855F7" />
+                    <View style={[styles.actionIconContainer, { backgroundColor: accent.soft }]}>
+                      <Ionicons name="share-social-outline" size={20} color={accent.primary} />
                     </View>
                     <View style={styles.actionTextContainer}>
                       <Text style={[styles.actionTitle, { color: theme.colors.text.primary }]}>
@@ -299,8 +299,8 @@ export default function FriendsScreen() {
                         <View style={styles.sectionHeader}>
                           <View style={styles.sectionTitleRow}>
                             <Text style={styles.sectionTitleText}>PEOPLE ON NŪŪKY</Text>
-                            <View style={styles.badge}>
-                              <Text style={styles.badgeText}>{notYetAddedContacts.length}</Text>
+                            <View style={[styles.badge, { backgroundColor: accent.soft }]}>
+                              <Text style={[styles.badgeText, { color: accent.primary }]}>{notYetAddedContacts.length}</Text>
                             </View>
                           </View>
                         </View>
@@ -310,8 +310,8 @@ export default function FriendsScreen() {
                             return (
                               <View key={contact.id} style={styles.contactCard}>
                                 <View style={styles.contactInfo}>
-                                  <View style={styles.contactAvatar}>
-                                    <Ionicons name="person" size={20} color="#A855F7" />
+                                  <View style={[styles.contactAvatar, { backgroundColor: accent.soft }]}>
+                                    <Ionicons name="person" size={20} color={accent.primary} />
                                   </View>
                                   <View style={styles.contactText}>
                                     <Text style={[styles.contactName, { color: theme.colors.text.primary }]}>
@@ -326,7 +326,7 @@ export default function FriendsScreen() {
                                 <TouchableOpacity
                                   onPress={() => handleAddFromContacts(contact)}
                                   disabled={loading}
-                                  style={styles.addContactButton}
+                                  style={[styles.addContactButton, { backgroundColor: accent.primary }]}
                                   activeOpacity={0.7}
                                 >
                                   <Text style={styles.addButtonText}>Add</Text>
@@ -351,8 +351,8 @@ export default function FriendsScreen() {
           ListEmptyComponent={
             !initialLoading ? (
               <View style={styles.emptyState}>
-                <View style={styles.emptyIconContainer}>
-                  <Ionicons name="person-add-outline" size={36} color="#A855F7" />
+                <View style={[styles.emptyIconContainer, { backgroundColor: accent.soft }]}>
+                  <Ionicons name="person-add-outline" size={36} color={accent.primary} />
                 </View>
                 <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>No Friends Yet</Text>
                 <Text style={styles.emptyMessage}>
@@ -403,7 +403,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(168, 85, 247, 0.1)",
   },
   scrollView: {
     flex: 1,
@@ -426,7 +425,6 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: "rgba(168, 85, 247, 0.1)",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
@@ -462,7 +460,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(168, 85, 247, 0.12)",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -500,7 +497,6 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.5)",
   },
   badge: {
-    backgroundColor: "rgba(168, 85, 247, 0.15)",
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
@@ -508,7 +504,6 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#A855F7",
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -539,7 +534,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(168, 85, 247, 0.15)",
   },
   contactText: {
     flex: 1,
@@ -557,7 +551,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 16,
-    backgroundColor: "#A855F7",
   },
   addButtonText: {
     fontSize: 14,
@@ -636,7 +629,6 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: "rgba(168, 85, 247, 0.08)",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
