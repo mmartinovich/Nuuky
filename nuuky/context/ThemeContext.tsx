@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { useColorScheme } from 'react-native';
 import { useAppStore } from '../stores/appStore';
-import { getTheme, ThemeMode, ResolvedTheme } from '../lib/theme';
+import { getTheme, ThemeMode, ResolvedTheme, AccentColors, getAccentFromMood } from '../lib/theme';
 
 interface ThemeContextType {
   theme: ReturnType<typeof getTheme>;
@@ -9,6 +9,7 @@ interface ThemeContextType {
   resolvedTheme: ResolvedTheme;
   setThemeMode: (mode: ThemeMode) => void;
   isDark: boolean;
+  accent: AccentColors;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -17,6 +18,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemColorScheme = useColorScheme();
   const themeMode = useAppStore((state) => state.themeMode);
   const setThemeMode = useAppStore((state) => state.setThemeMode);
+  const currentUser = useAppStore((state) => state.currentUser);
 
   const resolvedTheme: ResolvedTheme = useMemo(() => {
     if (themeMode === 'system') {
@@ -29,6 +31,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const isDark = resolvedTheme === 'dark';
 
+  // Compute accent colors based on user's current mood
+  const accent = useMemo(() => {
+    return getAccentFromMood(currentUser?.mood);
+  }, [currentUser?.mood]);
+
   const value = useMemo(
     () => ({
       theme,
@@ -36,8 +43,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       resolvedTheme,
       setThemeMode,
       isDark,
+      accent,
     }),
-    [theme, themeMode, resolvedTheme, setThemeMode, isDark]
+    [theme, themeMode, resolvedTheme, setThemeMode, isDark, accent]
   );
 
   return (

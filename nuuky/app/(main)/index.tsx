@@ -87,7 +87,7 @@ const CENTER_Y = height / 2;
 export default function QuantumOrbitScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { theme, isDark } = useTheme();
+  const { theme, isDark, accent } = useTheme();
   const { currentUser, friends, speakingParticipants, activeCustomMood } = useAppStore();
   const { currentMood, changeMood } = useMood();
   const { sendNudge } = useNudge();
@@ -830,11 +830,11 @@ export default function QuantumOrbitScreen() {
 
         {/* Notification Bell Icon */}
         <TouchableOpacity
-          style={[styles.notificationBell, { backgroundColor: "rgba(168, 85, 247, 0.1)" }]}
+          style={[styles.notificationBell, { backgroundColor: accent.soft }]}
           onPress={() => router.push("/(main)/notifications")}
           activeOpacity={0.7}
         >
-          <Ionicons name="notifications-outline" size={22} color="#A855F7" />
+          <Ionicons name="notifications-outline" size={22} color={accent.primary} />
           {notificationCount > 0 && (
             <View style={[styles.notificationBadge, { backgroundColor: theme.colors.neon.pink, borderColor: theme.colors.bg.primary }]}>
               <Text style={styles.notificationBadgeText}>
@@ -885,6 +885,7 @@ export default function QuantumOrbitScreen() {
               style={[
                 styles.speakingRing,
                 {
+                  borderColor: accent.primary,
                   transform: [
                     {
                       scale: ringAnim.interpolate({
@@ -906,9 +907,9 @@ export default function QuantumOrbitScreen() {
               styles.floatingButton,
               {
                 transform: [{ scale: buttonScaleAnim }],
-                backgroundColor: isMuted ? "transparent" : "#A855F7",
-                borderColor: "#A855F7",
-                shadowColor: "#A855F7",
+                backgroundColor: isMuted ? "transparent" : accent.primary,
+                borderColor: accent.primary,
+                shadowColor: accent.primary,
                 shadowOpacity: isMuted
                   ? 0.2
                   : buttonGlowAnim.interpolate({
@@ -945,9 +946,9 @@ export default function QuantumOrbitScreen() {
               disabled={isAudioConnecting}
             >
               {isAudioConnecting ? (
-                <Ionicons name="hourglass" size={28} color={isMuted ? "#A855F7" : "#FFFFFF"} />
+                <Ionicons name="hourglass" size={28} color={isMuted ? accent.primary : "#FFFFFF"} />
               ) : (
-                <Ionicons name={isMuted ? "mic-off" : "mic"} size={28} color={isMuted ? "#A855F7" : "#FFFFFF"} />
+                <Ionicons name={isMuted ? "mic-off" : "mic"} size={28} color={isMuted ? accent.primary : "#FFFFFF"} />
               )}
             </TouchableOpacity>
           </RNAnimated.View>
@@ -1270,7 +1271,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 10,
     borderWidth: 2,
-    borderColor: "#A855F7",
   },
   speakingRing: {
     position: "absolute",
@@ -1278,7 +1278,6 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: 32,
     borderWidth: 1.5,
-    borderColor: "#A855F7",
   },
   floatingButtonInner: {
     width: "100%",

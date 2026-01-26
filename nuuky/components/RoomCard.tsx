@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Room, User } from '../types';
 import { colors, gradients, spacing, radius, typography, getMoodColor, interactionStates } from '../lib/theme';
+import { useTheme } from '../hooks/useTheme';
 
 interface RoomCardProps {
   room: Room;
@@ -13,6 +14,7 @@ interface RoomCardProps {
 }
 
 const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, isCreator = false, isDefault = false }) => {
+  const { accent } = useTheme();
   const participants = room.participants || [];
   const participantCount = participants.length;
   const maxMembers = 10;
@@ -22,21 +24,18 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, isCreator =
   const displayedParticipants = participants.slice(0, 5);
   const remainingCount = Math.max(0, participantCount - 5);
 
-  // Accent color for selected state
-  const accentColor = '#A855F7';
-
   return (
-    <TouchableOpacity 
-      activeOpacity={interactionStates?.pressed || 0.7} 
+    <TouchableOpacity
+      activeOpacity={interactionStates?.pressed || 0.7}
       onPress={onPress}
       style={[
         styles.card,
-        isDefault && styles.cardSelected,
+        isDefault && [styles.cardSelected, { backgroundColor: accent.soft, borderColor: accent.primary + '40' }],
       ]}
     >
       {/* Selected indicator - left border accent */}
       {isDefault && (
-        <View style={styles.selectedIndicator} />
+        <View style={[styles.selectedIndicator, { backgroundColor: accent.primary }]} />
       )}
       
       <View style={styles.content}>
@@ -55,8 +54,8 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, isCreator =
           {/* Right side: member count + selected badge */}
           <View style={styles.headerRight}>
             {isDefault && (
-              <View style={styles.activeBadge}>
-                <Text style={styles.activeBadgeText}>Active</Text>
+              <View style={[styles.activeBadge, { backgroundColor: accent.soft }]}>
+                <Text style={[styles.activeBadgeText, { color: accent.primary }]}>Active</Text>
               </View>
             )}
             <Text style={styles.memberCount}>
@@ -91,7 +90,7 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, isCreator =
                     ]}
                   />
                 ) : (
-                  <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                  <View style={[styles.avatar, styles.avatarPlaceholder, { backgroundColor: accent.soft, borderColor: accent.primary + '4D' }]}>
                     <Text style={styles.avatarText}>
                       {user.display_name.charAt(0).toUpperCase()}
                     </Text>
@@ -144,9 +143,7 @@ const styles = StyleSheet.create({
     }),
   },
   cardSelected: {
-    backgroundColor: 'rgba(168, 85, 247, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(168, 85, 247, 0.25)',
   },
   selectedIndicator: {
     position: 'absolute',
@@ -154,7 +151,6 @@ const styles = StyleSheet.create({
     top: 8,
     bottom: 8,
     width: 3,
-    backgroundColor: '#A855F7',
     borderRadius: 2,
   },
   content: {
@@ -192,7 +188,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   activeBadge: {
-    backgroundColor: 'rgba(168, 85, 247, 0.15)',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -200,7 +195,6 @@ const styles = StyleSheet.create({
   activeBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#A855F7',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -228,8 +222,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
   avatarPlaceholder: {
-    backgroundColor: 'rgba(168, 85, 247, 0.2)',
-    borderColor: 'rgba(168, 85, 247, 0.3)',
+    // Colors set dynamically via inline styles
   },
   avatarText: {
     fontSize: 14,

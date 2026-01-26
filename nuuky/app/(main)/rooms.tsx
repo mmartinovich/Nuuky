@@ -30,7 +30,7 @@ const { width } = Dimensions.get("window");
 export default function RoomsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { theme, isDark } = useTheme();
+  const { theme, isDark, accent } = useTheme();
   const { currentUser, myRooms } = useAppStore();
   const { loadMyRooms, canCreateRoom, createRoom } = useRoom();
   const { roomInvites, loading: invitesLoading, loadMyInvites, acceptInvite, declineInvite } = useRoomInvites();
@@ -124,12 +124,12 @@ export default function RoomsScreen() {
 
           <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>Rooms</Text>
 
-          <TouchableOpacity 
-            style={styles.createButton} 
-            onPress={handleCreateRoom} 
+          <TouchableOpacity
+            style={[styles.createButton, { backgroundColor: accent.soft }]}
+            onPress={handleCreateRoom}
             activeOpacity={interactionStates?.pressed || 0.7}
           >
-            <Ionicons name="add" size={28} color="#A855F7" />
+            <Ionicons name="add" size={28} color={accent.primary} />
           </TouchableOpacity>
         </View>
 
@@ -152,8 +152,8 @@ export default function RoomsScreen() {
               >
                 <View style={styles.sectionTitleRow}>
                   <Text style={[styles.sectionTitle, { color: 'rgba(255,255,255,0.5)' }]}>INVITES</Text>
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{roomInvites.length}</Text>
+                  <View style={[styles.badge, { backgroundColor: accent.soft }]}>
+                    <Text style={[styles.badgeText, { color: accent.primary }]}>{roomInvites.length}</Text>
                   </View>
                 </View>
                 <Ionicons name={showInvites ? "chevron-up" : "chevron-down"} size={20} color="rgba(255,255,255,0.4)" />
@@ -194,17 +194,17 @@ export default function RoomsScreen() {
               </View>
             ) : (
               <View style={styles.emptyState}>
-                <View style={styles.emptyIconContainer}>
-                  <Ionicons name="home-outline" size={36} color="#A855F7" />
+                <View style={[styles.emptyIconContainer, { backgroundColor: accent.soft }]}>
+                  <Ionicons name="home-outline" size={36} color={accent.primary} />
                 </View>
                 <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>No Rooms Yet</Text>
                 <Text style={styles.emptyMessage}>Create your first room to hang with friends</Text>
-                <TouchableOpacity 
-                  style={styles.emptyButton} 
-                  onPress={handleCreateRoom} 
+                <TouchableOpacity
+                  style={styles.emptyButton}
+                  onPress={handleCreateRoom}
                   activeOpacity={interactionStates?.pressed || 0.7}
                 >
-                  <View style={styles.emptyButtonGradient}>
+                  <View style={[styles.emptyButtonGradient, { backgroundColor: accent.primary }]}>
                     <Ionicons name="add" size={20} color="#FFFFFF" />
                     <Text style={styles.emptyButtonText}>Create Room</Text>
                   </View>
@@ -257,7 +257,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(168, 85, 247, 0.1)",
   },
   scrollView: {
     flex: 1,
@@ -286,7 +285,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   badge: {
-    backgroundColor: "rgba(168, 85, 247, 0.15)",
     borderWidth: 0,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -295,7 +293,6 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#A855F7",
   },
   invitesList: {
     gap: spacing.sm + 4,
@@ -313,7 +310,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "rgba(168, 85, 247, 0.08)",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: spacing.lg,
@@ -339,7 +335,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingVertical: 14,
     paddingHorizontal: spacing.xl,
-    backgroundColor: "#A855F7",
   },
   emptyButtonText: {
     fontSize: 16,
