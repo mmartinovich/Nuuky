@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
+import { View, StyleSheet, Alert, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useRoom } from '../../../hooks/useRoom';
 import { useAudio } from '../../../hooks/useAudio';
 import { useTheme } from '../../../hooks/useTheme';
 import { RoomView } from '../../../components/RoomView';
 import { RoomSettingsModal } from '../../../components/RoomSettingsModal';
 import { InviteFriendsModal } from '../../../components/InviteFriendsModal';
-import { MuteButton } from '../../../components/MuteButton';
 import { AudioConnectionBadge } from '../../../components/AudioConnectionBadge';
 import { useAppStore } from '../../../stores/appStore';
 import { supabase } from '../../../lib/supabase';
+
+const PURPLE_ACCENT = '#A855F7';
 
 export default function RoomScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -168,11 +171,32 @@ export default function RoomScreen() {
 
       {/* Mute/Unmute Button */}
       <View style={styles.muteButtonContainer}>
-        <MuteButton
-          isMuted={isMuted}
-          isConnecting={isAudioConnecting}
-          onPress={handleToggleMute}
-        />
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            handleToggleMute();
+          }}
+          activeOpacity={0.8}
+          disabled={isAudioConnecting}
+          style={[
+            styles.muteButton,
+            {
+              backgroundColor: isMuted ? 'transparent' : PURPLE_ACCENT,
+              borderColor: PURPLE_ACCENT,
+              opacity: isAudioConnecting ? 0.7 : 1,
+            },
+          ]}
+        >
+          {isAudioConnecting ? (
+            <ActivityIndicator size="small" color={isMuted ? PURPLE_ACCENT : '#FFFFFF'} />
+          ) : (
+            <Ionicons
+              name={isMuted ? 'mic-off' : 'mic'}
+              size={28}
+              color={isMuted ? PURPLE_ACCENT : '#FFFFFF'}
+            />
+          )}
+        </TouchableOpacity>
       </View>
 
       <RoomSettingsModal
@@ -213,5 +237,18 @@ const styles = StyleSheet.create({
     bottom: 40,
     alignSelf: 'center',
     zIndex: 100,
+  },
+  muteButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    shadowColor: PURPLE_ACCENT,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 10,
   },
 });

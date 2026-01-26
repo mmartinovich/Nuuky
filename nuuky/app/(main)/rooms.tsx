@@ -23,7 +23,7 @@ import { useTheme } from "../../hooks/useTheme";
 import { RoomCard } from "../../components/RoomCard";
 import { InviteCard } from "../../components/InviteCard";
 import { CreateRoomModal } from "../../components/CreateRoomModal";
-import { spacing, radius, typography } from "../../lib/theme";
+import { spacing, radius, typography, interactionStates } from "../../lib/theme";
 
 const { width } = Dimensions.get("window");
 
@@ -112,16 +112,24 @@ export default function RoomsScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.bg.primary }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       <LinearGradient colors={theme.gradients.background} style={styles.gradient}>
-        {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + spacing.md, borderBottomColor: theme.colors.glass.border }]}>
-          <TouchableOpacity style={[styles.backButton, { borderColor: theme.colors.glass.border }]} onPress={() => router.back()} activeOpacity={0.8}>
-            <Ionicons name="chevron-back" size={24} color={theme.colors.text.primary} />
+        {/* Header - Clean Loóna style */}
+        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => router.back()} 
+            activeOpacity={interactionStates?.pressed || 0.7}
+          >
+            <Ionicons name="chevron-back" size={28} color={theme.colors.text.primary} />
           </TouchableOpacity>
 
           <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>Rooms</Text>
 
-          <TouchableOpacity style={[styles.createButton, { backgroundColor: theme.colors.mood.good.soft, borderColor: theme.colors.mood.good.base }]} onPress={handleCreateRoom} activeOpacity={0.8}>
-            <Ionicons name="add" size={24} color={theme.colors.text.primary} />
+          <TouchableOpacity 
+            style={styles.createButton} 
+            onPress={handleCreateRoom} 
+            activeOpacity={interactionStates?.pressed || 0.7}
+          >
+            <Ionicons name="add" size={28} color="#A855F7" />
           </TouchableOpacity>
         </View>
 
@@ -140,15 +148,15 @@ export default function RoomsScreen() {
               <TouchableOpacity
                 style={styles.sectionHeader}
                 onPress={() => setShowInvites(!showInvites)}
-                activeOpacity={0.8}
+                activeOpacity={interactionStates?.pressed || 0.7}
               >
                 <View style={styles.sectionTitleRow}>
-                  <Text style={[styles.sectionTitle, { color: theme.colors.text.secondary }]}>INVITES</Text>
-                  <View style={[styles.badge, { backgroundColor: theme.colors.mood.reachOut.soft, borderColor: theme.colors.mood.reachOut.base }]}>
-                    <Text style={[styles.badgeText, { color: theme.colors.mood.reachOut.base }]}>{roomInvites.length}</Text>
+                  <Text style={[styles.sectionTitle, { color: 'rgba(255,255,255,0.5)' }]}>INVITES</Text>
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{roomInvites.length}</Text>
                   </View>
                 </View>
-                <Ionicons name={showInvites ? "chevron-up" : "chevron-down"} size={20} color={theme.colors.text.secondary} />
+                <Ionicons name={showInvites ? "chevron-up" : "chevron-down"} size={20} color="rgba(255,255,255,0.4)" />
               </TouchableOpacity>
 
               {showInvites && (
@@ -169,7 +177,7 @@ export default function RoomsScreen() {
           {/* My Rooms Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.text.secondary }]}>MY ROOMS</Text>
+              <Text style={[styles.sectionTitle, { color: 'rgba(255,255,255,0.5)' }]}>MY ROOMS</Text>
             </View>
 
             {hasRooms ? (
@@ -186,16 +194,20 @@ export default function RoomsScreen() {
               </View>
             ) : (
               <View style={styles.emptyState}>
-                <View style={[styles.emptyIconContainer, { borderColor: theme.colors.glass.border }]}>
-                  <Ionicons name="home-outline" size={48} color={theme.colors.text.tertiary} />
+                <View style={styles.emptyIconContainer}>
+                  <Ionicons name="home-outline" size={36} color="#A855F7" />
                 </View>
                 <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>No Rooms Yet</Text>
-                <Text style={[styles.emptyMessage, { color: theme.colors.text.tertiary }]}>Create your first room to hang with friends</Text>
-                <TouchableOpacity style={styles.emptyButton} onPress={handleCreateRoom} activeOpacity={0.8}>
-                  <LinearGradient colors={theme.gradients.neonCyan} style={styles.emptyButtonGradient}>
-                    <Ionicons name="add" size={20} color={theme.colors.text.primary} />
-                    <Text style={[styles.emptyButtonText, { color: theme.colors.text.primary }]}>Create Room</Text>
-                  </LinearGradient>
+                <Text style={styles.emptyMessage}>Create your first room to hang with friends</Text>
+                <TouchableOpacity 
+                  style={styles.emptyButton} 
+                  onPress={handleCreateRoom} 
+                  activeOpacity={interactionStates?.pressed || 0.7}
+                >
+                  <View style={styles.emptyButtonGradient}>
+                    <Ionicons name="add" size={20} color="#FFFFFF" />
+                    <Text style={styles.emptyButtonText}>Create Room</Text>
+                  </View>
                 </TouchableOpacity>
               </View>
             )}
@@ -224,36 +236,35 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
+    paddingHorizontal: spacing.screenPadding || 24,
+    paddingBottom: spacing.lg,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    borderWidth: 1,
+    marginLeft: -8,
   },
   headerTitle: {
-    fontSize: typography.size["2xl"],
-    fontWeight: typography.weight.bold as any,
+    fontSize: 28,
+    fontWeight: "700",
+    letterSpacing: -0.5,
   },
   createButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
+    backgroundColor: "rgba(168, 85, 247, 0.1)",
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: spacing.md,
+    padding: spacing.screenPadding || 24,
+    paddingTop: spacing.sm,
   },
   section: {
     marginBottom: spacing.xl,
@@ -270,25 +281,27 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   sectionTitle: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.bold as any,
-    letterSpacing: 1,
+    fontSize: 13,
+    fontWeight: "500",
+    letterSpacing: 0.5,
   },
   badge: {
-    borderWidth: 1,
+    backgroundColor: "rgba(168, 85, 247, 0.15)",
+    borderWidth: 0,
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: radius.sm,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   badgeText: {
-    fontSize: typography.size.xs,
-    fontWeight: typography.weight.bold as any,
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#A855F7",
   },
   invitesList: {
-    gap: spacing.sm,
+    gap: spacing.sm + 4,
   },
   roomsList: {
-    gap: spacing.md,
+    gap: spacing.sm + 4,
   },
   emptyState: {
     alignItems: "center",
@@ -297,38 +310,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   emptyIconContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: "rgba(255, 255, 255, 0.03)",
-    borderWidth: 2,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "rgba(168, 85, 247, 0.08)",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: spacing.lg,
   },
   emptyTitle: {
-    fontSize: typography.size.xl,
-    fontWeight: typography.weight.bold as any,
+    fontSize: 20,
+    fontWeight: "600",
     marginBottom: spacing.xs,
   },
   emptyMessage: {
-    fontSize: typography.size.md,
+    fontSize: 15,
     textAlign: "center",
     marginBottom: spacing.xl,
+    color: "rgba(255, 255, 255, 0.5)",
   },
   emptyButton: {
-    borderRadius: radius.md,
+    borderRadius: 12,
     overflow: "hidden",
   },
   emptyButtonGradient: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.xs,
-    paddingVertical: spacing.md,
+    gap: spacing.sm,
+    paddingVertical: 14,
     paddingHorizontal: spacing.xl,
+    backgroundColor: "#A855F7",
   },
   emptyButtonText: {
-    fontSize: typography.size.md,
-    fontWeight: typography.weight.semibold as any,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
 });

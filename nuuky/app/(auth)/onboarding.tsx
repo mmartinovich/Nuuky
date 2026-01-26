@@ -21,7 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../stores/appStore';
 import { useProfile } from '../../hooks/useProfile';
 import { useTheme } from '../../hooks/useTheme';
-import { colors, gradients, typography, spacing, radius } from '../../lib/theme';
+import { colors, gradients, typography, spacing, radius, interactionStates } from '../../lib/theme';
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -205,7 +205,7 @@ export default function OnboardingScreen() {
               <TouchableOpacity
                 onPress={handleAvatarPress}
                 disabled={loading}
-                activeOpacity={0.8}
+                activeOpacity={interactionStates.pressed}
                 style={styles.avatarButton}
               >
                 <Animated.View
@@ -300,7 +300,7 @@ export default function OnboardingScreen() {
               onPress={handleContinue}
               disabled={loading || !isValid}
               style={styles.continueButton}
-              activeOpacity={0.8}
+              activeOpacity={interactionStates.pressed}
             >
               <LinearGradient
                 colors={
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    padding: spacing.xl,
+    padding: spacing.screenPadding, // Updated: spacing.xl → screenPadding (24px)
     justifyContent: 'center',
   },
   animatedContainer: {
@@ -443,10 +443,11 @@ const styles = StyleSheet.create({
   input: {
     fontSize: typography.size.xl,
     fontWeight: typography.weight.medium as any,
-    padding: spacing.md,
+    padding: spacing.md, // 20px
     borderRadius: radius.md,
     borderWidth: 1,
     marginBottom: spacing.xs,
+    minHeight: 56, // Updated: ensure proper touch target
   },
   charCount: {
     fontSize: typography.size.xs,
@@ -458,7 +459,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   continueGradient: {
-    padding: spacing.lg,
+    padding: spacing.md, // Updated: 20px for better proportions
+    minHeight: 56, // Updated: ensure proper button height
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

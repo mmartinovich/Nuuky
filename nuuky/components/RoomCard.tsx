@@ -1,10 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { Room, User } from '../types';
-import { colors, gradients, spacing, radius, typography, getMoodColor } from '../lib/theme';
+import { colors, gradients, spacing, radius, typography, getMoodColor, interactionStates } from '../lib/theme';
 
 interface RoomCardProps {
   room: Room;
@@ -23,108 +22,146 @@ export const RoomCard: React.FC<RoomCardProps> = ({ room, onPress, isCreator = f
   const displayedParticipants = participants.slice(0, 5);
   const remainingCount = Math.max(0, participantCount - 5);
 
+  // Accent color for selected state
+  const accentColor = '#A855F7';
+
   return (
-    <TouchableOpacity activeOpacity={0.8} onPress={onPress}>
-      <BlurView intensity={20} tint="dark" style={styles.card}>
-        <LinearGradient
-          colors={gradients.glass}
-          style={styles.gradient}
-        >
-          <View style={styles.content}>
-            {/* Room Header */}
-            <View style={styles.header}>
-              <View style={styles.titleRow}>
-                {hasOnlineMembers && (
-                  <View style={styles.onlineIndicator} />
-                )}
-                <Text style={styles.roomName} numberOfLines={1}>
-                  {room.name || 'Unnamed Room'}
-                </Text>
-                {isDefault && (
-                  <View style={styles.defaultBadge}>
-                    <Ionicons name="home" size={12} color={colors.neon.cyan} />
-                  </View>
-                )}
-                {isCreator && (
-                  <View style={styles.creatorBadge}>
-                    <Ionicons name="star" size={12} color={colors.neon.orange} />
+    <TouchableOpacity 
+      activeOpacity={interactionStates?.pressed || 0.7} 
+      onPress={onPress}
+      style={[
+        styles.card,
+        isDefault && styles.cardSelected,
+      ]}
+    >
+      {/* Selected indicator - left border accent */}
+      {isDefault && (
+        <View style={styles.selectedIndicator} />
+      )}
+      
+      <View style={styles.content}>
+        {/* Room Header */}
+        <View style={styles.header}>
+          <View style={styles.titleRow}>
+            {/* Online indicator */}
+            {hasOnlineMembers && (
+              <View style={styles.onlineIndicator} />
+            )}
+            <Text style={styles.roomName} numberOfLines={1}>
+              {room.name || 'Unnamed Room'}
+            </Text>
+          </View>
+          
+          {/* Right side: member count + selected badge */}
+          <View style={styles.headerRight}>
+            {isDefault && (
+              <View style={styles.activeBadge}>
+                <Text style={styles.activeBadgeText}>Active</Text>
+              </View>
+            )}
+            <Text style={styles.memberCount}>
+              {participantCount}/{maxMembers}
+            </Text>
+          </View>
+        </View>
+
+        {/* Participant Avatars */}
+        <View style={styles.avatarRow}>
+          {displayedParticipants.map((participant, index) => {
+            const user = participant.user;
+            if (!user) return null;
+
+            const moodColors = getMoodColor(user.mood);
+            const isOnline = user.is_online;
+            
+            return (
+              <View
+                key={participant.id}
+                style={[
+                  styles.avatarContainer,
+                  { marginLeft: index > 0 ? -10 : 0, zIndex: 10 - index }
+                ]}
+              >
+                {user.avatar_url ? (
+                  <Image
+                    source={{ uri: user.avatar_url }}
+                    style={[
+                      styles.avatar,
+                      { borderColor: isOnline ? moodColors.base : 'rgba(255,255,255,0.1)' }
+                    ]}
+                  />
+                ) : (
+                  <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                    <Text style={styles.avatarText}>
+                      {user.display_name.charAt(0).toUpperCase()}
+                    </Text>
                   </View>
                 )}
               </View>
-              <Text style={styles.memberCount}>
-                {participantCount}/{maxMembers}
-              </Text>
+            );
+          })}
+
+          {remainingCount > 0 && (
+            <View style={[styles.avatarContainer, { marginLeft: -10, zIndex: 0 }]}>
+              <View style={[styles.avatar, styles.remainingAvatar]}>
+                <Text style={styles.remainingText}>+{remainingCount}</Text>
+              </View>
             </View>
+          )}
 
-            {/* Participant Avatars */}
-            <View style={styles.avatarRow}>
-              {displayedParticipants.map((participant, index) => {
-                const user = participant.user;
-                if (!user) return null;
+          {participantCount === 0 && (
+            <Text style={styles.emptyText}>No members yet</Text>
+          )}
+        </View>
+      </View>
 
-                const moodColors = getMoodColor(user.mood);
-                return (
-                  <View
-                    key={participant.id}
-                    style={[
-                      styles.avatarContainer,
-                      { marginLeft: index > 0 ? -8 : 0 }
-                    ]}
-                  >
-                    {user.avatar_url ? (
-                      <Image
-                        source={{ uri: user.avatar_url }}
-                        style={[
-                          styles.avatar,
-                          { borderColor: moodColors.base }
-                        ]}
-                      />
-                    ) : (
-                      <LinearGradient
-                        colors={moodColors.gradient}
-                        style={styles.avatar}
-                      >
-                        <Text style={styles.avatarText}>
-                          {user.display_name.charAt(0).toUpperCase()}
-                        </Text>
-                      </LinearGradient>
-                    )}
-                  </View>
-                );
-              })}
-
-              {remainingCount > 0 && (
-                <View style={[styles.avatarContainer, { marginLeft: -8 }]}>
-                  <View style={[styles.avatar, styles.remainingAvatar]}>
-                    <Text style={styles.remainingText}>+{remainingCount}</Text>
-                  </View>
-                </View>
-              )}
-
-              {participantCount === 0 && (
-                <Text style={styles.emptyText}>No members yet</Text>
-              )}
-            </View>
-          </View>
-        </LinearGradient>
-      </BlurView>
+      {/* Chevron */}
+      <View style={styles.chevronContainer}>
+        <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.3)" />
+      </View>
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: radius.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: 16,
     overflow: 'hidden',
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.glass.border,
+    position: 'relative',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
-  gradient: {
-    padding: spacing.md,
+  cardSelected: {
+    backgroundColor: 'rgba(168, 85, 247, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(168, 85, 247, 0.25)',
+  },
+  selectedIndicator: {
+    position: 'absolute',
+    left: 0,
+    top: 8,
+    bottom: 8,
+    width: 3,
+    backgroundColor: '#A855F7',
+    borderRadius: 2,
   },
   content: {
-    gap: spacing.sm,
+    flex: 1,
+    padding: spacing.md,
+    paddingLeft: spacing.md + 4,
+    gap: spacing.sm + 4,
   },
   header: {
     flexDirection: 'row',
@@ -134,81 +171,85 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: spacing.sm,
     flex: 1,
   },
   onlineIndicator: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.mood.good.base,
-    shadowColor: colors.mood.good.base,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
+    backgroundColor: '#22C55E',
   },
   roomName: {
-    fontSize: typography.size.lg,
-    fontWeight: typography.weight.semibold as any,
-    color: colors.text.primary,
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#FFFFFF',
     flex: 1,
   },
-  defaultBadge: {
-    backgroundColor: 'rgba(0, 240, 255, 0.15)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 240, 255, 0.3)',
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
-  creatorBadge: {
-    backgroundColor: 'rgba(255, 107, 53, 0.15)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 107, 53, 0.3)',
+  activeBadge: {
+    backgroundColor: 'rgba(168, 85, 247, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  activeBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#A855F7',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   memberCount: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.medium as any,
-    color: colors.text.secondary,
+    fontSize: 14,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.5)',
   },
   avatarRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 32,
+    minHeight: 36,
   },
   avatarContainer: {
     position: 'relative',
   },
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     borderWidth: 2,
-    borderColor: colors.glass.border,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.bg.secondary,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  avatarPlaceholder: {
+    backgroundColor: 'rgba(168, 85, 247, 0.2)',
+    borderColor: 'rgba(168, 85, 247, 0.3)',
   },
   avatarText: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.bold as any,
-    color: colors.text.primary,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   remainingAvatar: {
-    backgroundColor: colors.bg.tertiary,
-    borderColor: colors.glass.border,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   remainingText: {
-    fontSize: typography.size.xs,
-    fontWeight: typography.weight.medium as any,
-    color: colors.text.secondary,
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.5)',
   },
   emptyText: {
-    fontSize: typography.size.sm,
-    color: colors.text.tertiary,
-    fontStyle: 'italic',
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.4)',
+  },
+  chevronContainer: {
+    paddingRight: spacing.md,
   },
 });

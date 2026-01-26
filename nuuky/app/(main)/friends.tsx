@@ -19,7 +19,7 @@ import { useContactSync } from "../../hooks/useContactSync";
 import { useInvite } from "../../hooks/useInvite";
 import { useAppStore } from "../../stores/appStore";
 import { useTheme } from "../../hooks/useTheme";
-import { typography, spacing, radius, getMoodColor } from "../../lib/theme";
+import { typography, spacing, radius, getMoodColor, interactionStates } from "../../lib/theme";
 import { User, MatchedContact } from "../../types";
 
 export default function FriendsScreen() {
@@ -100,29 +100,27 @@ export default function FriendsScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.bg.primary }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       <LinearGradient colors={theme.gradients.background} style={styles.gradient}>
-        {/* Header */}
-        <View
-          style={[styles.header, { paddingTop: insets.top + spacing.md, borderBottomColor: theme.colors.glass.border }]}
-        >
+        {/* Header - Loóna style */}
+        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
           <TouchableOpacity
-            style={[styles.backButton, { borderColor: theme.colors.glass.border }]}
+            style={styles.backButton}
             onPress={() => router.back()}
-            activeOpacity={0.8}
+            activeOpacity={interactionStates.pressed}
           >
-            <Ionicons name="chevron-back" size={24} color={theme.colors.text.primary} />
+            <Ionicons name="chevron-back" size={28} color={theme.colors.text.primary} />
           </TouchableOpacity>
 
           <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>Friends</Text>
 
           <TouchableOpacity
-            style={[styles.debugButton, { borderColor: theme.colors.glass.border }]}
+            style={styles.refreshButton}
             onPress={async () => {
               setFriends([]);
               await refreshFriends();
             }}
-            activeOpacity={0.8}
+            activeOpacity={interactionStates.pressed}
           >
-            <Ionicons name="refresh" size={20} color={theme.colors.text.secondary} />
+            <Ionicons name="refresh" size={24} color="#A855F7" />
           </TouchableOpacity>
         </View>
 
@@ -144,12 +142,10 @@ export default function FriendsScreen() {
               {isMounted && hasLoadedOnce && !hasSynced && friends.length === 0 && !hasEverHadFriends.current && (
                 <View style={styles.heroSection}>
                   <View style={styles.heroIconContainer}>
-                    <LinearGradient colors={theme.gradients.neonCyan} style={styles.heroIconGradient}>
-                      <Ionicons name="people" size={32} color={theme.colors.text.primary} />
-                    </LinearGradient>
+                    <Ionicons name="people" size={32} color="#A855F7" />
                   </View>
                   <Text style={[styles.heroTitle, { color: theme.colors.text.primary }]}>Connect with Friends</Text>
-                  <Text style={[styles.heroSubtitle, { color: theme.colors.text.secondary }]}>
+                  <Text style={styles.heroSubtitle}>
                     Find friends who are already on Nūūky or invite new ones to join
                   </Text>
                 </View>
@@ -159,56 +155,44 @@ export default function FriendsScreen() {
               <View style={styles.actionsSection}>
                 {/* Find Friends Button */}
                 <TouchableOpacity
-                  activeOpacity={0.8}
+                  activeOpacity={0.7}
                   onPress={handleSyncContacts}
                   disabled={syncLoading}
-                  style={styles.actionButtonWrapper}
+                  style={[styles.actionCard, syncLoading && styles.buttonDisabled]}
                 >
-                  <LinearGradient
-                    colors={theme.gradients.neonCyan}
-                    style={[styles.primaryActionButton, syncLoading && styles.buttonDisabled]}
-                  >
+                  <View style={styles.actionIconContainer}>
                     {syncLoading ? (
-                      <ActivityIndicator size="small" color={theme.colors.text.primary} />
+                      <ActivityIndicator size="small" color="#A855F7" />
                     ) : (
-                      <Ionicons name="search" size={22} color={theme.colors.text.primary} />
+                      <Ionicons name="search" size={20} color="#A855F7" />
                     )}
-                    <View style={styles.actionButtonTextContainer}>
-                      <Text style={[styles.actionButtonTitle, { color: theme.colors.text.primary }]}>
-                        {syncLoading ? "Searching..." : "Find Friends"}
-                      </Text>
-                      <Text style={[styles.actionButtonSubtitle, { color: theme.colors.text.tertiary }]}>
-                        From your contacts
-                      </Text>
-                    </View>
-                  </LinearGradient>
+                  </View>
+                  <View style={styles.actionTextContainer}>
+                    <Text style={[styles.actionTitle, { color: theme.colors.text.primary }]}>
+                      {syncLoading ? "Searching..." : "Find Friends"}
+                    </Text>
+                    <Text style={styles.actionSubtitle}>From your contacts</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.3)" />
                 </TouchableOpacity>
 
                 {/* Invite Button */}
                 <TouchableOpacity
-                  activeOpacity={0.8}
+                  activeOpacity={0.7}
                   onPress={handleInviteToNooke}
                   disabled={sending}
-                  style={styles.actionButtonWrapper}
+                  style={[styles.actionCard, sending && styles.buttonDisabled]}
                 >
-                  <LinearGradient
-                    colors={
-                      isDark
-                        ? ["rgba(139, 92, 246, 0.2)", "rgba(139, 92, 246, 0.1)"]
-                        : ["rgba(139, 92, 246, 0.15)", "rgba(139, 92, 246, 0.08)"]
-                    }
-                    style={[styles.secondaryActionButton, sending && styles.buttonDisabled]}
-                  >
-                    <Ionicons name="share-social-outline" size={22} color={isDark ? "#A78BFA" : "#7c3aed"} />
-                    <View style={styles.actionButtonTextContainer}>
-                      <Text style={[styles.secondaryActionButtonTitle, { color: isDark ? "#A78BFA" : "#7c3aed" }]}>
-                        Invite to Nūūky
-                      </Text>
-                      <Text style={[styles.actionButtonSubtitle, { color: theme.colors.text.tertiary }]}>
-                        Share with anyone
-                      </Text>
-                    </View>
-                  </LinearGradient>
+                  <View style={styles.actionIconContainer}>
+                    <Ionicons name="share-social-outline" size={20} color="#A855F7" />
+                  </View>
+                  <View style={styles.actionTextContainer}>
+                    <Text style={[styles.actionTitle, { color: theme.colors.text.primary }]}>
+                      Invite to Nūūky
+                    </Text>
+                    <Text style={styles.actionSubtitle}>Share with anyone</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.3)" />
                 </TouchableOpacity>
               </View>
 
@@ -225,57 +209,41 @@ export default function FriendsScreen() {
 
                   return (
                     <View style={styles.section}>
-                      <View style={styles.sectionHeaderRow}>
-                        <View>
-                          <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>
-                            People on Nūūky
-                          </Text>
-                          <Text style={[styles.sectionSubtitle, { color: theme.colors.text.tertiary }]}>
-                            {notYetAddedContacts.length} {notYetAddedContacts.length === 1 ? "contact" : "contacts"}{" "}
-                            found
-                          </Text>
+                      <View style={styles.sectionHeader}>
+                        <View style={styles.sectionTitleRow}>
+                          <Text style={styles.sectionTitleText}>PEOPLE ON NŪŪKY</Text>
+                          <View style={styles.badge}>
+                            <Text style={styles.badgeText}>{notYetAddedContacts.length}</Text>
+                          </View>
                         </View>
                       </View>
 
                       <View style={styles.contactsList}>
                         {notYetAddedContacts.map((contact) => {
                           return (
-                            <View key={contact.id} style={styles.contactCardWrapper}>
-                              <LinearGradient
-                                colors={
-                                  isDark
-                                    ? ["rgba(255, 255, 255, 0.08)", "rgba(255, 255, 255, 0.04)"]
-                                    : ["rgba(0, 0, 0, 0.06)", "rgba(0, 0, 0, 0.02)"]
-                                }
-                                style={[styles.contactCard, { borderColor: theme.colors.glass.border }]}
-                              >
-                                <View style={styles.contactInfo}>
-                                  <LinearGradient colors={theme.gradients.neonCyan} style={styles.contactAvatar}>
-                                    <Ionicons name="person" size={20} color={theme.colors.text.primary} />
-                                  </LinearGradient>
-                                  <View style={styles.contactText}>
-                                    <Text style={[styles.contactName, { color: theme.colors.text.primary }]}>
-                                      {contact.displayName || contact.name}
-                                    </Text>
-                                    <Text style={[styles.contactPhone, { color: theme.colors.text.tertiary }]}>
-                                      {contact.phoneNumbers[0]}
-                                    </Text>
-                                  </View>
+                            <View key={contact.id} style={styles.contactCard}>
+                              <View style={styles.contactInfo}>
+                                <View style={styles.contactAvatar}>
+                                  <Ionicons name="person" size={20} color="#A855F7" />
                                 </View>
+                                <View style={styles.contactText}>
+                                  <Text style={[styles.contactName, { color: theme.colors.text.primary }]}>
+                                    {contact.displayName || contact.name}
+                                  </Text>
+                                  <Text style={styles.contactPhone}>
+                                    {contact.phoneNumbers[0]}
+                                  </Text>
+                                </View>
+                              </View>
 
-                                <TouchableOpacity
-                                  onPress={() => handleAddFromContacts(contact)}
-                                  disabled={loading}
-                                  style={styles.addContactButtonWrapper}
-                                  activeOpacity={0.7}
-                                >
-                                  <LinearGradient colors={theme.gradients.neonCyan} style={styles.addContactButton}>
-                                    <Text style={[styles.addButtonText, { color: theme.colors.text.primary }]}>
-                                      Add
-                                    </Text>
-                                  </LinearGradient>
-                                </TouchableOpacity>
-                              </LinearGradient>
+                              <TouchableOpacity
+                                onPress={() => handleAddFromContacts(contact)}
+                                disabled={loading}
+                                style={styles.addContactButton}
+                                activeOpacity={0.7}
+                              >
+                                <Text style={styles.addButtonText}>Add</Text>
+                              </TouchableOpacity>
                             </View>
                           );
                         })}
@@ -286,22 +254,17 @@ export default function FriendsScreen() {
 
               {/* Friends List */}
               <View style={styles.section}>
-                <View style={styles.sectionHeaderRow}>
-                  <View>
-                    <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>My Friends</Text>
-                    <Text style={[styles.sectionSubtitle, { color: theme.colors.text.tertiary }]}>
-                      {friends.length} {friends.length === 1 ? "friend" : "friends"}
-                    </Text>
-                  </View>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitleText}>MY FRIENDS</Text>
                 </View>
 
                 {friends.length === 0 ? (
-                  <View style={[styles.emptyState, { borderColor: theme.colors.glass.border }]}>
+                  <View style={styles.emptyState}>
                     <View style={styles.emptyIconContainer}>
-                      <Ionicons name="person-add-outline" size={40} color={theme.colors.text.tertiary} />
+                      <Ionicons name="person-add-outline" size={36} color="#A855F7" />
                     </View>
-                    <Text style={[styles.emptyText, { color: theme.colors.text.primary }]}>No friends yet</Text>
-                    <Text style={[styles.emptySubtext, { color: theme.colors.text.tertiary }]}>
+                    <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>No Friends Yet</Text>
+                    <Text style={styles.emptyMessage}>
                       Find friends from your contacts to get started
                     </Text>
                   </View>
@@ -312,73 +275,43 @@ export default function FriendsScreen() {
                       const moodColors = getMoodColor(friend.mood);
 
                       return (
-                        <View key={friendship.id} style={styles.friendCardWrapper}>
-                          <LinearGradient
-                            colors={
-                              isDark
-                                ? ["rgba(255, 255, 255, 0.08)", "rgba(255, 255, 255, 0.04)"]
-                                : ["rgba(0, 0, 0, 0.06)", "rgba(0, 0, 0, 0.02)"]
-                            }
-                            style={[styles.friendCard, { borderColor: theme.colors.glass.border }]}
-                          >
-                            <View style={styles.friendInfo}>
-                              {/* Friend orb */}
-                              <View style={styles.miniOrbWrapper}>
-                                <View style={[styles.miniGlow, { backgroundColor: moodColors.glow }]} />
-                                <View
-                                  style={[
-                                    styles.miniOrb,
-                                    { backgroundColor: moodColors.base },
-                                    !friend.is_online && styles.offline,
-                                  ]}
-                                />
-                                {friend.is_online && (
-                                  <View
-                                    style={[
-                                      styles.onlineIndicator,
-                                      {
-                                        backgroundColor: theme.colors.mood.good.base,
-                                        borderColor: theme.colors.bg.primary,
-                                      },
-                                    ]}
-                                  />
-                                )}
-                              </View>
-
-                              <View style={styles.friendText}>
-                                <Text style={[styles.friendName, { color: theme.colors.text.primary }]}>
-                                  {friend.display_name}
-                                </Text>
-                                <View style={styles.friendStatusRow}>
-                                  <View
-                                    style={[
-                                      styles.statusDot,
-                                      {
-                                        backgroundColor: friend.is_online
-                                          ? theme.colors.mood.good.base
-                                          : theme.colors.text.tertiary,
-                                      },
-                                    ]}
-                                  />
-                                  <Text style={[styles.friendStatus, { color: theme.colors.text.secondary }]}>
-                                    {friend.is_online ? "Online" : "Offline"}
-                                  </Text>
-                                </View>
-                              </View>
+                        <TouchableOpacity 
+                          key={friendship.id} 
+                          style={styles.friendCard}
+                          activeOpacity={0.7}
+                          onLongPress={() => handleRemoveFriend(friendship)}
+                        >
+                          <View style={styles.friendInfo}>
+                            {/* Friend avatar */}
+                            <View style={styles.friendAvatarWrapper}>
+                              <View
+                                style={[
+                                  styles.friendAvatar,
+                                  { 
+                                    backgroundColor: moodColors.base,
+                                    borderColor: friend.is_online ? moodColors.base : "rgba(255,255,255,0.1)",
+                                  },
+                                ]}
+                              />
+                              {friend.is_online && (
+                                <View style={styles.onlineIndicator} />
+                              )}
                             </View>
 
-                            <TouchableOpacity
-                              onPress={() => handleRemoveFriend(friendship)}
-                              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                              style={styles.removeButtonWrapper}
-                              activeOpacity={0.7}
-                            >
-                              <View style={styles.removeButton}>
-                                <Ionicons name="close" size={20} color={theme.colors.text.tertiary} />
-                              </View>
-                            </TouchableOpacity>
-                          </LinearGradient>
-                        </View>
+                            <View style={styles.friendText}>
+                              <Text style={[styles.friendName, { color: theme.colors.text.primary }]}>
+                                {friend.display_name}
+                              </Text>
+                              <Text style={styles.friendStatus}>
+                                {friend.is_online ? "Online" : "Offline"}
+                              </Text>
+                            </View>
+                          </View>
+
+                          <View style={styles.chevronContainer}>
+                            <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.3)" />
+                          </View>
+                        </TouchableOpacity>
                       );
                     })}
                   </View>
@@ -403,36 +336,32 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
+    paddingHorizontal: spacing.screenPadding || 24,
+    paddingBottom: spacing.lg,
   },
   backButton: {
     width: 44,
     height: 44,
-    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    borderWidth: 1,
+    marginLeft: -8,
   },
   headerTitle: {
-    fontSize: typography.size["2xl"],
-    fontWeight: typography.weight.bold as any,
+    fontSize: 28,
+    fontWeight: "700",
     letterSpacing: -0.5,
   },
   placeholderButton: {
     width: 44,
     height: 44,
   },
-  debugButton: {
+  refreshButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    borderWidth: 1,
+    backgroundColor: "rgba(168, 85, 247, 0.1)",
   },
   scrollView: {
     flex: 1,
@@ -448,95 +377,96 @@ const styles = StyleSheet.create({
   // Hero Section
   heroSection: {
     alignItems: "center",
-    paddingVertical: spacing["3xl"],
-    paddingHorizontal: spacing.xl,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
   },
   heroIconContainer: {
-    marginBottom: spacing.lg,
-  },
-  heroIconGradient: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "rgba(168, 85, 247, 0.1)",
     justifyContent: "center",
     alignItems: "center",
+    marginBottom: 16,
   },
   heroTitle: {
-    fontSize: typography.size["2xl"],
-    fontWeight: typography.weight.bold as any,
-    marginBottom: spacing.sm,
+    fontSize: 20,
+    fontWeight: "600",
+    marginBottom: 8,
     textAlign: "center",
-    letterSpacing: -0.5,
   },
   heroSubtitle: {
-    fontSize: typography.size.base,
+    fontSize: 14,
     textAlign: "center",
-    lineHeight: 22,
+    lineHeight: 20,
+    color: "rgba(255, 255, 255, 0.5)",
   },
   // Actions Section
   actionsSection: {
-    gap: spacing.md,
-    marginBottom: spacing.xl,
+    gap: 12,
+    marginBottom: 24,
   },
-  actionButtonWrapper: {
-    borderRadius: radius.xl,
-    overflow: "hidden",
-  },
-  primaryActionButton: {
+  actionCard: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    gap: spacing.md,
+    padding: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(0, 240, 255, 0.3)",
+    borderColor: "rgba(255, 255, 255, 0.06)",
+    gap: 12,
   },
-  secondaryActionButton: {
-    flexDirection: "row",
+  actionIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(168, 85, 247, 0.12)",
+    justifyContent: "center",
     alignItems: "center",
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    gap: spacing.md,
-    borderWidth: 1,
-    borderColor: "rgba(139, 92, 246, 0.3)",
   },
-  actionButtonTextContainer: {
+  actionTextContainer: {
     flex: 1,
   },
-  actionButtonTitle: {
-    fontSize: typography.size.lg,
-    fontWeight: typography.weight.semibold as any,
+  actionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
     marginBottom: 2,
-    letterSpacing: -0.3,
   },
-  secondaryActionButtonTitle: {
-    fontSize: typography.size.lg,
-    fontWeight: typography.weight.semibold as any,
-    marginBottom: 2,
-    letterSpacing: -0.3,
-  },
-  actionButtonSubtitle: {
-    fontSize: typography.size.sm,
+  actionSubtitle: {
+    fontSize: 13,
+    color: "rgba(255, 255, 255, 0.5)",
   },
   // Section Headers
   section: {
     marginBottom: spacing["2xl"],
   },
-  sectionHeaderRow: {
+  sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
-  sectionTitle: {
-    fontSize: typography.size.xl,
-    fontWeight: typography.weight.bold as any,
-    letterSpacing: -0.3,
-    marginBottom: spacing.xs / 2,
+  sectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
   },
-  sectionSubtitle: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.medium as any,
+  sectionTitleText: {
+    fontSize: 13,
+    fontWeight: "500",
+    letterSpacing: 0.5,
+    color: "rgba(255,255,255,0.5)",
+  },
+  badge: {
+    backgroundColor: "rgba(168, 85, 247, 0.15)",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#A855F7",
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -545,22 +475,21 @@ const styles = StyleSheet.create({
   contactsList: {
     gap: spacing.sm,
   },
-  contactCardWrapper: {
-    borderRadius: radius.lg,
-    overflow: "hidden",
-  },
   contactCard: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: spacing.md,
+    padding: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    borderRadius: 16,
     borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.06)",
   },
   contactInfo: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
-    gap: spacing.md,
+    gap: 12,
   },
   contactAvatar: {
     width: 44,
@@ -568,95 +497,63 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "rgba(168, 85, 247, 0.15)",
   },
   contactText: {
     flex: 1,
   },
   contactName: {
-    fontSize: typography.size.base,
-    fontWeight: typography.weight.semibold as any,
+    fontSize: 16,
+    fontWeight: "600",
     marginBottom: 2,
-    letterSpacing: -0.2,
   },
   contactPhone: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.medium as any,
-  },
-  addContactButtonWrapper: {
-    borderRadius: radius.md,
-    overflow: "hidden",
+    fontSize: 13,
+    color: "rgba(255,255,255,0.5)",
   },
   addContactButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(0, 240, 255, 0.3)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: "#A855F7",
   },
   addButtonText: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.semibold as any,
-    letterSpacing: -0.2,
-  },
-  addedBadge: {
-    flexDirection: "row",
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(34, 197, 94, 0.1)",
-  },
-  addedText: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.semibold as any,
-    letterSpacing: -0.2,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
   // Friends List
   friendsList: {
     gap: spacing.sm,
   },
-  friendCardWrapper: {
-    borderRadius: radius.lg,
-    overflow: "hidden",
-  },
   friendCard: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: spacing.md,
+    padding: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    borderRadius: 16,
     borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.06)",
   },
   friendInfo: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
-    gap: spacing.md,
+    gap: 12,
   },
-  miniOrbWrapper: {
+  friendAvatarWrapper: {
     width: 44,
     height: 44,
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
   },
-  miniGlow: {
-    position: "absolute",
+  friendAvatar: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    opacity: 0.4,
-  },
-  miniOrb: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
-  offline: {
-    opacity: 0.5,
+    borderWidth: 2,
   },
   onlineIndicator: {
     position: "absolute",
@@ -665,69 +562,51 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
+    backgroundColor: "#22C55E",
     borderWidth: 2,
+    borderColor: "#0d0d1a",
   },
   friendText: {
     flex: 1,
   },
   friendName: {
-    fontSize: typography.size.base,
-    fontWeight: typography.weight.semibold as any,
-    marginBottom: 4,
-    letterSpacing: -0.2,
-  },
-  friendStatusRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 2,
   },
   friendStatus: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.medium as any,
+    fontSize: 13,
+    color: "rgba(255,255,255,0.5)",
   },
-  removeButtonWrapper: {
-    borderRadius: radius.md,
-    overflow: "hidden",
-  },
-  removeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
+  chevronContainer: {
+    width: 32,
+    height: 32,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
   },
   // Empty State
   emptyState: {
     alignItems: "center",
-    paddingVertical: spacing["3xl"],
-    paddingHorizontal: spacing.xl,
-    backgroundColor: "rgba(255, 255, 255, 0.02)",
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderStyle: "dashed",
+    paddingVertical: 48,
+    paddingHorizontal: 24,
   },
   emptyIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "rgba(168, 85, 247, 0.08)",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: spacing.md,
+    marginBottom: 16,
   },
-  emptyText: {
-    fontSize: typography.size.lg,
-    fontWeight: typography.weight.semibold as any,
-    marginBottom: spacing.xs,
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 8,
   },
-  emptySubtext: {
-    fontSize: typography.size.sm,
+  emptyMessage: {
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.5)",
     textAlign: "center",
     lineHeight: 20,
   },

@@ -1,9 +1,13 @@
 import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Image, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
+import { Ionicons } from '@expo/vector-icons';
 import { PresetMood } from '../types';
-import { colors, gradients, getMoodImage, typography, spacing, radius } from '../lib/theme';
+import { colors, getMoodImage, getMoodColor } from '../lib/theme';
+import { useTheme } from '../hooks/useTheme';
+
+// Purple accent to match Friends page
+const PURPLE_ACCENT = '#A855F7';
 
 // Moved outside component to prevent recreation on each render
 const MOODS: ReadonlyArray<{ mood: PresetMood; label: string; description: string }> = [
@@ -42,6 +46,8 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
   onSelectMood,
   onClose,
 }) => {
+  const { theme } = useTheme();
+
   const handleSelectMood = useCallback((mood: PresetMood) => {
     onSelectMood(mood);
     onClose();
@@ -55,75 +61,80 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
       onRequestClose={onClose}
       accessibilityViewIsModal={true}
     >
-      <BlurView intensity={20} style={styles.overlay} tint="dark">
-        <TouchableOpacity
-          style={styles.backdrop}
-          activeOpacity={1}
-          onPress={onClose}
-          accessibilityLabel="Close mood picker"
-          accessibilityRole="button"
+      <TouchableOpacity
+        style={styles.overlay}
+        activeOpacity={1}
+        onPress={onClose}
+        accessibilityLabel="Close mood picker"
+        accessibilityRole="button"
+      >
+        <View
+          style={styles.modalContainer}
+          onStartShouldSetResponder={() => true}
         >
-          <View
-            style={styles.container}
-            onStartShouldSetResponder={() => true}
-          >
-            <LinearGradient colors={gradients.card} style={styles.modal}>
-              <ScrollView
+          <LinearGradient colors={theme.gradients.background} style={styles.gradientBackground}>
+            <ScrollView
                 showsVerticalScrollIndicator={false}
                 bounces={false}
+                contentContainerStyle={styles.scrollContent}
               >
-                {/* Header */}
+                {/* Header - Friends page style */}
                 <View style={styles.header}>
-                  <Text style={styles.title}>How are you feeling?</Text>
-                  <Text style={styles.subtitle}>
-                    Your friends will see this
-                  </Text>
+                  <View style={styles.headerLeft} />
+                  <Text style={styles.headerTitle}>How are you?</Text>
+                  <TouchableOpacity
+                    style={styles.closeButton}
+                    onPress={onClose}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="close" size={24} color={PURPLE_ACCENT} />
+                  </TouchableOpacity>
                 </View>
 
-                {/* Preset Mood options */}
+                {/* Subtitle */}
+                <Text style={styles.subtitle}>Your friends will see this</Text>
+
+                {/* Mood options */}
                 <View style={styles.moodList}>
                   {MOODS.map(({ mood, label, description }) => {
                     const isSelected = currentMood === mood;
+                    const moodColors = getMoodColor(mood);
 
                     return (
                       <TouchableOpacity
                         key={mood}
                         activeOpacity={0.7}
                         onPress={() => handleSelectMood(mood)}
+                        style={[
+                          styles.moodCard,
+                          isSelected && { borderColor: moodColors.base, borderWidth: 2 },
+                        ]}
                         accessibilityLabel={`${label}: ${description}`}
                         accessibilityRole="button"
                         accessibilityState={{ selected: isSelected }}
                       >
-                        <LinearGradient
-                          colors={isSelected ? gradients.button : gradients.card}
-                          style={[
-                            styles.moodOption,
-                            isSelected && styles.moodOptionSelected,
-                          ]}
-                        >
-                          {/* Mood Creature Image */}
-                          <View style={styles.imageWrapper}>
-                            <Image
-                              source={getMoodImage(mood)}
-                              style={styles.moodImage}
-                            />
-                          </View>
+                        {/* Mood Creature Image */}
+                        <View style={styles.imageWrapper}>
+                          <Image
+                            source={getMoodImage(mood)}
+                            style={styles.moodImage}
+                          />
+                        </View>
 
-                          {/* Text */}
-                          <View style={styles.moodText}>
-                            <Text style={styles.moodLabel}>{label}</Text>
-                            <Text style={styles.moodDescription}>
-                              {description}
-                            </Text>
-                          </View>
+                        {/* Text */}
+                        <View style={styles.moodText}>
+                          <Text style={styles.moodLabel}>{label}</Text>
+                          <Text style={styles.moodDescription}>
+                            {description}
+                          </Text>
+                        </View>
 
-                          {/* Check mark */}
-                          {isSelected && (
-                            <View style={styles.checkmark}>
-                              <Text style={styles.checkmarkText}>✓</Text>
-                            </View>
-                          )}
-                        </LinearGradient>
+                        {/* Check mark */}
+                        {isSelected && (
+                          <View style={[styles.checkmark, { backgroundColor: moodColors.base }]}>
+                            <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                          </View>
+                        )}
                       </TouchableOpacity>
                     );
                   })}
@@ -138,11 +149,10 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                 >
                   <Text style={styles.cancelText}>Cancel</Text>
                 </TouchableOpacity>
-              </ScrollView>
-            </LinearGradient>
-          </View>
-        </TouchableOpacity>
-      </BlurView>
+            </ScrollView>
+          </LinearGradient>
+        </View>
+      </TouchableOpacity>
     </Modal>
   );
 };
@@ -150,100 +160,109 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-  },
-  backdrop: {
-    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: spacing.lg,
+    padding: 24,
   },
-  container: {
+  modalContainer: {
     width: '100%',
     maxWidth: 400,
+    borderRadius: 24,
+    overflow: 'hidden',
   },
-  modal: {
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.ui.border,
-    backgroundColor: 'rgba(20, 20, 40, 0.95)',
+  gradientBackground: {
+    borderRadius: 24,
   },
+  scrollContent: {
+    padding: 24,
+  },
+  // Header - Friends page style
   header: {
-    marginBottom: spacing.lg,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: typography.size['2xl'],
-    fontWeight: typography.weight.bold,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: typography.size.sm,
-    color: colors.text.secondary,
-  },
-  moodList: {
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  moodOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.ui.border,
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
-  moodOptionSelected: {
-    borderColor: colors.text.accent,
-    borderWidth: 2,
+  headerLeft: {
+    width: 44,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+    color: colors.text.primary,
+  },
+  closeButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(168, 85, 247, 0.1)',
+  },
+  subtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.5)',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  moodList: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  moodCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    gap: 12,
   },
   imageWrapper: {
-    width: 60,
-    height: 60,
+    width: 56,
+    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.md,
   },
   moodImage: {
-    width: 60,
-    height: 60,
+    width: 56,
+    height: 56,
     resizeMode: 'contain',
   },
   moodText: {
     flex: 1,
   },
   moodLabel: {
-    fontSize: typography.size.base,
-    fontWeight: typography.weight.medium,
+    fontSize: 16,
+    fontWeight: '600',
     color: colors.text.primary,
-    marginBottom: spacing.xs / 2,
+    marginBottom: 2,
   },
   moodDescription: {
-    fontSize: typography.size.sm,
-    color: colors.text.secondary,
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.5)',
   },
   checkmark: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.text.accent,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkmarkText: {
-    fontSize: typography.size.sm,
-    color: colors.text.primary,
-    fontWeight: typography.weight.bold,
-  },
   cancelButton: {
     alignItems: 'center',
-    paddingVertical: spacing.sm,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   cancelText: {
-    fontSize: typography.size.base,
-    color: colors.text.tertiary,
-    fontWeight: typography.weight.medium,
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontWeight: '600',
   },
 });

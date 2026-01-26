@@ -17,18 +17,18 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../hooks/useTheme";
 import { usePreferences } from "../../hooks/usePreferences";
-import { spacing } from "../../lib/theme";
+import { spacing, interactionStates } from "../../lib/theme";
 
-// iOS-style icon backgrounds
+// Minimal monochrome icon styling (Loóna-inspired)
 const ICON_BACKGROUNDS = {
-  profile: "#5856D6",
-  safety: "#FF9500",
-  nudges: "#34C759",
-  flares: "#FF3B30",
-  version: "#8E8E93",
-  privacy: "#007AFF",
-  terms: "#5AC8FA",
-  logout: "#FF3B30",
+  profile: "rgba(168, 85, 247, 0.15)", // Subtle purple
+  safety: "rgba(168, 85, 247, 0.15)",
+  nudges: "rgba(168, 85, 247, 0.15)",
+  flares: "rgba(168, 85, 247, 0.15)",
+  version: "rgba(255, 255, 255, 0.08)",
+  privacy: "rgba(255, 255, 255, 0.08)",
+  terms: "rgba(255, 255, 255, 0.08)",
+  logout: "rgba(239, 68, 68, 0.15)", // Subtle red for destructive
 };
 
 interface SettingsRowProps {
@@ -63,17 +63,21 @@ const SettingsRow: React.FC<SettingsRowProps> = ({
       style={[
         styles.rowContainer,
         {
-          backgroundColor: theme.colors.glass.background,
-          borderTopLeftRadius: isFirst ? 12 : 0,
-          borderTopRightRadius: isFirst ? 12 : 0,
-          borderBottomLeftRadius: isLast ? 12 : 0,
-          borderBottomRightRadius: isLast ? 12 : 0,
+          backgroundColor: 'rgba(255, 255, 255, 0.05)', // Subtle surface
+          borderTopLeftRadius: isFirst ? 16 : 0,
+          borderTopRightRadius: isFirst ? 16 : 0,
+          borderBottomLeftRadius: isLast ? 16 : 0,
+          borderBottomRightRadius: isLast ? 16 : 0,
         },
       ]}
     >
       <View style={styles.rowContent}>
         <View style={[styles.iconWrapper, { backgroundColor: iconBg }]}>
-          <Ionicons name={icon as any} size={18} color="#FFFFFF" />
+          <Ionicons 
+            name={icon as any} 
+            size={20} 
+            color={isDestructive ? "#EF4444" : theme.colors.accent?.primary || "#A855F7"} 
+          />
         </View>
         <Text
           style={[
@@ -103,7 +107,7 @@ const SettingsRow: React.FC<SettingsRowProps> = ({
       {!isLast && (
         <View style={styles.separatorContainer}>
           <View
-            style={[styles.separator, { backgroundColor: theme.colors.glass.border }]}
+            style={[styles.separator, { backgroundColor: 'rgba(255, 255, 255, 0.06)' }]}
           />
         </View>
       )}
@@ -112,7 +116,7 @@ const SettingsRow: React.FC<SettingsRowProps> = ({
 
   if (onPress) {
     return (
-      <TouchableOpacity activeOpacity={0.6} onPress={onPress}>
+      <TouchableOpacity activeOpacity={interactionStates.pressed} onPress={onPress}>
         {content}
       </TouchableOpacity>
     );
@@ -197,18 +201,21 @@ export default function SettingsScreen() {
         style={StyleSheet.absoluteFill}
       />
 
-      {/* iOS-style Large Title Header */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
+      {/* Header - Loóna style (matching rooms header) */}
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          activeOpacity={interactionStates.pressed}
         >
-          <Ionicons name="chevron-back" size={28} color={theme.colors.neon.cyan} />
+          <Ionicons name="chevron-back" size={28} color={theme.colors.text.primary} />
         </TouchableOpacity>
+        
         <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
           Settings
         </Text>
+        
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView
@@ -349,19 +356,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.sm,
-  },
-  backButton: {
     flexDirection: "row",
     alignItems: "center",
-    marginLeft: -spacing.xs,
-    marginBottom: spacing.xs,
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.screenPadding || 24,
+    paddingBottom: spacing.lg,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: -8,
   },
   headerTitle: {
-    fontSize: 34,
+    fontSize: 28,
     fontWeight: "700",
-    letterSpacing: 0.37,
+    letterSpacing: -0.5,
+  },
+  headerSpacer: {
+    width: 44, // Match backButton width for centered title
   },
   content: {
     flex: 1,
@@ -371,27 +385,28 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: spacing.xl,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.screenPadding, // Updated: spacing.md → screenPadding (24px)
   },
   sectionTitle: {
     fontSize: 13,
-    fontWeight: "400",
-    letterSpacing: -0.08,
-    marginBottom: spacing.sm,
+    fontWeight: "500", // Updated: 400 → 500 for better readability
+    letterSpacing: 0.5, // Updated: -0.08 → 0.5 for cleaner look
+    marginBottom: spacing.sm + 4, // 12px
     marginLeft: spacing.md,
     textTransform: "uppercase",
   },
   sectionContent: {
-    borderRadius: 12,
+    borderRadius: 16, // Updated: 12 → 16 for more modern look
     overflow: "hidden",
     ...Platform.select({
       ios: {
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
       },
       android: {
-        elevation: 1,
+        elevation: 3,
       },
     }),
   },
@@ -403,26 +418,26 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.md,
   },
   rowContainer: {
-    minHeight: 44,
+    minHeight: 56, // Updated: 44 → 56 for better touch target
   },
   rowContent: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: spacing.md,
-    paddingVertical: 11,
-    minHeight: 44,
+    paddingHorizontal: spacing.md, // 20px
+    paddingVertical: 14, // Updated: 11 → 14 for proper proportions with 56px height
+    minHeight: 56, // Updated: 44 → 56
   },
   iconWrapper: {
-    width: 29,
-    height: 29,
-    borderRadius: 6,
+    width: 32, // Updated: 29 → 32 for better proportions
+    height: 32,
+    borderRadius: 8, // Updated: 6 → 8 for more modern look
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
   },
   rowLabel: {
     flex: 1,
-    fontSize: 17,
+    fontSize: 16, // Updated: 17 → 16 to match new typography.size.base
     fontWeight: "400",
     letterSpacing: -0.41,
   },

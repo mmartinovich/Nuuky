@@ -18,7 +18,7 @@ import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-si
 import { AntDesign } from "@expo/vector-icons";
 import { supabase } from "../../lib/supabase";
 import { useAppStore } from "../../stores/appStore";
-import { colors, gradients, typography, spacing, radius } from "../../lib/theme";
+import { colors, gradients, typography, spacing, radius, interactionStates } from "../../lib/theme";
 import Constants from "expo-constants";
 
 export default function LoginScreen() {
@@ -249,67 +249,29 @@ export default function LoginScreen() {
             {/* Apple Sign-In */}
             {Platform.OS === 'ios' && (
               <TouchableOpacity
-                activeOpacity={0.8}
+                activeOpacity={interactionStates.pressed}
                 onPress={handleAppleSignIn}
                 disabled={loading}
+                style={styles.appleButton}
               >
-                <LinearGradient
-                  colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.08)']}
-                  style={styles.authButton}
-                >
-                  {/* Neon border glow */}
-                  <View style={[styles.buttonBorder, { borderColor: 'rgba(255, 255, 255, 0.3)' }]} />
-
-                  {/* Apple Icon */}
-                  <View style={styles.iconContainer}>
-                    <AntDesign name="apple" size={24} color={colors.text.primary} />
-                  </View>
-
-                  <Text style={styles.buttonText}>
-                    {loading ? "Signing in..." : "Continue with Apple"}
-                  </Text>
-
-                  {/* Subtle shine effect */}
-                  <LinearGradient
-                    colors={['rgba(255, 255, 255, 0.15)', 'transparent']}
-                    style={styles.buttonShine}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  />
-                </LinearGradient>
+                <AntDesign name="apple" size={20} color="#000" />
+                <Text style={styles.appleButtonText}>
+                  {loading ? "Signing in..." : "Continue with Apple"}
+                </Text>
               </TouchableOpacity>
             )}
 
             {/* Google Sign-In */}
             <TouchableOpacity
-              activeOpacity={0.8}
+              activeOpacity={interactionStates.pressed}
               onPress={handleGoogleSignIn}
               disabled={loading}
+              style={styles.googleButton}
             >
-              <LinearGradient
-                colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.08)']}
-                style={styles.authButton}
-              >
-                {/* Neon border glow */}
-                <View style={[styles.buttonBorder, { borderColor: 'rgba(0, 240, 255, 0.4)' }]} />
-
-                {/* Google Icon */}
-                <View style={styles.iconContainer}>
-                  <AntDesign name="google" size={24} color="#4285F4" />
-                </View>
-
-                <Text style={styles.buttonText}>
-                  {loading ? "Signing in..." : "Continue with Google"}
-                </Text>
-
-                {/* Subtle shine effect */}
-                <LinearGradient
-                  colors={['rgba(0, 240, 255, 0.1)', 'transparent']}
-                  style={styles.buttonShine}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                />
-              </LinearGradient>
+              <AntDesign name="google" size={20} color="#4285F4" />
+              <Text style={styles.googleButtonText}>
+                {loading ? "Signing in..." : "Continue with Google"}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -332,7 +294,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: spacing.xl,
+    padding: spacing.screenPadding, // Updated: spacing.xl → screenPadding (24px)
     justifyContent: "center",
   },
   header: {
@@ -345,7 +307,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: typography.size["5xl"],
-    fontWeight: typography.weight.bold,
+    fontWeight: typography.weight.bold as any,
     color: colors.text.primary,
     marginBottom: spacing.sm,
     letterSpacing: -1,
@@ -357,47 +319,63 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   bottomSection: {
-    padding: spacing.xl,
+    padding: spacing.screenPadding, // Updated: spacing.xl → screenPadding (24px)
     paddingBottom: spacing["2xl"],
   },
   authButtons: {
-    gap: spacing.md,
+    gap: spacing.sm + 4, // 12px gap between buttons
     marginBottom: spacing.md,
   },
-  authButton: {
+  appleButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     height: 56,
-    borderRadius: radius.lg,
-    overflow: "hidden",
-    position: "relative",
+    borderRadius: radius.md,
+    backgroundColor: "#FFFFFF",
+    gap: spacing.sm,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
-  buttonBorder: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: "rgba(0, 240, 255, 0.3)",
-  },
-  buttonShine: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "50%",
-    height: "100%",
-    pointerEvents: "none",
-  },
-  iconContainer: {
-    marginRight: spacing.sm,
-  },
-  buttonText: {
+  appleButtonText: {
     fontSize: typography.size.base,
-    fontWeight: typography.weight.semibold,
-    color: colors.text.primary,
+    fontWeight: "600" as const,
+    color: "#000000",
+    letterSpacing: 0.2,
+  },
+  googleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    height: 56,
+    borderRadius: radius.md,
+    backgroundColor: "#FFFFFF",
+    gap: spacing.sm,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  googleButtonText: {
+    fontSize: typography.size.base,
+    fontWeight: "600" as const,
+    color: "#1F1F1F",
     letterSpacing: 0.2,
   },
   privacyText: {

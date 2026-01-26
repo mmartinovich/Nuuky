@@ -14,7 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { spacing } from "../../lib/theme";
+import { spacing, interactionStates } from "../../lib/theme";
 import { useTheme } from "../../hooks/useTheme";
 import { useSafety } from "../../hooks/useSafety";
 import { useFriends } from "../../hooks/useFriends";
@@ -272,18 +272,21 @@ export default function SafetyScreen() {
         style={StyleSheet.absoluteFill}
       />
 
-      {/* iOS-style Large Title Header */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
+      {/* Header - Loóna style */}
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          activeOpacity={interactionStates.pressed}
         >
-          <Ionicons name="chevron-back" size={28} color={theme.colors.neon.cyan} />
+          <Ionicons name="chevron-back" size={28} color={theme.colors.text.primary} />
         </TouchableOpacity>
+        
         <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
           Safety & Privacy
         </Text>
+        
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView
@@ -484,19 +487,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.sm,
-  },
-  backButton: {
     flexDirection: "row",
     alignItems: "center",
-    marginLeft: -spacing.xs,
-    marginBottom: spacing.xs,
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.screenPadding || 24,
+    paddingBottom: spacing.lg,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: -8,
   },
   headerTitle: {
-    fontSize: 34,
+    fontSize: 28,
     fontWeight: "700",
-    letterSpacing: 0.37,
+    letterSpacing: -0.5,
+  },
+  headerSpacer: {
+    width: 44,
   },
   scrollView: {
     flex: 1,

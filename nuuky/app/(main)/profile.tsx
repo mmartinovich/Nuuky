@@ -22,7 +22,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAppStore } from "../../stores/appStore";
 import { useProfile } from "../../hooks/useProfile";
 import { useTheme } from "../../hooks/useTheme";
-import { spacing } from "../../lib/theme";
+import { spacing, interactionStates } from "../../lib/theme";
 
 // iOS-style icon backgrounds
 const ICON_BACKGROUNDS = {
@@ -291,18 +291,21 @@ export default function ProfileScreen() {
         style={StyleSheet.absoluteFill}
       />
 
-      {/* iOS-style Large Title Header */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
+      {/* Header - Loóna style (matching rooms header) */}
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          activeOpacity={interactionStates.pressed}
         >
-          <Ionicons name="chevron-back" size={28} color={theme.colors.neon.cyan} />
+          <Ionicons name="chevron-back" size={28} color={theme.colors.text.primary} />
         </TouchableOpacity>
+        
         <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
           Profile
         </Text>
+        
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView
@@ -508,19 +511,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.sm,
-  },
-  backButton: {
     flexDirection: "row",
     alignItems: "center",
-    marginLeft: -spacing.xs,
-    marginBottom: spacing.xs,
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.screenPadding || 24,
+    paddingBottom: spacing.lg,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: -8,
   },
   headerTitle: {
-    fontSize: 34,
+    fontSize: 28,
     fontWeight: "700",
-    letterSpacing: 0.37,
+    letterSpacing: -0.5,
+  },
+  headerSpacer: {
+    width: 44,
   },
   scrollView: {
     flex: 1,

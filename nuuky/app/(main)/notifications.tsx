@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../hooks/useTheme';
 import { useNotifications } from '../../hooks/useNotifications';
 import { NotificationCard } from '../../components/NotificationCard';
-import { spacing, radius, typography } from '../../lib/theme';
+import { spacing, radius, typography, interactionStates } from '../../lib/theme';
 import { getNotificationTimeGroup } from '../../lib/utils';
 import { AppNotification } from '../../types';
 
@@ -128,22 +128,14 @@ export default function NotificationsScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.bg.primary }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <LinearGradient colors={theme.gradients.background} style={styles.gradient}>
-        {/* Header */}
-        <View
-          style={[
-            styles.header,
-            {
-              paddingTop: insets.top + spacing.md,
-              borderBottomColor: theme.colors.glass.border,
-            },
-          ]}
-        >
+        {/* Header - Loóna style */}
+        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
           <TouchableOpacity
-            style={[styles.backButton, { borderColor: theme.colors.glass.border }]}
+            style={styles.backButton}
             onPress={() => router.back()}
-            activeOpacity={0.8}
+            activeOpacity={interactionStates.pressed}
           >
-            <Ionicons name="chevron-back" size={24} color={theme.colors.text.primary} />
+            <Ionicons name="chevron-back" size={28} color={theme.colors.text.primary} />
           </TouchableOpacity>
 
           <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
@@ -152,12 +144,12 @@ export default function NotificationsScreen() {
 
           {unreadCount > 0 ? (
             <TouchableOpacity
-              style={[styles.markReadButton, { borderColor: theme.colors.glass.border }]}
+              style={styles.markReadButton}
               onPress={handleMarkAllAsRead}
-              activeOpacity={0.8}
+              activeOpacity={interactionStates.pressed}
             >
-              <Text style={[styles.markReadText, { color: theme.colors.neon.cyan }]}>
-                Mark all read
+              <Text style={styles.markReadText}>
+                Mark All
               </Text>
             </TouchableOpacity>
           ) : (
@@ -237,36 +229,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
+    paddingHorizontal: spacing.screenPadding || 24,
+    paddingBottom: spacing.lg,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1,
+    marginLeft: -8,
   },
   headerTitle: {
-    fontSize: typography.size['2xl'],
-    fontWeight: typography.weight.bold as any,
+    fontSize: 28,
+    fontWeight: '700',
+    letterSpacing: -0.5,
   },
   markReadButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1,
+    height: 36,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(168, 85, 247, 0.1)',
   },
   markReadText: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.medium as any,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#A855F7',
   },
   placeholderButton: {
-    width: 100,
+    width: 44,
   },
   scrollView: {
     flex: 1,

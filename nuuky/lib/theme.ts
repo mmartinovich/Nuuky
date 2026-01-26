@@ -64,13 +64,13 @@ const darkColors = {
     highlight: 'rgba(255, 255, 255, 0.25)',
     shadow: 'rgba(0, 0, 0, 0.3)',
   },
-  // Text colors - high contrast
+  // Text colors - opacity-based hierarchy for better contrast
   text: {
     primary: '#ffffff',
-    secondary: '#c7d2fe',
-    tertiary: '#8b9fd9',
-    accent: '#00f0ff',
-    neon: '#ff1aff',
+    secondary: 'rgba(255, 255, 255, 0.7)', // Updated: color → opacity
+    tertiary: 'rgba(255, 255, 255, 0.5)', // Updated: color → opacity
+    accent: '#00f0ff', // Keep neon cyan
+    neon: '#ff1aff', // Keep neon pink
   },
   // UI elements - vibrant and modern
   ui: {
@@ -80,6 +80,12 @@ const darkColors = {
     cardHover: 'rgba(30, 30, 60, 0.8)',
     overlay: 'rgba(10, 10, 31, 0.85)',
     neonBorder: 'rgba(255, 26, 255, 0.5)',
+  },
+  // Accent colors (new - for consistent interactive elements)
+  accent: {
+    primary: '#A855F7', // Purple from mood.notGreat
+    soft: 'rgba(168, 85, 247, 0.15)', // Background for selected states
+    muted: 'rgba(168, 85, 247, 0.5)', // Borders for inactive states
   },
   // BlurView tint
   blurTint: 'dark' as const,
@@ -118,6 +124,12 @@ const lightColors = {
     cardHover: 'rgba(255, 255, 255, 0.9)',
     overlay: 'rgba(248, 246, 255, 0.95)',
     neonBorder: 'rgba(192, 38, 211, 0.4)',
+  },
+  // Accent colors (matching dark theme)
+  accent: {
+    primary: '#A855F7',
+    soft: 'rgba(168, 85, 247, 0.15)',
+    muted: 'rgba(168, 85, 247, 0.5)',
   },
   // BlurView tint
   blurTint: 'light' as const,
@@ -183,13 +195,13 @@ export const typography = {
   body: 'system',
   mono: 'monospace',
 
-  // Font sizes
+  // Font sizes (refined for better readability)
   size: {
     xs: 11,
-    sm: 13,
-    base: 15,
-    md: 15,
-    lg: 17,
+    sm: 14, // Updated: 13 → 14
+    base: 16, // Updated: 15 → 16
+    md: 16, // Updated: 15 → 16
+    lg: 18, // Updated: 17 → 18
     xl: 20,
     '2xl': 24,
     '3xl': 32,
@@ -199,10 +211,10 @@ export const typography = {
   // Alias for plural form
   sizes: {
     xs: 11,
-    sm: 13,
-    base: 15,
-    md: 15,
-    lg: 17,
+    sm: 14,
+    base: 16,
+    md: 16,
+    lg: 18,
     xl: 20,
     '2xl': 24,
     '3xl': 32,
@@ -228,16 +240,28 @@ export const typography = {
     extrabold: '800',
     black: '900',
   },
+
+  // Line heights (new - for better readability)
+  lineHeight: {
+    tight: 1.2, // Headings
+    normal: 1.5, // Body text
+    relaxed: 1.7, // Long-form content
+  },
 };
 
 export const spacing = {
   xs: 4,
   sm: 8,
-  md: 16,
+  md: 20, // Updated: 16 → 20 for more generous default padding
   lg: 24,
   xl: 32,
   '2xl': 48,
   '3xl': 64,
+  
+  // Semantic spacing tokens (new)
+  screenPadding: 24, // Consistent screen edge margins
+  cardPadding: 20, // Internal card spacing
+  listItemGap: 16, // Between list items
 };
 
 export const radius = {
@@ -266,6 +290,41 @@ export const shadows = {
     md: '0 8px 24px rgba(0, 0, 0, 0.4)',
     lg: '0 12px 32px rgba(0, 0, 0, 0.5)',
   },
+};
+
+// Elevation system (new - for subtle depth without glows)
+// Use these for non-glowing elements that need depth
+export const elevation = {
+  none: {},
+  sm: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  md: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  lg: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+};
+
+// Interaction states (new - for consistent feedback)
+export const interactionStates = {
+  pressed: 0.7, // activeOpacity for TouchableOpacity
+  disabled: 0.4, // opacity for disabled elements
+  active: '#A855F7', // accent.primary for selected items
+  activeBackground: 'rgba(168, 85, 247, 0.15)', // accent.soft for selected backgrounds
 };
 
 // Helper function to get mood color

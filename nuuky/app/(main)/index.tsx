@@ -121,6 +121,11 @@ export default function QuantumOrbitScreen() {
   // Separate animated values: scale uses native driver, glow uses JS driver
   const buttonScaleAnim = useRef(new RNAnimated.Value(1)).current;
   const buttonGlowAnim = useRef(new RNAnimated.Value(1)).current;
+  // Animated rings for speaking visualization
+  const ring1Anim = useRef(new RNAnimated.Value(0)).current;
+  const ring2Anim = useRef(new RNAnimated.Value(0)).current;
+  const ring3Anim = useRef(new RNAnimated.Value(0)).current;
+  const ring4Anim = useRef(new RNAnimated.Value(0)).current;
 
   // Shared orbit angle for roulette rotation - all friends rotate together
   // Using React Native Animated API (works in Expo Go, can upgrade to Reanimated later)
@@ -450,6 +455,54 @@ export default function QuantumOrbitScreen() {
     }
   }, [isMuted, isCurrentUserSpeaking]);
 
+  // Animated rings that expand outward when speaking
+  useEffect(() => {
+    if (!isMuted && isCurrentUserSpeaking) {
+      // Create staggered ring animations - each ring expands and fades out
+      const createRingAnimation = (ringAnim: RNAnimated.Value, delay: number) => {
+        return RNAnimated.loop(
+          RNAnimated.sequence([
+            RNAnimated.delay(delay),
+            RNAnimated.timing(ringAnim, {
+              toValue: 1,
+              duration: 1200,
+              easing: Easing.out(Easing.ease),
+              useNativeDriver: false,
+            }),
+            RNAnimated.timing(ringAnim, {
+              toValue: 0,
+              duration: 0,
+              useNativeDriver: false,
+            }),
+          ])
+        );
+      };
+
+      const ring1Animation = createRingAnimation(ring1Anim, 0);
+      const ring2Animation = createRingAnimation(ring2Anim, 300);
+      const ring3Animation = createRingAnimation(ring3Anim, 600);
+      const ring4Animation = createRingAnimation(ring4Anim, 900);
+
+      ring1Animation.start();
+      ring2Animation.start();
+      ring3Animation.start();
+      ring4Animation.start();
+
+      return () => {
+        ring1Animation.stop();
+        ring2Animation.stop();
+        ring3Animation.stop();
+        ring4Animation.stop();
+      };
+    } else {
+      // Reset rings when not speaking
+      ring1Anim.setValue(0);
+      ring2Anim.setValue(0);
+      ring3Anim.setValue(0);
+      ring4Anim.setValue(0);
+    }
+  }, [isMuted, isCurrentUserSpeaking]);
+
   // Join default room when it's set
   useEffect(() => {
     if (defaultRoom && currentUser) {
@@ -774,11 +827,11 @@ export default function QuantumOrbitScreen() {
 
         {/* Notification Bell Icon */}
         <TouchableOpacity
-          style={[styles.notificationBell, { backgroundColor: theme.colors.glass.background }]}
+          style={[styles.notificationBell, { backgroundColor: "rgba(168, 85, 247, 0.1)" }]}
           onPress={() => router.push("/(main)/notifications")}
           activeOpacity={0.7}
         >
-          <Ionicons name="notifications-outline" size={22} color={theme.colors.text.primary} />
+          <Ionicons name="notifications-outline" size={22} color="#A855F7" />
           {notificationCount > 0 && (
             <View style={[styles.notificationBadge, { backgroundColor: theme.colors.neon.pink, borderColor: theme.colors.bg.primary }]}>
               <Text style={styles.notificationBadgeText}>
@@ -819,23 +872,52 @@ export default function QuantumOrbitScreen() {
 
       {/* Bottom Navigation Bar */}
       <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 8) }]} pointerEvents="box-none">
-        {/* Floating center button wrapper */}
+        {/* Floating center button */}
         <View style={styles.floatingButtonWrapper} pointerEvents="box-none">
+          {/* Animated rings - only visible when speaking */}
+          {!isMuted && [ring1Anim, ring2Anim, ring3Anim, ring4Anim].map((ringAnim, index) => (
+            <RNAnimated.View
+              key={`ring-${index}`}
+              pointerEvents="none"
+              style={[
+                styles.speakingRing,
+                {
+                  transform: [
+                    {
+                      scale: ringAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1, 2.2 + index * 0.15],
+                      }),
+                    },
+                  ],
+                  opacity: ringAnim.interpolate({
+                    inputRange: [0, 0.3, 1],
+                    outputRange: [0.6, 0.4, 0],
+                  }),
+                },
+              ]}
+            />
+          ))}
           <RNAnimated.View
             style={[
               styles.floatingButton,
               {
                 transform: [{ scale: buttonScaleAnim }],
-                backgroundColor: isMuted ? theme.colors.neon.purple : theme.colors.neon.cyan,
-                shadowColor: isMuted ? theme.colors.neon.purple : theme.colors.neon.cyan,
-                shadowOpacity: buttonGlowAnim.interpolate({
-                  inputRange: [1, 1.6],
-                  outputRange: [0.5, 0.8],
-                }),
-                shadowRadius: buttonGlowAnim.interpolate({
-                  inputRange: [1, 1.6],
-                  outputRange: [12, 20],
-                }),
+                backgroundColor: isMuted ? "transparent" : "#A855F7",
+                borderColor: "#A855F7",
+                shadowColor: "#A855F7",
+                shadowOpacity: isMuted
+                  ? 0.2
+                  : buttonGlowAnim.interpolate({
+                      inputRange: [1, 1.6],
+                      outputRange: [0.6, 0.9],
+                    }),
+                shadowRadius: isMuted
+                  ? 8
+                  : buttonGlowAnim.interpolate({
+                      inputRange: [1, 1.6],
+                      outputRange: [15, 30],
+                    }),
               },
               isAudioConnecting && { opacity: 0.7 },
             ]}
@@ -846,17 +928,11 @@ export default function QuantumOrbitScreen() {
                   Alert.alert("No Room", "Please join or create a room first to use voice chat.");
                   return;
                 }
-
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
                 if (isMuted) {
-                  // User is unmuting - connect to audio
                   const success = await audioUnmute();
-                  if (success) {
-                    setIsMuted(false);
-                  }
+                  if (success) setIsMuted(false);
                 } else {
-                  // User is muting
                   await audioMute();
                   setIsMuted(true);
                 }
@@ -866,53 +942,75 @@ export default function QuantumOrbitScreen() {
               disabled={isAudioConnecting}
             >
               {isAudioConnecting ? (
-                <Ionicons name="hourglass" size={28} color="#FFFFFF" />
+                <Ionicons name="hourglass" size={28} color={isMuted ? "#A855F7" : "#FFFFFF"} />
               ) : (
-                <Ionicons name={isMuted ? "mic-off" : "mic"} size={28} color="#FFFFFF" />
+                <Ionicons name={isMuted ? "mic-off" : "mic"} size={28} color={isMuted ? "#A855F7" : "#FFFFFF"} />
               )}
             </TouchableOpacity>
           </RNAnimated.View>
         </View>
 
-        {/* Navigation bar */}
-        <View style={styles.navBar}>
-          {/* Left section */}
-          <View style={styles.navSection}>
-            <TouchableOpacity
-              onPress={handleFlarePress}
-              activeOpacity={0.7}
-              disabled={!!myActiveFlare}
-              style={styles.navTab}
-            >
-              <Ionicons name="flame" size={26} color="#FF3B30" />
-              <Text style={styles.navLabel}>Flare</Text>
-            </TouchableOpacity>
+        {/* Navigation bar with SVG shape */}
+        <View style={styles.navBarWrapper}>
+          {/* Background fill below nav bar */}
+          <View style={styles.navBarFill} />
+          
+          <Image 
+            source={require("../../assets/nav-bar-shape.png")} 
+            style={styles.navBarShape}
+            resizeMode="stretch"
+          />
+          <View style={styles.navBarContent}>
+            {/* Left icons */}
+            <View style={styles.navSection}>
+              <TouchableOpacity
+                onPress={handleFlarePress}
+                activeOpacity={0.7}
+                disabled={!!myActiveFlare}
+                style={styles.navTab}
+              >
+                <Ionicons name="flame" size={26} color="#FF3B30" />
+                <Text style={styles.navLabel}>Flare</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => router.push("/(main)/friends")} activeOpacity={0.7} style={styles.navTab}>
-              <Feather name="users" size={24} color="rgba(255, 255, 255, 0.85)" />
-              <Text style={styles.navLabel}>Friends</Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity 
+                onPress={() => router.push("/(main)/friends")} 
+                activeOpacity={0.7} 
+                style={styles.navTab}
+              >
+                <Feather name="users" size={24} color="rgba(255, 255, 255, 0.85)" />
+                <Text style={styles.navLabel}>Friends</Text>
+              </TouchableOpacity>
+            </View>
 
-          {/* Center gap for button */}
-          <View style={styles.centerGap} />
+            {/* Center gap */}
+            <View style={styles.centerGap} />
 
-          {/* Right section */}
-          <View style={styles.navSection}>
-            <TouchableOpacity onPress={handleOpenRooms} activeOpacity={0.7} style={styles.navTab}>
-              <Ionicons name="grid-outline" size={24} color="rgba(255, 255, 255, 0.85)" />
-              {roomInvites.length > 0 && (
-                <View style={[styles.roomBadge, { backgroundColor: theme.colors.mood.neutral.base }]}>
-                  <Text style={[styles.roomBadgeText, { color: theme.colors.text.primary }]}>{roomInvites.length}</Text>
-                </View>
-              )}
-              <Text style={styles.navLabel}>Rooms</Text>
-            </TouchableOpacity>
+            {/* Right icons */}
+            <View style={styles.navSection}>
+              <TouchableOpacity 
+                onPress={handleOpenRooms} 
+                activeOpacity={0.7} 
+                style={styles.navTab}
+              >
+                <Ionicons name="grid-outline" size={24} color="rgba(255, 255, 255, 0.85)" />
+                {roomInvites.length > 0 && (
+                  <View style={[styles.roomBadge, { backgroundColor: theme.colors.mood.neutral.base }]}>
+                    <Text style={[styles.roomBadgeText, { color: theme.colors.text.primary }]}>{roomInvites.length}</Text>
+                  </View>
+                )}
+                <Text style={styles.navLabel}>Rooms</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => router.push("/(main)/settings")} activeOpacity={0.7} style={styles.navTab}>
-              <Feather name="settings" size={24} color="rgba(255, 255, 255, 0.7)" />
-              <Text style={styles.navLabel}>Settings</Text>
-            </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => router.push("/(main)/settings")} 
+                activeOpacity={0.7} 
+                style={styles.navTab}
+              >
+                <Feather name="settings" size={24} color="rgba(255, 255, 255, 0.7)" />
+                <Text style={styles.navLabel}>Settings</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
@@ -1112,16 +1210,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     alignItems: "center",
   },
-  navBar: {
-    flexDirection: "row",
-    backgroundColor: "#1a1a2e",
-    height: 60,
-    borderRadius: 30,
-    alignItems: "center",
+  navBarWrapper: {
     width: "100%",
-    borderWidth: 1.5,
-    borderColor: "rgba(139, 92, 246, 0.25)",
-    zIndex: 10,
+    height: 70,
+    position: "relative",
+  },
+  navBarFill: {
+    position: "absolute",
+    top: 40,
+    left: -16,
+    right: -16,
+    bottom: -100,
+    backgroundColor: "#1C1C1E",
+  },
+  navBarShape: {
+    position: "absolute",
+    top: 0,
+    left: -16,
+    right: -16,
+    bottom: 0,
+    width: Dimensions.get("window").width,
+    height: "100%",
+    tintColor: "#1C1C1E",
+  },
+  navBarContent: {
+    position: "absolute",
+    top: 8,
+    left: 0,
+    right: 0,
+    height: 60,
+    flexDirection: "row",
+    alignItems: "center",
   },
   navSection: {
     flex: 1,
@@ -1135,7 +1254,7 @@ const styles = StyleSheet.create({
   },
   floatingButtonWrapper: {
     position: "absolute",
-    top: -24,
+    top: -18,
     left: 0,
     right: 0,
     alignItems: "center",
@@ -1147,15 +1266,23 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     shadowOffset: { width: 0, height: 6 },
     elevation: 10,
-    borderWidth: 4,
-    borderColor: "#0d0d1a",
+    borderWidth: 2,
+    borderColor: "#A855F7",
+  },
+  speakingRing: {
+    position: "absolute",
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 1.5,
+    borderColor: "#A855F7",
   },
   floatingButtonInner: {
     width: "100%",
     height: "100%",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 32,
+    borderRadius: 27,
   },
   navTab: {
     alignItems: "center",
@@ -1184,10 +1311,6 @@ const styles = StyleSheet.create({
     color: "rgba(255, 255, 255, 0.65)",
     letterSpacing: 0.1,
     marginTop: 2,
-  },
-  navLabelActive: {
-    color: "rgba(255, 255, 255, 0.95)",
-    fontWeight: "600",
   },
   flaresAlert: {
     position: "absolute",

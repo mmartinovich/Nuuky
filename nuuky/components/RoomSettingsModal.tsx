@@ -12,10 +12,13 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, radius, typography, gradients, getMoodColor } from '../lib/theme';
+import { colors, getMoodColor, interactionStates } from '../lib/theme';
+import { useTheme } from '../hooks/useTheme';
 import { RoomParticipant } from '../types';
+
+// Friends page style constants
+const PURPLE_ACCENT = '#A855F7';
 
 interface RoomSettingsModalProps {
   visible: boolean;
@@ -48,6 +51,7 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
   onInviteFriends,
   onRemoveParticipant,
 }) => {
+  const { theme } = useTheme();
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(roomName);
   const [loading, setLoading] = useState(false);
@@ -148,15 +152,17 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
-            {/* Header */}
+          <LinearGradient colors={theme.gradients.background} style={styles.gradientBackground}>
+            {/* Header - Friends page style */}
             <View style={styles.header}>
-              <Text style={styles.title}>Room Settings</Text>
+              <View style={styles.headerLeft} />
+              <Text style={styles.headerTitle}>Room Settings</Text>
               <TouchableOpacity
                 style={styles.closeButton}
                 onPress={handleClose}
-                activeOpacity={0.8}
+                activeOpacity={interactionStates.pressed}
               >
-                <Ionicons name="close" size={24} color={colors.text.primary} />
+                <Ionicons name="close" size={24} color={PURPLE_ACCENT} />
               </TouchableOpacity>
             </View>
 
@@ -165,206 +171,219 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
               contentContainerStyle={styles.contentContainer}
               showsVerticalScrollIndicator={false}
             >
-              {/* Room Name Section */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>ROOM NAME</Text>
-                {isRenaming ? (
-                  <View style={styles.renameContainer}>
-                    <TextInput
-                      style={styles.input}
-                      value={newName}
-                      onChangeText={setNewName}
-                      placeholder="Enter room name"
-                      placeholderTextColor={colors.text.tertiary}
-                      autoFocus
-                      maxLength={50}
-                    />
-                    <View style={styles.renameButtons}>
-                      <TouchableOpacity
-                        style={styles.cancelButton}
-                        onPress={() => {
-                          setIsRenaming(false);
-                          setNewName(roomName);
-                        }}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={styles.cancelButtonText}>Cancel</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.saveButton}
-                        onPress={handleRename}
-                        disabled={loading}
-                        activeOpacity={0.8}
-                      >
-                        <LinearGradient colors={gradients.neonCyan} style={styles.saveGradient}>
-                          <Text style={styles.saveButtonText}>
-                            {loading ? 'Saving...' : 'Save'}
-                          </Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    </View>
+            {/* Room Name Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitleText}>ROOM NAME</Text>
+              {isRenaming ? (
+                <View style={styles.renameContainer}>
+                  <TextInput
+                    style={styles.input}
+                    value={newName}
+                    onChangeText={setNewName}
+                    placeholder="Enter room name"
+                    placeholderTextColor="rgba(255,255,255,0.3)"
+                    autoFocus
+                    maxLength={50}
+                  />
+                  <View style={styles.renameButtons}>
+                    <TouchableOpacity
+                      style={styles.cancelButton}
+                      onPress={() => {
+                        setIsRenaming(false);
+                        setNewName(roomName);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.cancelButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.saveButton}
+                      onPress={handleRename}
+                      disabled={loading}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.saveButtonText}>
+                        {loading ? 'Saving...' : 'Save'}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.settingItem}
-                    onPress={() => isCreator && setIsRenaming(true)}
-                    disabled={!isCreator}
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.settingInfo}>
-                      <Text style={styles.roomNameText}>{roomName}</Text>
-                    </View>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.actionCard}
+                  onPress={() => isCreator && setIsRenaming(true)}
+                  disabled={!isCreator}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.actionIconContainer}>
+                    <Ionicons name="chatbubble-outline" size={20} color={PURPLE_ACCENT} />
+                  </View>
+                  <View style={styles.actionTextContainer}>
+                    <Text style={styles.actionTitle}>{roomName}</Text>
                     {isCreator && (
-                      <Ionicons name="pencil" size={20} color={colors.text.secondary} />
+                      <Text style={styles.actionSubtitle}>Tap to rename</Text>
                     )}
-                  </TouchableOpacity>
-                )}
-              </View>
+                  </View>
+                  {isCreator && (
+                    <Ionicons name="pencil" size={18} color="rgba(255,255,255,0.3)" />
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
 
-              {/* Participants Section */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>MEMBERS ({participants?.length || 0})</Text>
-                <View style={styles.participantsList}>
-                  {sortedParticipants.map((participant) => {
-                    const user = participant.user;
-                    if (!user) return null;
-
-                    const isCurrentUser = user.id === currentUserId;
-                    const isRoomCreator = user.id === creatorId;
-                    const canRemove = isCreator && !isCurrentUser && onRemoveParticipant;
-                    const isRemoving = removingUserId === user.id;
-                    const moodColors = getMoodColor(user.mood || 'neutral');
-
-                    return (
-                      <View key={participant.id} style={styles.participantItem}>
-                        <View style={styles.participantInfo}>
-                          {/* Avatar with mood border */}
-                          <View style={styles.avatarContainer}>
-                            {user.avatar_url ? (
-                              <Image
-                                source={{ uri: user.avatar_url }}
-                                style={styles.avatar}
-                              />
-                            ) : (
-                              <View style={[styles.avatar, styles.avatarPlaceholder]}>
-                                <Text style={styles.avatarText}>
-                                  {user.display_name?.charAt(0).toUpperCase() || '?'}
-                                </Text>
-                              </View>
-                            )}
-                            <View
-                              style={[
-                                styles.avatarBorder,
-                                { borderColor: moodColors.base },
-                              ]}
-                            />
-                            {user.is_online && <View style={styles.onlineIndicator} />}
-                          </View>
-
-                          {/* Name and badges */}
-                          <View style={styles.participantDetails}>
-                            <View style={styles.nameRow}>
-                              <Text style={styles.participantName} numberOfLines={1}>
-                                {user.display_name}{isCurrentUser ? ' (You)' : ''}
-                              </Text>
-                              {isRoomCreator && (
-                                <View style={styles.creatorBadge}>
-                                  <Ionicons name="star" size={12} color={colors.neon.cyan} />
-                                  <Text style={styles.creatorBadgeText}>Owner</Text>
-                                </View>
-                              )}
-                            </View>
-                          </View>
-                        </View>
-
-                        {/* Remove button (only for creator, not for current user) */}
-                        {canRemove && (
-                          <TouchableOpacity
-                            style={styles.removeButton}
-                            onPress={() => handleRemoveParticipant(user.id, user.display_name)}
-                            disabled={isRemoving}
-                            activeOpacity={0.7}
-                          >
-                            {isRemoving ? (
-                              <ActivityIndicator size="small" color={colors.mood.reachOut.base} />
-                            ) : (
-                              <Ionicons
-                                name="close-circle"
-                                size={24}
-                                color={colors.mood.reachOut.base}
-                              />
-                            )}
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                    );
-                  })}
+            {/* Members Section */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitleText}>MEMBERS</Text>
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{participants?.length || 0}</Text>
                 </View>
               </View>
+              <View style={styles.membersList}>
+                {sortedParticipants.map((participant) => {
+                  const user = participant.user;
+                  if (!user) return null;
 
-              {/* Actions Section */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>ACTIONS</Text>
+                  const isCurrentUser = user.id === currentUserId;
+                  const isRoomCreator = user.id === creatorId;
+                  const canRemove = isCreator && !isCurrentUser && onRemoveParticipant;
+                  const isRemoving = removingUserId === user.id;
+                  const moodColors = getMoodColor(user.mood || 'neutral');
 
+                  return (
+                    <View key={participant.id} style={styles.memberCard}>
+                      <View style={styles.memberInfo}>
+                        {/* Avatar with mood border */}
+                        <View style={styles.memberAvatarWrapper}>
+                          {user.avatar_url ? (
+                            <Image
+                              source={{ uri: user.avatar_url }}
+                              style={[
+                                styles.memberAvatar,
+                                {
+                                  borderColor: user.is_online ? moodColors.base : "rgba(255,255,255,0.1)",
+                                },
+                              ]}
+                            />
+                          ) : (
+                            <View
+                              style={[
+                                styles.memberAvatar,
+                                styles.memberAvatarPlaceholder,
+                                {
+                                  borderColor: user.is_online ? moodColors.base : "rgba(255,255,255,0.1)",
+                                },
+                              ]}
+                            >
+                              <Ionicons name="person" size={20} color={PURPLE_ACCENT} />
+                            </View>
+                          )}
+                          {user.is_online && <View style={styles.onlineIndicator} />}
+                        </View>
+
+                        {/* Name and status */}
+                        <View style={styles.memberText}>
+                          <View style={styles.nameRow}>
+                            <Text style={styles.memberName} numberOfLines={1}>
+                              {user.display_name}{isCurrentUser ? ' (You)' : ''}
+                            </Text>
+                            {isRoomCreator && (
+                              <View style={styles.ownerBadge}>
+                                <Ionicons name="star" size={10} color={PURPLE_ACCENT} />
+                              </View>
+                            )}
+                          </View>
+                          <Text style={styles.memberStatus}>
+                            {user.is_online ? 'Online' : 'Offline'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Remove button */}
+                      {canRemove && (
+                        <TouchableOpacity
+                          style={styles.removeButton}
+                          onPress={() => handleRemoveParticipant(user.id, user.display_name)}
+                          disabled={isRemoving}
+                          activeOpacity={0.7}
+                        >
+                          {isRemoving ? (
+                            <ActivityIndicator size="small" color="#EF4444" />
+                          ) : (
+                            <Ionicons name="close-circle" size={22} color="#EF4444" />
+                          )}
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Actions Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitleText}>ACTIONS</Text>
+              <View style={styles.actionsContainer}>
                 {/* Invite Friends */}
                 <TouchableOpacity
-                  style={styles.settingItem}
+                  style={styles.actionCard}
                   onPress={onInviteFriends}
-                  activeOpacity={0.8}
+                  activeOpacity={0.7}
                 >
-                  <View style={styles.settingInfo}>
-                    <Ionicons
-                      name="person-add-outline"
-                      size={24}
-                      color={colors.mood.good.base}
-                    />
-                    <Text style={styles.settingLabel}>Invite Friends</Text>
+                  <View style={styles.actionIconContainer}>
+                    <Ionicons name="person-add-outline" size={20} color={PURPLE_ACCENT} />
                   </View>
-                  <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
+                  <View style={styles.actionTextContainer}>
+                    <Text style={styles.actionTitle}>Invite Friends</Text>
+                    <Text style={styles.actionSubtitle}>Add people to this room</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.3)" />
                 </TouchableOpacity>
 
                 {/* Leave Room */}
                 <TouchableOpacity
-                  style={[styles.settingItem, styles.leaveItem]}
+                  style={styles.actionCard}
                   onPress={() => {
                     onLeave();
                     onClose();
                   }}
-                  activeOpacity={0.8}
+                  activeOpacity={0.7}
                 >
-                  <View style={styles.settingInfo}>
-                    <Ionicons
-                      name="exit-outline"
-                      size={24}
-                      color={colors.mood.reachOut.base}
-                    />
-                    <Text style={styles.leaveLabel}>Leave Room</Text>
+                  <View style={[styles.actionIconContainer, styles.leaveIconContainer]}>
+                    <Ionicons name="exit-outline" size={20} color="#EF4444" />
                   </View>
-                  <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
+                  <View style={styles.actionTextContainer}>
+                    <Text style={[styles.actionTitle, styles.leaveText]}>Leave Room</Text>
+                    <Text style={styles.actionSubtitle}>Exit this room</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.3)" />
                 </TouchableOpacity>
               </View>
+            </View>
 
-              {/* Danger Zone (Creator Only) */}
-              {isCreator && (
-                <View style={styles.section}>
-                  <Text style={[styles.sectionTitle, styles.dangerTitle]}>DANGER ZONE</Text>
-
-                  {/* Delete Room */}
-                  <TouchableOpacity
-                    style={[styles.settingItem, styles.dangerItem]}
-                    onPress={handleDelete}
-                    disabled={loading}
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.settingInfo}>
-                      <Ionicons name="trash-outline" size={24} color={colors.mood.reachOut.base} />
-                      <Text style={styles.dangerLabel}>Delete Room</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
-                  </TouchableOpacity>
-                </View>
-              )}
+            {/* Danger Zone (Creator Only) */}
+            {isCreator && (
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitleText, styles.dangerSectionTitle]}>DANGER ZONE</Text>
+                <TouchableOpacity
+                  style={[styles.actionCard, styles.dangerCard]}
+                  onPress={handleDelete}
+                  disabled={loading}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.actionIconContainer, styles.dangerIconContainer]}>
+                    <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                  </View>
+                  <View style={styles.actionTextContainer}>
+                    <Text style={[styles.actionTitle, styles.dangerText]}>Delete Room</Text>
+                    <Text style={styles.actionSubtitle}>Permanently remove this room</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.3)" />
+                </TouchableOpacity>
+              </View>
+            )}
             </ScrollView>
+          </LinearGradient>
         </View>
       </View>
     </Modal>
@@ -376,250 +395,261 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   modalContainer: {
     width: '90%',
     maxWidth: 400,
-    height: '70%',
-    borderRadius: radius.xl,
+    height: '75%',
+    borderRadius: 24,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.glass.border,
-    backgroundColor: colors.bg.secondary,
   },
+  gradientBackground: {
+    flex: 1,
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  // Header - Friends page style
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.glass.border,
+    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    flexShrink: 0,
   },
-  title: {
-    fontSize: typography.size.xl,
-    fontWeight: typography.weight.bold as any,
+  headerLeft: {
+    width: 44,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    letterSpacing: -0.5,
     color: colors.text.primary,
   },
   closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(168, 85, 247, 0.1)',
   },
   content: {
     flex: 1,
+    flexGrow: 1,
   },
   contentContainer: {
-    padding: spacing.lg,
+    padding: 24,
+    paddingBottom: 40,
   },
   section: {
-    marginBottom: spacing.xl,
+    marginBottom: 24,
   },
-  sectionTitle: {
-    fontSize: typography.size.xs,
-    fontWeight: typography.weight.bold as any,
-    color: colors.text.secondary,
-    letterSpacing: 1,
-    marginBottom: spacing.sm,
-  },
-  dangerTitle: {
-    color: colors.mood.reachOut.base,
-  },
-  settingItem: {
+  // Section header with badge - Friends page style
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.glass.background,
-    borderRadius: radius.md,
+    gap: 8,
+    marginBottom: 12,
+  },
+  sectionTitleText: {
+    fontSize: 13,
+    fontWeight: '500',
+    letterSpacing: 0.5,
+    color: 'rgba(255, 255, 255, 0.5)',
+    marginBottom: 12,
+  },
+  badge: {
+    backgroundColor: 'rgba(168, 85, 247, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginBottom: 12,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: PURPLE_ACCENT,
+  },
+  // Action cards - Friends page style
+  actionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.glass.border,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    gap: 12,
   },
-  dangerItem: {
-    borderColor: colors.mood.reachOut.soft,
-    backgroundColor: 'rgba(239, 68, 68, 0.05)',
-  },
-  settingInfo: {
-    flexDirection: 'row',
+  actionIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(168, 85, 247, 0.12)',
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: spacing.sm,
+  },
+  actionTextContainer: {
     flex: 1,
   },
-  settingLabel: {
-    fontSize: typography.size.md,
-    fontWeight: typography.weight.medium as any,
+  actionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
     color: colors.text.primary,
+    marginBottom: 2,
   },
-  dangerLabel: {
-    fontSize: typography.size.md,
-    fontWeight: typography.weight.medium as any,
-    color: colors.mood.reachOut.base,
+  actionSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.5)',
   },
-  leaveItem: {
-    marginTop: spacing.sm,
+  actionsContainer: {
+    gap: 12,
   },
-  leaveLabel: {
-    fontSize: typography.size.md,
-    fontWeight: typography.weight.medium as any,
-    color: colors.mood.reachOut.base,
+  // Leave/Danger styles
+  leaveIconContainer: {
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
   },
-  roomNameText: {
-    fontSize: typography.size.md,
-    fontWeight: typography.weight.semibold as any,
-    color: colors.text.primary,
+  leaveText: {
+    color: '#EF4444',
   },
-  defaultInfo: {
-    flex: 1,
+  dangerSectionTitle: {
+    color: '#EF4444',
   },
-  settingDescription: {
-    fontSize: typography.size.xs,
-    color: colors.text.tertiary,
-    marginTop: 2,
+  dangerCard: {
+    borderColor: 'rgba(239, 68, 68, 0.2)',
   },
+  dangerIconContainer: {
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+  },
+  dangerText: {
+    color: '#EF4444',
+  },
+  // Rename container
   renameContainer: {
-    gap: spacing.sm,
+    gap: 12,
   },
   input: {
-    backgroundColor: colors.glass.background,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
-    borderColor: colors.glass.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: typography.size.md,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
     color: colors.text.primary,
   },
   renameButtons: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: 12,
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.glass.background,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
-    borderColor: colors.glass.border,
-    borderRadius: radius.md,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 16,
     alignItems: 'center',
   },
   cancelButtonText: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.semibold as any,
-    color: colors.text.secondary,
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.5)',
   },
   saveButton: {
     flex: 1,
-    borderRadius: radius.md,
-    overflow: 'hidden',
-  },
-  saveGradient: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: PURPLE_ACCENT,
+    borderRadius: 16,
     alignItems: 'center',
   },
   saveButtonText: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.semibold as any,
-    color: colors.text.primary,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
-  // Participants list styles
-  participantsList: {
-    gap: spacing.sm,
+  // Members list - Friends page style
+  membersList: {
+    gap: 8,
   },
-  participantItem: {
+  memberCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.glass.background,
-    borderRadius: radius.md,
+    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.glass.border,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
-  participantInfo: {
+  memberInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    gap: spacing.sm,
+    gap: 12,
   },
-  avatarContainer: {
+  memberAvatarWrapper: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
     position: 'relative',
-    width: 40,
-    height: 40,
   },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  memberAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
   },
-  avatarPlaceholder: {
-    backgroundColor: colors.glass.background,
+  memberAvatarPlaceholder: {
+    backgroundColor: 'rgba(168, 85, 247, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  avatarText: {
-    fontSize: typography.size.md,
-    fontWeight: typography.weight.bold as any,
-    color: colors.text.primary,
-  },
-  avatarBorder: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 20,
-    borderWidth: 2,
-  },
   onlineIndicator: {
     position: 'absolute',
-    top: 0,
+    bottom: 0,
     right: 0,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: colors.mood.good.base,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#22C55E',
     borderWidth: 2,
-    borderColor: colors.bg.secondary,
+    borderColor: colors.bg.primary,
   },
-  participantDetails: {
+  memberText: {
     flex: 1,
   },
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: 6,
   },
-  participantName: {
-    fontSize: typography.size.md,
-    fontWeight: typography.weight.medium as any,
+  memberName: {
+    fontSize: 16,
+    fontWeight: '600',
     color: colors.text.primary,
-    flex: 1,
+    marginBottom: 2,
   },
-  creatorBadge: {
-    flexDirection: 'row',
+  ownerBadge: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'rgba(168, 85, 247, 0.15)',
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    backgroundColor: 'rgba(0, 240, 255, 0.1)',
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 240, 255, 0.3)',
   },
-  creatorBadgeText: {
-    fontSize: typography.size.xs,
-    fontWeight: typography.weight.semibold as any,
-    color: colors.neon.cyan,
+  memberStatus: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.5)',
   },
   removeButton: {
-    padding: spacing.xs,
+    padding: 4,
   },
 });

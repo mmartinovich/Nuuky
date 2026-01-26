@@ -37,7 +37,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
   closeButtonText = 'Cancel',
   maxHeight = '80%',
   contentStyle,
-  blurIntensity = 80,
+  blurIntensity = 60, // Updated: 80 → 60 for less heavy blur
 }) => {
   return (
     <Modal
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
-    padding: spacing.lg,
+    padding: spacing.screenPadding, // Updated: spacing.lg → screenPadding (24px)
   },
   modalContainer: {
     width: '100%',
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
     borderColor: colors.glass.border,
   },
   header: {
-    padding: spacing.lg,
+    padding: spacing.screenPadding, // Updated: spacing.lg → screenPadding (24px)
     borderBottomWidth: 1,
     borderBottomColor: colors.glass.border,
   },
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     fontSize: typography.size['2xl'],
     fontWeight: typography.weight.bold as any,
     color: colors.text.primary,
-    marginBottom: subtitle ? spacing.xs : 0,
+    marginBottom: subtitle ? spacing.sm : 0, // Updated: spacing.xs → spacing.sm
   },
   subtitle: {
     fontSize: typography.size.sm,
@@ -151,10 +151,10 @@ const styles = StyleSheet.create({
     maxHeight: 400,
   },
   contentContainer: {
-    padding: spacing.lg,
+    padding: spacing.screenPadding, // Updated: spacing.lg → screenPadding (24px)
   },
   footer: {
-    padding: spacing.lg,
+    padding: spacing.screenPadding, // Updated: spacing.lg → screenPadding (24px)
     borderTopWidth: 1,
     borderTopColor: colors.glass.border,
   },
