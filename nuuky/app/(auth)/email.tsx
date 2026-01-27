@@ -12,7 +12,6 @@ import {
   ScrollView,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -147,13 +146,11 @@ export default function EmailAuthScreen() {
   };
 
   const fetchUserProfile = async (userId: string): Promise<{ needsOnboarding: boolean } | null> => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    let { data: userData, error: fetchError } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", userId)
-      .single();
+    let { data: userData, error: fetchError } = await supabase.from("users").select("*").eq("id", userId).single();
 
     if (!userData && user) {
       // Create profile for new user
@@ -231,10 +228,7 @@ export default function EmailAuthScreen() {
 
   return (
     <LinearGradient colors={theme.gradients.background as any} style={styles.container}>
-      <KeyboardAvoidingView
-        style={styles.keyboardView}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
+      <KeyboardAvoidingView style={styles.keyboardView} behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <ScrollView
           contentContainerStyle={[
             styles.content,
@@ -245,11 +239,7 @@ export default function EmailAuthScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={handleBack}
-              activeOpacity={interactionStates.pressed}
-            >
+            <TouchableOpacity style={styles.backButton} onPress={handleBack} activeOpacity={interactionStates.pressed}>
               <Feather name="arrow-left" size={24} color={theme.colors.text.primary} />
             </TouchableOpacity>
           </View>
@@ -267,33 +257,40 @@ export default function EmailAuthScreen() {
               <>
                 {/* Email Input Step */}
                 <View style={styles.titleSection}>
-                  <Text style={[styles.title, { color: theme.colors.text.primary }]}>
-                    What's your email?
-                  </Text>
+                  <Text style={[styles.title, { color: theme.colors.text.primary }]}>What's your email?</Text>
                   <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
                     We'll send you a code to verify your account
                   </Text>
                 </View>
 
-                <BlurView
-                  intensity={20}
-                  tint={theme.colors.blurTint}
-                  style={[styles.inputCard, { borderColor: theme.colors.glass.border }]}
-                >
-                  <Text style={[styles.label, { color: theme.colors.text.secondary }]}>EMAIL</Text>
+                <View style={styles.inputSection}>
                   <TextInput
                     style={[
                       styles.input,
                       {
                         color: theme.colors.text.primary,
-                        borderColor: error ? "#EF4444" : isEmailValid && email ? "#22C55E" : theme.colors.glass.border,
                         backgroundColor: theme.colors.glass.background,
+                        borderColor: error
+                          ? "rgba(239, 68, 68, 0.6)"
+                          : isEmailValid && email
+                            ? "rgba(34, 197, 94, 0.5)"
+                            : theme.colors.glass.border,
                       },
                     ]}
                     value={email}
                     onChangeText={(text) => {
                       setEmail(text);
                       setError(null);
+                      // Real-time validation
+                      if (text.trim() && !validateEmail(text.trim())) {
+                        // Don't set error immediately, let user finish typing
+                      }
+                    }}
+                    onBlur={() => {
+                      // Validate on blur if email is entered but invalid
+                      if (email.trim() && !isEmailValid) {
+                        setError("Please enter a valid email address");
+                      }
                     }}
                     placeholder="you@example.com"
                     placeholderTextColor={theme.colors.text.tertiary}
@@ -303,44 +300,25 @@ export default function EmailAuthScreen() {
                     autoFocus
                   />
                   {error && <Text style={styles.errorText}>{error}</Text>}
-                </BlurView>
+                </View>
 
                 <TouchableOpacity
                   onPress={handleSendOTP}
                   disabled={loading || !isEmailValid}
-                  style={styles.continueButton}
+                  style={[styles.continueButton, (!isEmailValid || loading) && styles.buttonDisabled]}
                   activeOpacity={interactionStates.pressed}
                 >
-                  <LinearGradient
-                    colors={
-                      isEmailValid
-                        ? (theme.gradients.neonCyan as any)
-                        : ["rgba(255,255,255,0.1)", "rgba(255,255,255,0.05)"]
-                    }
-                    style={[styles.continueGradient, (!isEmailValid || loading) && styles.buttonDisabled]}
-                  >
-                    <Text style={styles.continueButtonText}>
-                      {loading ? "Sending..." : "Send Code"}
-                    </Text>
-                    <Feather
-                      name="arrow-right"
-                      size={20}
-                      color={isEmailValid ? "#fff" : theme.colors.text.tertiary}
-                      style={styles.arrowIcon}
-                    />
-                  </LinearGradient>
+                  <Text style={styles.continueButtonText}>{loading ? "Sending..." : "Send Code"}</Text>
                 </TouchableOpacity>
               </>
             ) : (
               <>
                 {/* OTP Verification Step */}
                 <View style={styles.titleSection}>
-                  <Text style={[styles.title, { color: theme.colors.text.primary }]}>
-                    Enter verification code
-                  </Text>
+                  <Text style={[styles.title, { color: theme.colors.text.primary }]}>Enter verification code</Text>
                   <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
                     We sent a 6-digit code to{"\n"}
-                    <Text style={{ color: theme.colors.text.primary }}>{maskEmail(email)}</Text>
+                    <Text style={{ color: theme.colors.text.primary, fontWeight: "600" }}>{maskEmail(email)}</Text>
                   </Text>
                 </View>
 
@@ -360,30 +338,23 @@ export default function EmailAuthScreen() {
                 <TouchableOpacity
                   onPress={handleVerifyOTP}
                   disabled={loading || otp.length !== 6}
-                  style={styles.continueButton}
+                  style={[styles.continueButton, (otp.length !== 6 || loading) && styles.buttonDisabled]}
                   activeOpacity={interactionStates.pressed}
                 >
-                  <LinearGradient
-                    colors={
-                      otp.length === 6
-                        ? (theme.gradients.neonCyan as any)
-                        : ["rgba(255,255,255,0.1)", "rgba(255,255,255,0.05)"]
-                    }
-                    style={[styles.continueGradient, (otp.length !== 6 || loading) && styles.buttonDisabled]}
-                  >
-                    <Text style={styles.continueButtonText}>
-                      {loading ? "Verifying..." : "Verify"}
-                    </Text>
-                  </LinearGradient>
+                  <Text style={styles.continueButtonText}>{loading ? "Verifying..." : "Verify"}</Text>
                 </TouchableOpacity>
 
                 {/* Resend Section */}
                 <View style={styles.resendSection}>
                   {canResend ? (
-                    <TouchableOpacity onPress={handleResendOTP} disabled={loading}>
-                      <Text style={[styles.resendText, { color: theme.colors.text.primary }]}>
+                    <TouchableOpacity
+                      onPress={handleResendOTP}
+                      disabled={loading}
+                      activeOpacity={interactionStates.pressed}
+                    >
+                      <Text style={[styles.resendText, { color: theme.colors.text.secondary }]}>
                         Didn't get the code?{" "}
-                        <Text style={styles.resendLink}>Resend</Text>
+                        <Text style={[styles.resendLink, { color: theme.colors.text.primary }]}>Resend</Text>
                       </Text>
                     </TouchableOpacity>
                   ) : (
@@ -443,27 +414,19 @@ const styles = StyleSheet.create({
     fontSize: typography.size.base,
     lineHeight: 24,
   },
-  inputCard: {
-    padding: spacing.lg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
+  inputSection: {
     marginBottom: spacing.lg,
-    overflow: "hidden",
-  },
-  label: {
-    fontSize: typography.size.sm,
-    fontWeight: typography.weight.semibold as any,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    marginBottom: spacing.sm,
+    paddingBottom: 2, // Extra space to prevent border clipping
   },
   input: {
-    fontSize: typography.size.xl,
+    fontSize: typography.size.base,
     fontWeight: typography.weight.medium as any,
-    padding: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1,
     minHeight: 56,
+    borderStyle: "solid", // Ensure solid border rendering
   },
   errorText: {
     color: "#EF4444",
@@ -478,27 +441,33 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   continueButton: {
-    borderRadius: radius.lg,
-    overflow: "hidden",
-    marginTop: spacing.md,
-  },
-  continueGradient: {
-    padding: spacing.md,
-    minHeight: 56,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    height: 56,
+    borderRadius: radius.md,
+    backgroundColor: "#FFFFFF",
+    gap: spacing.sm,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   buttonDisabled: {
-    opacity: 0.5,
+    opacity: 0.4,
   },
   continueButtonText: {
-    fontSize: typography.size.lg,
-    fontWeight: typography.weight.bold as any,
-    color: "#fff",
-  },
-  arrowIcon: {
-    marginLeft: spacing.sm,
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold as any,
+    color: "#000000",
+    letterSpacing: 0.2,
   },
   resendSection: {
     alignItems: "center",

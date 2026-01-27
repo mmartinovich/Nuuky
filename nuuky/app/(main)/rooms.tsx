@@ -16,12 +16,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAppStore } from "../../stores/appStore";
 import { useRoom } from "../../hooks/useRoom";
-import { useRoomInvites } from "../../hooks/useRoomInvites";
 import { useFirstTimeRoom } from "../../hooks/useFirstTimeRoom";
 import { useDefaultRoom } from "../../hooks/useDefaultRoom";
 import { useTheme } from "../../hooks/useTheme";
 import { RoomCard } from "../../components/RoomCard";
-import { InviteCard } from "../../components/InviteCard";
 import { CreateRoomModal } from "../../components/CreateRoomModal";
 import { spacing, radius, typography, interactionStates } from "../../lib/theme";
 
@@ -33,12 +31,10 @@ export default function RoomsScreen() {
   const { theme, isDark, accent } = useTheme();
   const { currentUser, myRooms } = useAppStore();
   const { loadMyRooms, canCreateRoom, createRoom } = useRoom();
-  const { roomInvites, loading: invitesLoading, loadMyInvites, acceptInvite, declineInvite } = useRoomInvites();
   const { loading: firstTimeLoading } = useFirstTimeRoom();
   const { isDefaultRoom, setAsDefaultRoom } = useDefaultRoom();
 
   const [refreshing, setRefreshing] = useState(false);
-  const [showInvites, setShowInvites] = useState(true);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
 
   // Track if initial load has happened to prevent double loading
@@ -66,7 +62,7 @@ export default function RoomsScreen() {
   );
 
   const loadData = async () => {
-    await Promise.all([loadMyRooms(), loadMyInvites()]);
+    await loadMyRooms();
   };
 
   const handleRefresh = async () => {
@@ -94,18 +90,6 @@ export default function RoomsScreen() {
     router.replace("/(main)");
   };
 
-  const handleAcceptInvite = async (inviteId: string) => {
-    const success = await acceptInvite(inviteId);
-    if (success) {
-      await loadMyRooms();
-    }
-  };
-
-  const handleDeclineInvite = async (inviteId: string) => {
-    await declineInvite(inviteId);
-  };
-
-  const hasInvites = roomInvites.length > 0;
   const hasRooms = myRooms.length > 0;
 
   return (
@@ -142,38 +126,6 @@ export default function RoomsScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.colors.text.secondary} />
           }
         >
-          {/* Invites Section */}
-          {hasInvites && (
-            <View style={styles.section}>
-              <TouchableOpacity
-                style={styles.sectionHeader}
-                onPress={() => setShowInvites(!showInvites)}
-                activeOpacity={interactionStates?.pressed || 0.7}
-              >
-                <View style={styles.sectionTitleRow}>
-                  <Text style={[styles.sectionTitle, { color: 'rgba(255,255,255,0.5)' }]}>INVITES</Text>
-                  <View style={[styles.badge, { backgroundColor: accent.soft }]}>
-                    <Text style={[styles.badgeText, { color: accent.primary }]}>{roomInvites.length}</Text>
-                  </View>
-                </View>
-                <Ionicons name={showInvites ? "chevron-up" : "chevron-down"} size={20} color="rgba(255,255,255,0.4)" />
-              </TouchableOpacity>
-
-              {showInvites && (
-                <View style={styles.invitesList}>
-                  {roomInvites.map((invite) => (
-                    <InviteCard
-                      key={invite.id}
-                      invite={invite}
-                      onAccept={() => handleAcceptInvite(invite.id)}
-                      onDecline={() => handleDeclineInvite(invite.id)}
-                    />
-                  ))}
-                </View>
-              )}
-            </View>
-          )}
-
           {/* My Rooms Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -274,28 +226,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: spacing.md,
   },
-  sectionTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
   sectionTitle: {
     fontSize: 13,
     fontWeight: "500",
     letterSpacing: 0.5,
-  },
-  badge: {
-    borderWidth: 0,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  invitesList: {
-    gap: spacing.sm + 4,
   },
   roomsList: {
     gap: spacing.sm + 4,

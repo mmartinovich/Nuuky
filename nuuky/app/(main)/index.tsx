@@ -121,8 +121,9 @@ export default function QuantumOrbitScreen() {
     disconnect: audioDisconnect,
   } = useAudio(defaultRoom?.id || null);
 
-  // Notifications
+  // Notifications - combine unread notifications with room invites for badge
   const { unreadCount: notificationCount } = useNotifications();
+  const totalBadgeCount = notificationCount + roomInvites.length;
 
   const [loading, setLoading] = useState(false); // Start with false - friends from Zustand show immediately
   const [showMoodPicker, setShowMoodPicker] = useState(false);
@@ -207,6 +208,9 @@ export default function QuantumOrbitScreen() {
         let deltaAngle = currentAngle - lastAngleRef.current;
         if (deltaAngle > Math.PI) deltaAngle -= 2 * Math.PI;
         else if (deltaAngle < -Math.PI) deltaAngle += 2 * Math.PI;
+
+        // Skip tiny movements to reduce unnecessary updates
+        if (Math.abs(deltaAngle) < 0.001) return;
 
         const newValue = orbitAngleValueRef.current + deltaAngle;
         orbitAngleValueRef.current = newValue;
@@ -842,10 +846,10 @@ export default function QuantumOrbitScreen() {
           activeOpacity={0.7}
         >
           <Ionicons name="notifications-outline" size={22} color={accent.primary} />
-          {notificationCount > 0 && (
-            <View style={[styles.notificationBadge, { backgroundColor: theme.colors.neon.pink, borderColor: theme.colors.bg.primary }]}>
+          {totalBadgeCount > 0 && (
+            <View style={[styles.notificationBadge, { backgroundColor: accent.primary }]}>
               <Text style={styles.notificationBadgeText}>
-                {notificationCount > 99 ? "99+" : notificationCount}
+                {totalBadgeCount > 99 ? "99+" : totalBadgeCount}
               </Text>
             </View>
           )}
@@ -999,17 +1003,12 @@ export default function QuantumOrbitScreen() {
 
             {/* Right icons */}
             <View style={styles.navSection}>
-              <TouchableOpacity 
-                onPress={handleOpenRooms} 
-                activeOpacity={0.7} 
+              <TouchableOpacity
+                onPress={handleOpenRooms}
+                activeOpacity={0.7}
                 style={styles.navTab}
               >
                 <Ionicons name="grid-outline" size={24} color="rgba(255, 255, 255, 0.85)" />
-                {roomInvites.length > 0 && (
-                  <View style={[styles.roomBadge, { backgroundColor: theme.colors.mood.neutral.base }]}>
-                    <Text style={[styles.roomBadgeText, { color: theme.colors.text.primary }]}>{roomInvites.length}</Text>
-                  </View>
-                )}
                 <Text style={styles.navLabel}>Rooms</Text>
               </TouchableOpacity>
 
@@ -1165,15 +1164,14 @@ const styles = StyleSheet.create({
   },
   notificationBadge: {
     position: "absolute",
-    top: 6,
-    right: 6,
+    top: -4,
+    right: -4,
     minWidth: 18,
     height: 18,
     borderRadius: 9,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 4,
-    borderWidth: 2,
   },
   notificationBadgeText: {
     fontSize: 10,
@@ -1298,21 +1296,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 52,
     height: 52,
-  },
-  roomBadge: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    paddingHorizontal: 6,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  roomBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
   },
   navLabel: {
     fontSize: 10,

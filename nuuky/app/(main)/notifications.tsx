@@ -15,7 +15,10 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../hooks/useTheme';
 import { useNotifications } from '../../hooks/useNotifications';
+import { useRoomInvites } from '../../hooks/useRoomInvites';
+import { useRoom } from '../../hooks/useRoom';
 import { NotificationCard } from '../../components/NotificationCard';
+import { InviteCard } from '../../components/InviteCard';
 import { spacing, radius, typography, interactionStates } from '../../lib/theme';
 import { getNotificationTimeGroup } from '../../lib/utils';
 import { AppNotification } from '../../types';
@@ -27,7 +30,6 @@ export default function NotificationsScreen() {
   const {
     notifications,
     unreadCount,
-    loading,
     refreshing,
     loadNotifications,
     refreshNotifications,
@@ -36,12 +38,29 @@ export default function NotificationsScreen() {
     handleNotificationTap,
   } = useNotifications();
 
+  const { roomInvites, loadMyInvites, acceptInvite, declineInvite } = useRoomInvites();
+  const { loadMyRooms } = useRoom();
+
   // Empty state animation
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     loadNotifications();
+    loadMyInvites();
   }, []);
+
+  const handleAcceptInvite = async (inviteId: string) => {
+    const success = await acceptInvite(inviteId);
+    if (success) {
+      await loadMyRooms();
+    }
+  };
+
+  const handleDeclineInvite = async (inviteId: string) => {
+    await declineInvite(inviteId);
+  };
+
+  const hasInvites = roomInvites.length > 0;
 
   // Pulse animation for empty state icon
   useEffect(() => {
@@ -173,6 +192,32 @@ export default function NotificationsScreen() {
             />
           }
         >
+          {/* Room Invites Section */}
+          {hasInvites && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { color: theme.colors.text.secondary }]}>
+                  Room Invites
+                </Text>
+                <View style={[styles.inviteBadge, { backgroundColor: theme.colors.text.secondary + '20' }]}>
+                  <Text style={[styles.inviteBadgeText, { color: theme.colors.text.secondary }]}>
+                    {roomInvites.length}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.invitesList}>
+                {roomInvites.map((invite) => (
+                  <InviteCard
+                    key={invite.id}
+                    invite={invite}
+                    onAccept={() => handleAcceptInvite(invite.id)}
+                    onDecline={() => handleDeclineInvite(invite.id)}
+                  />
+                ))}
+              </View>
+            </View>
+          )}
+
           {hasNotifications ? (
             <>
               {renderSection('TODAY', groupedNotifications.today, 0)}
@@ -187,7 +232,7 @@ export default function NotificationsScreen() {
                 (groupedNotifications.today.length + groupedNotifications.yesterday.length) * 50
               )}
             </>
-          ) : (
+          ) : !hasInvites && (
             <View style={styles.emptyState}>
               <Animated.View
                 style={[
@@ -270,12 +315,27 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     marginBottom: spacing.md,
   },
   sectionTitle: {
     fontSize: typography.size.sm,
     fontWeight: typography.weight.bold as any,
     letterSpacing: 1,
+  },
+  inviteBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  inviteBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  invitesList: {
+    gap: spacing.sm,
   },
   notificationsList: {
     gap: 0, // NotificationCard handles its own margin

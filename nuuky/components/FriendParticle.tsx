@@ -108,39 +108,53 @@ export function FriendParticle({
       activeListeners.delete(friendId);
     }
 
+    // Cache last computed values to skip unnecessary updates
+    let lastComputedX = Math.cos(baseAngle) * radius;
+    let lastComputedY = Math.sin(baseAngle) * radius;
+    let pendingUpdate = false;
+
     const updatePosition = () => {
-      const now = Date.now();
-      // Throttle to 33ms (~30fps) - good enough for smooth animation, better for battery
-      if (now - lastUpdateTime.current < 33) return;
-      
-      lastUpdateTime.current = now;
-      const parentAngle = (orbitAngle as any)._value || 0;
-      const localOffset = (localOrbitAnim as any)._value || 0;
-      
-      // Combine parent orbit rotation with local oscillation
-      const angle = baseAngle + parentAngle + localOffset;
-      const x = Math.cos(angle) * radius;
-      const y = Math.sin(angle) * radius;
-      
-      // Use setValue - no React re-render, direct animation update
-      translateXAnim.setValue(x);
-      translateYAnim.setValue(y);
-      localOffsetRef.current = localOffset;
+      // Batch updates using requestAnimationFrame for smoother rendering
+      if (pendingUpdate) return;
+      pendingUpdate = true;
+
+      requestAnimationFrame(() => {
+        pendingUpdate = false;
+        const parentAngle = (orbitAngle as any)._value || 0;
+        const localOffset = lowPowerMode ? 0 : ((localOrbitAnim as any)._value || 0);
+
+        // Combine parent orbit rotation with local oscillation
+        const angle = baseAngle + parentAngle + localOffset;
+        const x = Math.cos(angle) * radius;
+        const y = Math.sin(angle) * radius;
+
+        // Only update if position actually changed (avoid unnecessary setValue calls)
+        const dx = Math.abs(x - lastComputedX);
+        const dy = Math.abs(y - lastComputedY);
+        if (dx > 0.5 || dy > 0.5) {
+          lastComputedX = x;
+          lastComputedY = y;
+          translateXAnim.setValue(x);
+          translateYAnim.setValue(y);
+        }
+        localOffsetRef.current = localOffset;
+      });
     };
-    
+
     const orbitListener = orbitAngle.addListener(updatePosition);
-    const localListener = localOrbitAnim.addListener(updatePosition);
+    // Only add local listener if not in low power mode (oscillation disabled anyway)
+    const localListener = lowPowerMode ? null : localOrbitAnim.addListener(updatePosition);
 
     const cleanup = () => {
       orbitAngle.removeListener(orbitListener);
-      localOrbitAnim.removeListener(localListener);
+      if (localListener) localOrbitAnim.removeListener(localListener);
       activeListeners.delete(friendId);
     };
 
-    activeListeners.set(friendId, { orbitListener, localListener, cleanup });
+    activeListeners.set(friendId, { orbitListener, localListener: localListener || '', cleanup });
 
     return cleanup;
-  }, [friend.id, baseAngle, radius, orbitAngle, localOrbitAnim]);
+  }, [friend.id, baseAngle, radius, orbitAngle, localOrbitAnim, lowPowerMode]);
 
   // Lightweight animations - native-driven for performance
   // Disabled in low power mode

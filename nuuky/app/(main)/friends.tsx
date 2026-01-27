@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   StatusBar,
   ListRenderItem,
+  Image,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -40,15 +41,27 @@ const FriendCard = memo(
       <TouchableOpacity style={styles.friendCard} activeOpacity={0.7} onLongPress={onLongPress}>
         <View style={styles.friendInfo}>
           <View style={styles.friendAvatarWrapper}>
-            <View
-              style={[
-                styles.friendAvatar,
-                {
-                  backgroundColor: moodColors.base,
-                  borderColor: friend.is_online ? moodColors.base : "rgba(255,255,255,0.1)",
-                },
-              ]}
-            />
+            {friend.avatar_url ? (
+              <Image
+                source={{ uri: friend.avatar_url }}
+                style={[
+                  styles.friendAvatar,
+                  {
+                    borderColor: friend.is_online ? moodColors.base : "rgba(255,255,255,0.1)",
+                  },
+                ]}
+              />
+            ) : (
+              <View
+                style={[
+                  styles.friendAvatar,
+                  {
+                    backgroundColor: moodColors.base,
+                    borderColor: friend.is_online ? moodColors.base : "rgba(255,255,255,0.1)",
+                  },
+                ]}
+              />
+            )}
             {friend.is_online && <View style={styles.onlineIndicator} />}
           </View>
 
@@ -73,6 +86,7 @@ const FriendCard = memo(
       prevFriend.display_name === nextFriend.display_name &&
       prevFriend.mood === nextFriend.mood &&
       prevFriend.is_online === nextFriend.is_online &&
+      prevFriend.avatar_url === nextFriend.avatar_url &&
       prevProps.textPrimaryColor === nextProps.textPrimaryColor
     );
   },
