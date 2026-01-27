@@ -1,5 +1,5 @@
 // Mood types
-export type PresetMood = 'good' | 'neutral' | 'not_great' | 'reach_out';
+export type PresetMood = "good" | "neutral" | "not_great" | "reach_out";
 
 export interface CustomMood {
   id: string;
@@ -14,22 +14,33 @@ export interface CustomMood {
 // User types
 export interface User {
   id: string;
-  phone?: string;           // Optional (legacy field for existing data)
-  email?: string;            // Required for OAuth users
+  phone?: string; // Optional (legacy field for existing data)
+  email?: string; // Required for OAuth users
+  username: string; // Unique handle for discovery (lowercase, alphanumeric + underscores)
   display_name: string;
   avatar_url?: string;
   mood: PresetMood;
   custom_mood_id?: string;
-  custom_mood?: CustomMood;  // Joined custom mood data
+  custom_mood?: CustomMood; // Joined custom mood data
   is_online: boolean;
   last_seen_at: string;
   ghost_mode_until?: string;
   take_break_until?: string;
   fcm_token?: string;
-  auth_provider?: 'google' | 'apple' | 'email';  // OAuth provider
+  auth_provider?: "google" | "apple" | "email"; // OAuth provider
   default_room_id?: string;
-  profile_completed?: boolean;  // Whether user has completed onboarding
+  profile_completed?: boolean; // Whether user has completed onboarding
   created_at: string;
+}
+
+// User search result (for username search)
+export interface UserSearchResult {
+  id: string;
+  username: string;
+  display_name: string;
+  avatar_url?: string;
+  is_online: boolean;
+  mood: PresetMood;
 }
 
 // Friendship types
@@ -37,8 +48,8 @@ export interface Friendship {
   id: string;
   user_id: string;
   friend_id: string;
-  status: 'pending' | 'accepted' | 'declined';
-  visibility: 'full' | 'limited' | 'minimal' | 'hidden';
+  status: "pending" | "accepted" | "declined";
+  visibility: "full" | "limited" | "minimal" | "hidden";
   created_at: string;
   last_interaction_at: string;
   friend?: User;
@@ -73,10 +84,24 @@ export interface RoomInvite {
   receiver_id: string;
   room?: Room;
   sender?: User;
-  status: 'pending' | 'accepted' | 'declined';
+  status: "pending" | "accepted" | "declined";
   created_at: string;
   expires_at: string;
   responded_at?: string;
+}
+
+// Shareable room invite link (token-based, no specific receiver)
+export interface RoomInviteLink {
+  id: string;
+  token: string;
+  room_id: string;
+  room?: Room;
+  created_by: string;
+  creator?: User;
+  max_uses: number | null;
+  use_count: number;
+  expires_at: string | null;
+  created_at: string;
 }
 
 // Flare types
@@ -102,7 +127,7 @@ export interface Block {
   id: string;
   blocker_id: string;
   blocked_id: string;
-  block_type: 'mute' | 'soft' | 'hard';
+  block_type: "mute" | "soft" | "hard";
   created_at: string;
 }
 
@@ -121,7 +146,7 @@ export interface Report {
   reported_id: string;
   report_type: string;
   details?: string;
-  status: 'pending' | 'reviewed' | 'resolved';
+  status: "pending" | "reviewed" | "resolved";
   created_at: string;
 }
 
@@ -151,12 +176,7 @@ export interface MatchedContact extends PhoneContact {
 }
 
 // Audio types
-export type AudioConnectionStatus =
-  | 'disconnected'
-  | 'connecting'
-  | 'connected'
-  | 'reconnecting'
-  | 'error';
+export type AudioConnectionStatus = "disconnected" | "connecting" | "connected" | "reconnecting" | "error";
 
 export interface ParticipantAudioState {
   participantId: string;
@@ -173,7 +193,7 @@ export interface LiveKitTokenResponse {
 }
 
 // Notification types
-export type NotificationType = 'nudge' | 'flare' | 'friend_request' | 'friend_accepted' | 'room_invite' | 'call_me';
+export type NotificationType = "nudge" | "flare" | "friend_request" | "friend_accepted" | "room_invite" | "call_me";
 
 export interface NotificationData {
   sender_id?: string;

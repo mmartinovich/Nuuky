@@ -22,6 +22,7 @@ import { useAppStore } from "../../stores/appStore";
 import { useTheme } from "../../hooks/useTheme";
 import { typography, spacing, radius, getMoodColor, interactionStates } from "../../lib/theme";
 import { User, MatchedContact, Friendship } from "../../types";
+import { UserSearchModal } from "../../components/UserSearchModal";
 
 // Memoized Friend Card component to prevent unnecessary re-renders
 interface FriendCardProps {
@@ -30,59 +31,52 @@ interface FriendCardProps {
   textPrimaryColor: string;
 }
 
-const FriendCard = memo(({ friendship, onLongPress, textPrimaryColor }: FriendCardProps) => {
-  const friend = friendship.friend as User;
-  const moodColors = getMoodColor(friend.mood);
+const FriendCard = memo(
+  ({ friendship, onLongPress, textPrimaryColor }: FriendCardProps) => {
+    const friend = friendship.friend as User;
+    const moodColors = getMoodColor(friend.mood);
 
-  return (
-    <TouchableOpacity
-      style={styles.friendCard}
-      activeOpacity={0.7}
-      onLongPress={onLongPress}
-    >
-      <View style={styles.friendInfo}>
-        <View style={styles.friendAvatarWrapper}>
-          <View
-            style={[
-              styles.friendAvatar,
-              {
-                backgroundColor: moodColors.base,
-                borderColor: friend.is_online ? moodColors.base : "rgba(255,255,255,0.1)",
-              },
-            ]}
-          />
-          {friend.is_online && (
-            <View style={styles.onlineIndicator} />
-          )}
+    return (
+      <TouchableOpacity style={styles.friendCard} activeOpacity={0.7} onLongPress={onLongPress}>
+        <View style={styles.friendInfo}>
+          <View style={styles.friendAvatarWrapper}>
+            <View
+              style={[
+                styles.friendAvatar,
+                {
+                  backgroundColor: moodColors.base,
+                  borderColor: friend.is_online ? moodColors.base : "rgba(255,255,255,0.1)",
+                },
+              ]}
+            />
+            {friend.is_online && <View style={styles.onlineIndicator} />}
+          </View>
+
+          <View style={styles.friendText}>
+            <Text style={[styles.friendName, { color: textPrimaryColor }]}>{friend.display_name}</Text>
+            <Text style={styles.friendStatus}>{friend.is_online ? "Online" : "Offline"}</Text>
+          </View>
         </View>
 
-        <View style={styles.friendText}>
-          <Text style={[styles.friendName, { color: textPrimaryColor }]}>
-            {friend.display_name}
-          </Text>
-          <Text style={styles.friendStatus}>
-            {friend.is_online ? "Online" : "Offline"}
-          </Text>
+        <View style={styles.chevronContainer}>
+          <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.3)" />
         </View>
-      </View>
-
-      <View style={styles.chevronContainer}>
-        <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.3)" />
-      </View>
-    </TouchableOpacity>
-  );
-}, (prevProps, nextProps) => {
-  // Custom comparison - only re-render if relevant data changed
-  const prevFriend = prevProps.friendship.friend as User;
-  const nextFriend = nextProps.friendship.friend as User;
-  return (
-    prevProps.friendship.id === nextProps.friendship.id &&
-    prevFriend.display_name === nextFriend.display_name &&
-    prevFriend.mood === nextFriend.mood &&
-    prevFriend.is_online === nextFriend.is_online &&
-    prevProps.textPrimaryColor === nextProps.textPrimaryColor
-  );
-});
+      </TouchableOpacity>
+    );
+  },
+  (prevProps, nextProps) => {
+    // Custom comparison - only re-render if relevant data changed
+    const prevFriend = prevProps.friendship.friend as User;
+    const nextFriend = nextProps.friendship.friend as User;
+    return (
+      prevProps.friendship.id === nextProps.friendship.id &&
+      prevFriend.display_name === nextFriend.display_name &&
+      prevFriend.mood === nextFriend.mood &&
+      prevFriend.is_online === nextFriend.is_online &&
+      prevProps.textPrimaryColor === nextProps.textPrimaryColor
+    );
+  },
+);
 
 export default function FriendsScreen() {
   const router = useRouter();
@@ -108,6 +102,7 @@ export default function FriendsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [addedContacts, setAddedContacts] = useState<Set<string>>(new Set());
   const [isMounted, setIsMounted] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
   const hasEverHadFriends = useRef(friends.length > 0);
 
   useEffect(() => {
@@ -146,26 +141,32 @@ export default function FriendsScreen() {
     setRefreshing(false);
   };
 
-  const handleRemoveFriend = useCallback((friendship: any) => {
-    const friend = friendship.friend as User;
-    Alert.alert("Remove Friend", `Remove ${friend.display_name} from your friends?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Remove",
-        style: "destructive",
-        onPress: () => removeFriendship(friend.id),
-      },
-    ]);
-  }, [removeFriendship]);
+  const handleRemoveFriend = useCallback(
+    (friendship: any) => {
+      const friend = friendship.friend as User;
+      Alert.alert("Remove Friend", `Remove ${friend.display_name} from your friends?`, [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => removeFriendship(friend.id),
+        },
+      ]);
+    },
+    [removeFriendship],
+  );
 
   // Memoized render function for FlatList
-  const renderFriendItem: ListRenderItem<Friendship> = useCallback(({ item: friendship }) => (
-    <FriendCard
-      friendship={friendship}
-      onLongPress={() => handleRemoveFriend(friendship)}
-      textPrimaryColor={theme.colors.text.primary}
-    />
-  ), [handleRemoveFriend, theme.colors.text.primary]);
+  const renderFriendItem: ListRenderItem<Friendship> = useCallback(
+    ({ item: friendship }) => (
+      <FriendCard
+        friendship={friendship}
+        onLongPress={() => handleRemoveFriend(friendship)}
+        textPrimaryColor={theme.colors.text.primary}
+      />
+    ),
+    [handleRemoveFriend, theme.colors.text.primary],
+  );
 
   // Key extractor for FlatList
   const keyExtractor = useCallback((item: Friendship) => item.id, []);
@@ -240,7 +241,23 @@ export default function FriendsScreen() {
 
                 {/* Action Buttons */}
                 <View style={styles.actionsSection}>
-                  {/* Find Friends Button */}
+                  {/* Search by Username Button */}
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => setShowSearchModal(true)}
+                    style={styles.actionCard}
+                  >
+                    <View style={[styles.actionIconContainer, { backgroundColor: accent.soft }]}>
+                      <Ionicons name="at" size={20} color={accent.primary} />
+                    </View>
+                    <View style={styles.actionTextContainer}>
+                      <Text style={[styles.actionTitle, { color: theme.colors.text.primary }]}>Search by Username</Text>
+                      <Text style={styles.actionSubtitle}>Find anyone on Nūūky</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.3)" />
+                  </TouchableOpacity>
+
+                  {/* Find Friends from Contacts Button */}
                   <TouchableOpacity
                     activeOpacity={0.7}
                     onPress={handleSyncContacts}
@@ -251,14 +268,14 @@ export default function FriendsScreen() {
                       {syncLoading ? (
                         <ActivityIndicator size="small" color={accent.primary} />
                       ) : (
-                        <Ionicons name="search" size={20} color={accent.primary} />
+                        <Ionicons name="people" size={20} color={accent.primary} />
                       )}
                     </View>
                     <View style={styles.actionTextContainer}>
                       <Text style={[styles.actionTitle, { color: theme.colors.text.primary }]}>
-                        {syncLoading ? "Searching..." : "Find Friends"}
+                        {syncLoading ? "Searching..." : "Find from Contacts"}
                       </Text>
-                      <Text style={styles.actionSubtitle}>From your contacts</Text>
+                      <Text style={styles.actionSubtitle}>Sync your phone contacts</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.3)" />
                   </TouchableOpacity>
@@ -274,9 +291,7 @@ export default function FriendsScreen() {
                       <Ionicons name="share-social-outline" size={20} color={accent.primary} />
                     </View>
                     <View style={styles.actionTextContainer}>
-                      <Text style={[styles.actionTitle, { color: theme.colors.text.primary }]}>
-                        Invite to Nūūky
-                      </Text>
+                      <Text style={[styles.actionTitle, { color: theme.colors.text.primary }]}>Invite to Nūūky</Text>
                       <Text style={styles.actionSubtitle}>Share with anyone</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.3)" />
@@ -300,7 +315,9 @@ export default function FriendsScreen() {
                           <View style={styles.sectionTitleRow}>
                             <Text style={styles.sectionTitleText}>PEOPLE ON NŪŪKY</Text>
                             <View style={[styles.badge, { backgroundColor: accent.soft }]}>
-                              <Text style={[styles.badgeText, { color: accent.primary }]}>{notYetAddedContacts.length}</Text>
+                              <Text style={[styles.badgeText, { color: accent.primary }]}>
+                                {notYetAddedContacts.length}
+                              </Text>
                             </View>
                           </View>
                         </View>
@@ -317,9 +334,7 @@ export default function FriendsScreen() {
                                     <Text style={[styles.contactName, { color: theme.colors.text.primary }]}>
                                       {contact.displayName || contact.name}
                                     </Text>
-                                    <Text style={styles.contactPhone}>
-                                      {contact.phoneNumbers[0]}
-                                    </Text>
+                                    <Text style={styles.contactPhone}>{contact.phoneNumbers[0]}</Text>
                                   </View>
                                 </View>
 
@@ -355,14 +370,15 @@ export default function FriendsScreen() {
                   <Ionicons name="person-add-outline" size={36} color={accent.primary} />
                 </View>
                 <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>No Friends Yet</Text>
-                <Text style={styles.emptyMessage}>
-                  Find friends from your contacts to get started
-                </Text>
+                <Text style={styles.emptyMessage}>Search by username or sync contacts to find friends</Text>
               </View>
             ) : null
           }
         />
       </LinearGradient>
+
+      {/* Username Search Modal */}
+      <UserSearchModal visible={showSearchModal} onClose={() => setShowSearchModal(false)} />
     </View>
   );
 }

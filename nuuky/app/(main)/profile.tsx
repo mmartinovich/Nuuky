@@ -23,12 +23,15 @@ import { useAppStore } from "../../stores/appStore";
 import { useProfile } from "../../hooks/useProfile";
 import { useTheme } from "../../hooks/useTheme";
 import { spacing, interactionStates } from "../../lib/theme";
+import { QRCodeModal } from "../../components/QRCode";
 
 // iOS-style icon backgrounds
 const ICON_BACKGROUNDS = {
   name: "#5856D6",
+  username: "#34C759",
   email: "#007AFF",
   phone: "#FF9500",
+  qr: "#AF52DE",
 };
 
 interface ProfileRowProps {
@@ -72,29 +75,16 @@ const ProfileRow: React.FC<ProfileRowProps> = ({
           <Ionicons name={icon as any} size={18} color="#FFFFFF" />
         </View>
         <View style={styles.rowTextContainer}>
-          <Text style={[styles.rowLabel, { color: theme.colors.text.tertiary }]}>
-            {label}
-          </Text>
-          <Text
-            style={[styles.rowValue, { color: theme.colors.text.primary }]}
-            numberOfLines={1}
-          >
+          <Text style={[styles.rowLabel, { color: theme.colors.text.tertiary }]}>{label}</Text>
+          <Text style={[styles.rowValue, { color: theme.colors.text.primary }]} numberOfLines={1}>
             {value}
           </Text>
         </View>
-        {showChevron && (
-          <Ionicons
-            name="chevron-forward"
-            size={18}
-            color={theme.colors.text.tertiary}
-          />
-        )}
+        {showChevron && <Ionicons name="chevron-forward" size={18} color={theme.colors.text.tertiary} />}
       </View>
       {!isLast && (
         <View style={styles.separatorContainer}>
-          <View
-            style={[styles.separator, { backgroundColor: theme.colors.glass.border }]}
-          />
+          <View style={[styles.separator, { backgroundColor: theme.colors.glass.border }]} />
         </View>
       )}
     </View>
@@ -117,18 +107,9 @@ interface ProfileSectionProps {
   theme: ReturnType<typeof useTheme>["theme"];
 }
 
-const ProfileSection: React.FC<ProfileSectionProps> = ({
-  title,
-  footer,
-  children,
-  theme,
-}) => (
+const ProfileSection: React.FC<ProfileSectionProps> = ({ title, footer, children, theme }) => (
   <View style={styles.section}>
-    {title && (
-      <Text style={[styles.sectionTitle, { color: theme.colors.text.tertiary }]}>
-        {title}
-      </Text>
-    )}
+    {title && <Text style={[styles.sectionTitle, { color: theme.colors.text.tertiary }]}>{title}</Text>}
     <View
       style={[
         styles.sectionContent,
@@ -140,11 +121,7 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({
     >
       {children}
     </View>
-    {footer && (
-      <Text style={[styles.sectionFooter, { color: theme.colors.text.tertiary }]}>
-        {footer}
-      </Text>
-    )}
+    {footer && <Text style={[styles.sectionFooter, { color: theme.colors.text.tertiary }]}>{footer}</Text>}
   </View>
 );
 
@@ -153,12 +130,12 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { theme, isDark } = useTheme();
   const { currentUser } = useAppStore();
-  const { loading, previewUri, pickAndUploadAvatar, updateDisplayName, deleteAvatar } =
-    useProfile();
+  const { loading, previewUri, pickAndUploadAvatar, updateDisplayName, deleteAvatar } = useProfile();
 
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(currentUser?.display_name || "");
   const [imageKey, setImageKey] = useState(Date.now());
+  const [showQRModal, setShowQRModal] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -205,7 +182,7 @@ export default function ProfileScreen() {
           toValue: 1,
           duration: 1000,
           useNativeDriver: true,
-        })
+        }),
       ).start();
     }
   }, [loading]);
@@ -238,7 +215,7 @@ export default function ProfileScreen() {
           } else if (buttonIndex === 2 && currentUser?.avatar_url) {
             await deleteAvatar();
           }
-        }
+        },
       );
     } else {
       const buttons: any[] = [
@@ -286,10 +263,7 @@ export default function ProfileScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-      <LinearGradient
-        colors={theme.gradients.background}
-        style={StyleSheet.absoluteFill}
-      />
+      <LinearGradient colors={theme.gradients.background} style={StyleSheet.absoluteFill} />
 
       {/* Header - Loóna style (matching rooms header) */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
@@ -300,20 +274,15 @@ export default function ProfileScreen() {
         >
           <Ionicons name="chevron-back" size={28} color={theme.colors.text.primary} />
         </TouchableOpacity>
-        
-        <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
-          Profile
-        </Text>
-        
+
+        <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>Profile</Text>
+
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: insets.bottom + 32 },
-        ]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -333,12 +302,7 @@ export default function ProfileScreen() {
             activeOpacity={0.8}
             style={styles.avatarWrapper}
           >
-            <View
-              style={[
-                styles.avatarContainer,
-                { borderColor: theme.colors.glass.border },
-              ]}
-            >
+            <View style={[styles.avatarContainer, { borderColor: theme.colors.glass.border }]}>
               {previewUri ? (
                 <Image
                   key={`preview-${previewUri}`}
@@ -354,13 +318,8 @@ export default function ProfileScreen() {
                   resizeMode="cover"
                 />
               ) : (
-                <LinearGradient
-                  colors={["#5856D6", "#AF52DE"]}
-                  style={styles.avatarGradient}
-                >
-                  <Text style={styles.avatarInitial}>
-                    {currentUser?.display_name?.[0]?.toUpperCase() || "?"}
-                  </Text>
+                <LinearGradient colors={["#5856D6", "#AF52DE"]} style={styles.avatarGradient}>
+                  <Text style={styles.avatarInitial}>{currentUser?.display_name?.[0]?.toUpperCase() || "?"}</Text>
                 </LinearGradient>
               )}
 
@@ -389,23 +348,14 @@ export default function ProfileScreen() {
           <Text style={[styles.userName, { color: theme.colors.text.primary }]}>
             {currentUser?.display_name || "Your Name"}
           </Text>
-          <Text style={[styles.userEmail, { color: theme.colors.text.tertiary }]}>
-            {currentUser?.email || ""}
-          </Text>
+          <Text style={[styles.userEmail, { color: theme.colors.text.tertiary }]}>{currentUser?.email || ""}</Text>
         </Animated.View>
 
         {/* Edit Name Section */}
         {isEditingName ? (
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text.tertiary }]}>
-              DISPLAY NAME
-            </Text>
-            <View
-              style={[
-                styles.editCard,
-                { backgroundColor: theme.colors.glass.background },
-              ]}
-            >
+            <Text style={[styles.sectionTitle, { color: theme.colors.text.tertiary }]}>DISPLAY NAME</Text>
+            <View style={[styles.editCard, { backgroundColor: theme.colors.glass.background }]}>
               <View style={styles.editInputContainer}>
                 <TextInput
                   style={[styles.nameInput, { color: theme.colors.text.primary }]}
@@ -419,28 +369,12 @@ export default function ProfileScreen() {
                   onSubmitEditing={handleSaveName}
                 />
               </View>
-              <View
-                style={[
-                  styles.editDivider,
-                  { backgroundColor: theme.colors.glass.border },
-                ]}
-              />
+              <View style={[styles.editDivider, { backgroundColor: theme.colors.glass.border }]} />
               <View style={styles.editButtons}>
-                <TouchableOpacity
-                  style={styles.editButton}
-                  onPress={handleCancelEdit}
-                  activeOpacity={0.6}
-                >
-                  <Text style={[styles.cancelButtonText, { color: theme.colors.text.secondary }]}>
-                    Cancel
-                  </Text>
+                <TouchableOpacity style={styles.editButton} onPress={handleCancelEdit} activeOpacity={0.6}>
+                  <Text style={[styles.cancelButtonText, { color: theme.colors.text.secondary }]}>Cancel</Text>
                 </TouchableOpacity>
-                <View
-                  style={[
-                    styles.buttonDivider,
-                    { backgroundColor: theme.colors.glass.border },
-                  ]}
-                />
+                <View style={[styles.buttonDivider, { backgroundColor: theme.colors.glass.border }]} />
                 <TouchableOpacity
                   style={styles.editButton}
                   onPress={handleSaveName}
@@ -460,11 +394,7 @@ export default function ProfileScreen() {
             </View>
           </View>
         ) : (
-          <ProfileSection
-            title="DISPLAY NAME"
-            footer="This is how your friends will see you in the app."
-            theme={theme}
-          >
+          <ProfileSection title="DISPLAY NAME" footer="This is how your friends will see you in the app." theme={theme}>
             <ProfileRow
               icon="person"
               iconBg={ICON_BACKGROUNDS.name}
@@ -481,12 +411,22 @@ export default function ProfileScreen() {
 
         {/* Account Info Section */}
         <ProfileSection title="ACCOUNT" theme={theme}>
+          {currentUser?.username && (
+            <ProfileRow
+              icon="at"
+              iconBg={ICON_BACKGROUNDS.username}
+              label="Username"
+              value={`@${currentUser.username}`}
+              isFirst
+              theme={theme}
+            />
+          )}
           <ProfileRow
             icon="mail"
             iconBg={ICON_BACKGROUNDS.email}
             label="Email"
             value={currentUser?.email || "Not set"}
-            isFirst
+            isFirst={!currentUser?.username}
             isLast={!currentUser?.phone}
             theme={theme}
           />
@@ -501,7 +441,39 @@ export default function ProfileScreen() {
             />
           )}
         </ProfileSection>
+
+        {/* Share Profile Section */}
+        {currentUser?.username && (
+          <ProfileSection
+            title="SHARE PROFILE"
+            footer="Friends can add you by scanning your QR code or searching for your username."
+            theme={theme}
+          >
+            <ProfileRow
+              icon="qr-code"
+              iconBg={ICON_BACKGROUNDS.qr}
+              label="My QR Code"
+              value="Tap to show"
+              onPress={() => setShowQRModal(true)}
+              showChevron
+              isFirst
+              isLast
+              theme={theme}
+            />
+          </ProfileSection>
+        )}
       </ScrollView>
+
+      {/* QR Code Modal */}
+      {currentUser?.username && (
+        <QRCodeModal
+          visible={showQRModal}
+          value={`nuuky://u/${currentUser.username}`}
+          title="My QR Code"
+          subtitle={`@${currentUser.username}`}
+          onClose={() => setShowQRModal(false)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }
