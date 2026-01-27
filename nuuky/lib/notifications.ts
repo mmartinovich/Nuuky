@@ -3,13 +3,32 @@ import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { supabase } from './supabase';
 
-// Configure how notifications should be handled when app is foregrounded
+/**
+ * Configure how notifications should be handled when app is foregrounded
+ * Silent notifications (with _silent flag) won't show UI
+ * This follows the Discord/Slack pattern where background data syncs silently
+ */
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
+  handleNotification: async (notification) => {
+    const data = notification.request.content.data;
+
+    // Silent/data-only notifications should not show any UI
+    // They're used for background data sync when app is backgrounded
+    if (data?._silent) {
+      return {
+        shouldShowAlert: false,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+      };
+    }
+
+    // Regular notifications show full UI
+    return {
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    };
+  },
 });
 
 export async function registerForPushNotificationsAsync(): Promise<string | undefined> {
@@ -88,6 +107,19 @@ export const NotificationTypes = {
   FRIEND_REQUEST: 'friend_request',
   FRIEND_ACCEPTED: 'friend_accepted',
   ROOM_INVITE: 'room_invite',
+  CALL_ME: 'call_me', // New: request for a call
+} as const;
+
+/**
+ * Sync types for silent background notifications
+ * These are used to tell the app what data to refresh
+ */
+export const SyncTypes = {
+  NOTIFICATIONS: 'sync_notifications',
+  FRIENDS: 'sync_friends',
+  FLARES: 'sync_flares',
+  ROOMS: 'sync_rooms',
+  PRESENCE: 'sync_presence',
 } as const;
 
 // Setup notification listeners
@@ -131,4 +163,55 @@ export async function scheduleLocalNotification(
     },
     trigger: seconds > 0 ? { seconds } : null,
   });
+}
+
+/**
+ * Handle silent notification data for background sync
+ * This is called when a silent push notification arrives
+ * The app uses this to know what data to refresh
+ */
+export function handleSilentNotification(
+  data: Record<string, any>,
+  callbacks?: {
+    onSyncNotifications?: () => void;
+    onSyncFriends?: () => void;
+    onSyncFlares?: () => void;
+    onSyncRooms?: () => void;
+    onSyncPresence?: () => void;
+  }
+) {
+  if (!data?._silent) return;
+
+  const syncType = data.sync_type;
+
+  switch (syncType) {
+    case SyncTypes.NOTIFICATIONS:
+      callbacks?.onSyncNotifications?.();
+      break;
+    case SyncTypes.FRIENDS:
+      callbacks?.onSyncFriends?.();
+      break;
+    case SyncTypes.FLARES:
+      callbacks?.onSyncFlares?.();
+      break;
+    case SyncTypes.ROOMS:
+      callbacks?.onSyncRooms?.();
+      break;
+    case SyncTypes.PRESENCE:
+      callbacks?.onSyncPresence?.();
+      break;
+    default:
+      // If no specific sync type, trigger all syncs
+      callbacks?.onSyncNotifications?.();
+      callbacks?.onSyncFriends?.();
+      callbacks?.onSyncFlares?.();
+      break;
+  }
+}
+
+/**
+ * Check if a notification is a silent/background notification
+ */
+export function isSilentNotification(notification: Notifications.Notification): boolean {
+  return notification.request.content.data?._silent === true;
 }

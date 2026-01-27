@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { User } from '../types';
 import { getMoodColor } from '../lib/theme';
+import { useLowPowerMode } from '../stores/appStore';
 
 const { width, height } = Dimensions.get('window');
 const CENTER_X = width / 2;
@@ -36,6 +37,7 @@ export function FriendParticle({
   radius,
   orbitAngle,
 }: FriendParticleProps) {
+  const lowPowerMode = useLowPowerMode();
   const pulseAnim = useRef(new Animated.Value(0)).current;
   const flareAnim = useRef(new Animated.Value(0)).current;
   const bounceAnim = useRef(new Animated.Value(0)).current;
@@ -53,19 +55,27 @@ export function FriendParticle({
   const localOffsetRef = useRef(0);
 
   // Start gentle oscillation animation for organic floating
+  // Optimized: Longer duration = fewer updates = better battery
+  // Low power mode disables this animation entirely
   useEffect(() => {
-    const oscillationAmplitude = 0.12; // Radians - gentle swing
-    const oscillationDuration = 8000 + (index * 2000); // 8-14 seconds
+    // Skip oscillation animation in low power mode
+    if (lowPowerMode) {
+      localOrbitAnim.setValue(0);
+      return;
+    }
+
+    const oscillationAmplitude = 0.08; // Radians - reduced for subtlety
+    const oscillationDuration = 12000 + (index * 3000); // 12-27 seconds (slower = less battery)
     const startDirection = index % 2 === 0 ? 1 : -1;
 
-    // Smooth oscillation loop
+    // Smooth oscillation loop - longer duration for battery optimization
     Animated.loop(
       Animated.sequence([
         Animated.timing(localOrbitAnim, {
           toValue: oscillationAmplitude * startDirection,
           duration: oscillationDuration / 2,
           easing: Easing.sin,
-          useNativeDriver: false, // Need JS value for position calc
+          useNativeDriver: false, // Required for position calculation
         }),
         Animated.timing(localOrbitAnim, {
           toValue: -oscillationAmplitude * startDirection,
@@ -85,7 +95,7 @@ export function FriendParticle({
     return () => {
       localOrbitAnim.stopAnimation();
     };
-  }, [index]);
+  }, [index, lowPowerMode]);
 
   // Update position when orbit angle or local oscillation changes
   // Uses setValue instead of setState to avoid React re-renders (60fps without lag)
@@ -100,8 +110,8 @@ export function FriendParticle({
 
     const updatePosition = () => {
       const now = Date.now();
-      // Throttle to 16ms (~60fps) - smooth animation without React re-renders
-      if (now - lastUpdateTime.current < 16) return;
+      // Throttle to 33ms (~30fps) - good enough for smooth animation, better for battery
+      if (now - lastUpdateTime.current < 33) return;
       
       lastUpdateTime.current = now;
       const parentAngle = (orbitAngle as any)._value || 0;
@@ -133,7 +143,15 @@ export function FriendParticle({
   }, [friend.id, baseAngle, radius, orbitAngle, localOrbitAnim]);
 
   // Lightweight animations - native-driven for performance
+  // Disabled in low power mode
   useEffect(() => {
+    // Skip animations in low power mode
+    if (lowPowerMode) {
+      bounceAnim.setValue(0);
+      pulseAnim.setValue(0);
+      return;
+    }
+
     // Very subtle bounce - minimal overhead
     const bounceAnimation = Animated.loop(
       Animated.sequence([
@@ -180,7 +198,7 @@ export function FriendParticle({
       bounceAnimation.stop();
       pulseAnimation?.stop();
     };
-  }, [friend.is_online, index]);
+  }, [friend.is_online, index, lowPowerMode]);
 
   useEffect(() => {
     let flareAnimation: Animated.CompositeAnimation | null = null;

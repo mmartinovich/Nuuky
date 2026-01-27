@@ -2,10 +2,8 @@ import { useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../stores/appStore';
+import { subscriptionManager } from '../lib/subscriptionManager';
 import { Friendship } from '../types';
-
-// Module-level subscription tracking to prevent duplicates
-let activeFriendsSubscription: { cleanup: () => void; userId: string } | null = null;
 
 // Throttle mechanism to prevent excessive API calls on realtime updates
 let lastFriendsRefresh = 0;
@@ -93,19 +91,10 @@ export const useFriends = () => {
   const setupRealtimeSubscription = () => {
     if (!currentUser) return () => {};
 
-    // Prevent duplicate subscriptions - return existing cleanup to properly cleanup on unmount
-    if (activeFriendsSubscription && activeFriendsSubscription.userId === currentUser.id) {
-      return activeFriendsSubscription.cleanup;
-    }
-
-    if (activeFriendsSubscription) {
-      activeFriendsSubscription.cleanup();
-      activeFriendsSubscription = null;
-    }
+    const subscriptionId = `friendships-${currentUser.id}`;
 
     // Throttled refresh to prevent excessive API calls
-    // Use a function that captures the user ID to avoid stale closures
-    const throttledLoadFriends = async (_payload?: any) => {
+    const throttledLoadFriends = async () => {
       const now = Date.now();
       if (now - lastFriendsRefresh < FRIENDS_REFRESH_THROTTLE_MS) {
         return;
@@ -160,38 +149,32 @@ export const useFriends = () => {
       }
     };
 
-    const channel = supabase
-      .channel(`friendships-changes-${currentUser.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'friendships',
-          filter: `user_id=eq.${currentUser.id}`,
-        },
-        throttledLoadFriends
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'friendships',
-          filter: `friend_id=eq.${currentUser.id}`,
-        },
-        throttledLoadFriends
-      )
-      .subscribe();
-
-    const cleanup = () => {
-      supabase.removeChannel(channel);
-      if (activeFriendsSubscription && activeFriendsSubscription.userId === currentUser.id) {
-        activeFriendsSubscription = null;
-      }
-    };
-
-    activeFriendsSubscription = { cleanup, userId: currentUser.id };
+    // Use subscription manager for automatic pause/resume on app background
+    const cleanup = subscriptionManager.register(subscriptionId, () => {
+      return supabase
+        .channel(subscriptionId)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'friendships',
+            filter: `user_id=eq.${currentUser.id}`,
+          },
+          throttledLoadFriends
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'friendships',
+            filter: `friend_id=eq.${currentUser.id}`,
+          },
+          throttledLoadFriends
+        )
+        .subscribe();
+    });
 
     return cleanup;
   };

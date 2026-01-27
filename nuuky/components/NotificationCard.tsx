@@ -57,6 +57,12 @@ const getNotificationStyle = (type: NotificationType, theme: any) => {
         color: theme.colors.neon.purple,
         label: 'Room Invite',
       };
+    case 'call_me':
+      return {
+        icon: 'call' as const,
+        color: theme.colors.mood.good.base,
+        label: 'Call Request',
+      };
     default:
       return {
         icon: 'notifications' as const,

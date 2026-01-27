@@ -26,6 +26,9 @@ interface AppState {
   // Theme state
   themeMode: ThemeMode;
 
+  // Battery optimization
+  lowPowerMode: boolean;
+
   // Audio state
   audioConnectionStatus: AudioConnectionStatus;
   audioError: string | null;
@@ -69,6 +72,7 @@ interface AppState {
   removeNotification: (notificationId: string) => void;
   setDefaultRoomId: (roomId: string | null) => void;
   setThemeMode: (mode: ThemeMode) => void;
+  setLowPowerMode: (enabled: boolean) => void;
   setAudioConnectionStatus: (status: AudioConnectionStatus) => void;
   setAudioError: (error: string | null) => void;
   addSpeakingParticipant: (participantId: string) => void;
@@ -92,6 +96,7 @@ export const useUnreadNotificationCount = () => useAppStore((state) => state.unr
 export const useThemeMode = () => useAppStore((state) => state.themeMode);
 export const useDefaultRoomId = () => useAppStore((state) => state.defaultRoomId);
 export const useAudioConnectionStatus = () => useAppStore((state) => state.audioConnectionStatus);
+export const useLowPowerMode = () => useAppStore((state) => state.lowPowerMode);
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -108,6 +113,7 @@ export const useAppStore = create<AppState>()(
   roomInvites: [],
   defaultRoomId: null,
   themeMode: 'dark' as ThemeMode,
+  lowPowerMode: false,
   audioConnectionStatus: 'disconnected' as AudioConnectionStatus,
   audioError: null,
   speakingParticipants: [],
@@ -238,6 +244,8 @@ export const useAppStore = create<AppState>()(
 
   setThemeMode: (mode) => set({ themeMode: mode }),
 
+  setLowPowerMode: (enabled) => set({ lowPowerMode: enabled }),
+
   setAudioConnectionStatus: (status) => set({ audioConnectionStatus: status }),
 
   setAudioError: (error) => set({ audioError: error }),
@@ -286,6 +294,7 @@ export const useAppStore = create<AppState>()(
         currentUser: state.currentUser,
         themeMode: state.themeMode,
         defaultRoomId: state.defaultRoomId,
+        lowPowerMode: state.lowPowerMode,
       }),
     }
   )

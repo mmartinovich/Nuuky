@@ -39,6 +39,8 @@ export default function RootLayout() {
         router.push('/(main)/friends');
         break;
       case 'room_invite':
+      case 'call_me':
+        // Both room invites and call requests go to rooms
         router.push('/(main)/rooms');
         break;
       default:

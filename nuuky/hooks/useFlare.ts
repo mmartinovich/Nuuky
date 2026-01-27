@@ -3,10 +3,8 @@ import { Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../stores/appStore';
+import { subscriptionManager } from '../lib/subscriptionManager';
 import { Flare } from '../types';
-
-// Module-level subscription tracking to prevent duplicates
-let activeFlareSubscription: { cleanup: () => void; userId: string } | null = null;
 
 export const useFlare = () => {
   const { currentUser, friends } = useAppStore();
@@ -97,42 +95,31 @@ export const useFlare = () => {
   const setupRealtimeSubscription = () => {
     if (!currentUser) return () => {};
 
-    // Prevent duplicate subscriptions - return existing cleanup for proper unmount
-    if (activeFlareSubscription && activeFlareSubscription.userId === currentUser.id) {
-      return activeFlareSubscription.cleanup;
-    }
+    const subscriptionId = `flares-${currentUser.id}`;
 
-    if (activeFlareSubscription) {
-      activeFlareSubscription.cleanup();
-      activeFlareSubscription = null;
-    }
+    // Use subscription manager for automatic pause/resume on app background
+    const cleanup = subscriptionManager.register(subscriptionId, () => {
+      return supabase
+        .channel(subscriptionId)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'flares',
+          },
+          (payload) => {
+            loadActiveFlares();
 
-    const channel = supabase
-      .channel('flares-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'flares',
-        },
-        (payload) => {
-          loadActiveFlares();
-
-          // Play strong haptic if a friend sent a flare
-          if (payload.eventType === 'INSERT' && payload.new.user_id !== currentUser?.id) {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            // Play strong haptic if a friend sent a flare
+            const user = useAppStore.getState().currentUser;
+            if (payload.eventType === 'INSERT' && payload.new.user_id !== user?.id) {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            }
           }
-        }
-      )
-      .subscribe();
-
-    const cleanup = () => {
-      supabase.removeChannel(channel);
-      activeFlareSubscription = null;
-    };
-
-    activeFlareSubscription = { cleanup, userId: currentUser.id };
+        )
+        .subscribe();
+    });
 
     return cleanup;
   };

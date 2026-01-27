@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../hooks/useTheme";
 import { usePreferences } from "../../hooks/usePreferences";
+import { useLowPowerMode, useAppStore } from "../../stores/appStore";
 import { spacing, interactionStates } from "../../lib/theme";
 
 
@@ -160,6 +161,8 @@ export default function SettingsScreen() {
     toggleFlares,
     loading: prefsLoading,
   } = usePreferences();
+  const lowPowerMode = useLowPowerMode();
+  const setLowPowerMode = useAppStore((state) => state.setLowPowerMode);
 
   const handleLogout = async () => {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
@@ -277,6 +280,35 @@ export default function SettingsScreen() {
               trackColor={{
                 false: isDark ? "rgba(120,120,128,0.32)" : "rgba(120,120,128,0.16)",
                 true: "#FF3B30",
+              }}
+              thumbColor="#FFFFFF"
+              ios_backgroundColor={
+                isDark ? "rgba(120,120,128,0.32)" : "rgba(120,120,128,0.16)"
+              }
+            />
+          </SettingsRow>
+        </SettingsSection>
+
+        {/* Battery & Performance Section */}
+        <SettingsSection
+          title="BATTERY & PERFORMANCE"
+          footer="Low Power Mode reduces animations and background activity to save battery."
+          theme={theme}
+        >
+          <SettingsRow
+            icon="battery-half"
+            label="Low Power Mode"
+            showChevron={false}
+            isFirst
+            isLast
+            theme={theme}
+          >
+            <Switch
+              value={lowPowerMode}
+              onValueChange={setLowPowerMode}
+              trackColor={{
+                false: isDark ? "rgba(120,120,128,0.32)" : "rgba(120,120,128,0.16)",
+                true: "#34C759",
               }}
               thumbColor="#FFFFFF"
               ios_backgroundColor={
