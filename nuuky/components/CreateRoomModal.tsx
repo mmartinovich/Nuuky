@@ -11,10 +11,11 @@ import {
   Animated,
   Dimensions,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../hooks/useTheme';
+import { colors } from '../lib/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -29,7 +30,7 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
   onClose,
   onCreate,
 }) => {
-  const { theme, isDark } = useTheme();
+  const { theme, accent } = useTheme();
   const [roomName, setRoomName] = useState('');
 
   // Simple animations
@@ -75,11 +76,7 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <BlurView
-        intensity={isDark ? 60 : 40}
-        tint={theme.colors.blurTint}
-        style={styles.overlay}
-      >
+      <View style={styles.overlay}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
@@ -93,101 +90,74 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
               },
             ]}
           >
-            <View
-              style={[
-                styles.modal,
-                {
-                  backgroundColor: theme.colors.bg.secondary,
-                  borderColor: theme.colors.glass.border,
-                },
-              ]}
+            <LinearGradient
+              colors={theme.gradients.background}
+              style={styles.gradientBackground}
             >
-              {/* Header Row */}
-              <View style={styles.headerRow}>
-                <View style={styles.iconContainer}>
-                  <Ionicons name="home" size={24} color={theme.colors.neon.cyan} />
+              {/* Header Section */}
+              <View style={styles.headerSection}>
+                <View style={[styles.iconContainer, { backgroundColor: accent.soft }]}>
+                  <Ionicons name="home" size={22} color={accent.primary} />
                 </View>
                 <View style={styles.headerText}>
-                  <Text style={[styles.title, { color: theme.colors.text.primary }]}>
-                    Create Room
-                  </Text>
-                  <Text style={[styles.subtitle, { color: theme.colors.text.tertiary }]}>
-                    Start a space for friends
-                  </Text>
+                  <Text style={styles.title}>Create Room</Text>
+                  <Text style={styles.subtitle}>Start a space for friends</Text>
                 </View>
               </View>
 
-              {/* Input */}
-              <View
-                style={[
-                  styles.inputContainer,
-                  { backgroundColor: 'rgba(255, 255, 255, 0.05)' },
-                ]}
-              >
-                <TextInput
-                  style={[styles.input, { color: theme.colors.text.primary }]}
-                  placeholder="Room name"
-                  placeholderTextColor={theme.colors.text.tertiary}
-                  value={roomName}
-                  onChangeText={setRoomName}
-                  maxLength={30}
-                  autoCorrect={false}
-                  autoCapitalize="words"
-                  autoFocus
-                />
+              {/* Input Section */}
+              <View style={styles.inputSection}>
+                <Text style={styles.sectionLabel}>ROOM NAME</Text>
+                <View style={styles.inputCard}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter a name..."
+                    placeholderTextColor="rgba(255, 255, 255, 0.3)"
+                    value={roomName}
+                    onChangeText={setRoomName}
+                    maxLength={30}
+                    autoCorrect={false}
+                    autoCapitalize="words"
+                    autoFocus
+                  />
+                </View>
               </View>
 
               {/* Buttons */}
               <View style={styles.buttons}>
                 <TouchableOpacity
                   onPress={handleCancel}
-                  style={[
-                    styles.button,
-                    {
-                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                      borderColor: 'rgba(255, 255, 255, 0.1)',
-                    },
-                  ]}
+                  style={styles.cancelButton}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="close" size={18} color={theme.colors.text.secondary} style={styles.buttonIcon} />
-                  <Text style={[styles.buttonText, { color: theme.colors.text.secondary }]}>
-                    Cancel
-                  </Text>
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={handleCreate}
                   style={[
-                    styles.button,
+                    styles.createButton,
                     {
-                      backgroundColor: canCreate ? 'rgba(50, 213, 131, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                      borderColor: canCreate ? 'rgba(50, 213, 131, 0.4)' : 'rgba(255, 255, 255, 0.1)',
+                      backgroundColor: canCreate ? accent.primary : 'rgba(255, 255, 255, 0.08)',
                     },
                   ]}
                   activeOpacity={0.7}
                   disabled={!canCreate}
                 >
-                  <Ionicons
-                    name="checkmark"
-                    size={18}
-                    color={canCreate ? '#32D583' : theme.colors.text.tertiary}
-                    style={styles.buttonIcon}
-                  />
                   <Text
                     style={[
-                      styles.buttonText,
-                      { color: canCreate ? '#32D583' : theme.colors.text.tertiary },
+                      styles.createButtonText,
+                      { color: canCreate ? '#FFFFFF' : 'rgba(255, 255, 255, 0.3)' },
                     ]}
                   >
                     Create
                   </Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </LinearGradient>
           </Animated.View>
         </KeyboardAvoidingView>
-      </BlurView>
+      </View>
     </Modal>
   );
 };
@@ -197,6 +167,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   keyboardView: {
     width: '100%',
@@ -205,66 +176,96 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: SCREEN_WIDTH - 48,
     maxWidth: 360,
+    borderRadius: 24,
+    overflow: 'hidden',
   },
-  modal: {
-    borderRadius: 20,
-    padding: 20,
+  gradientBackground: {
+    padding: 24,
+    borderRadius: 24,
     borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
-  headerRow: {
+  // Header
+  headerSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 24,
   },
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(0, 240, 255, 0.1)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 14,
   },
   headerText: {
     flex: 1,
   },
   title: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
     letterSpacing: -0.3,
+    color: colors.text.primary,
     marginBottom: 2,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '400',
+    color: 'rgba(255, 255, 255, 0.5)',
   },
-  inputContainer: {
-    borderRadius: 12,
-    marginBottom: 16,
+  // Input Section
+  inputSection: {
+    marginBottom: 24,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    color: 'rgba(255, 255, 255, 0.4)',
+    marginBottom: 10,
+  },
+  inputCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   input: {
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
     fontWeight: '500',
+    color: colors.text.primary,
   },
+  // Buttons
   buttons: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
   },
-  button: {
+  cancelButton: {
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
-  buttonIcon: {
-    marginRight: 6,
+  cancelButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.5)',
   },
-  buttonText: {
+  createButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 16,
+  },
+  createButtonText: {
     fontSize: 15,
     fontWeight: '600',
   },
