@@ -6,7 +6,7 @@ import { useAppStore } from '../stores/appStore';
 // MOCK MODE FLAG - should match useRoom.ts
 const USE_MOCK_DATA = false;
 
-const HEARTBEAT_INTERVAL = 30000; // 30 seconds
+const HEARTBEAT_INTERVAL = 60000; // 60 seconds - optimized for battery
 const OFFLINE_TIMEOUT = 120000; // 2 minutes of inactivity = offline
 
 export const usePresence = () => {

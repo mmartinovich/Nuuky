@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { sendExpoNotification, sendBatchExpoNotifications } from '../_shared/expo-push.ts';
+import { sendBatchExpoNotifications, sendBatchSilentNotifications } from '../_shared/expo-push.ts';
 
 interface RoomInviteRequest {
   room_id: string;
@@ -136,7 +136,17 @@ serve(async (req) => {
 
     const result = await sendBatchExpoNotifications(tokens, notification);
 
-    console.log(`Sent ${result.success} room invite notifications`);
+    // Send silent notifications for background sync (Discord/Slack pattern)
+    await sendBatchSilentNotifications(tokens, {
+      sync_type: 'sync_rooms',
+      notification_type: 'room_invite',
+      room_id: room_id,
+      room_name: roomName,
+      sender_id: sender_id,
+      sender_name: sender.display_name,
+    });
+
+    console.log(`Sent ${result.success} room invite notifications + silent sync`);
 
     return new Response(
       JSON.stringify({

@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { sendBatchExpoNotifications } from '../_shared/expo-push.ts';
+import { sendBatchExpoNotifications, sendBatchSilentNotifications } from '../_shared/expo-push.ts';
 
 interface FlareRequest {
   user_id: string;
@@ -194,6 +194,19 @@ serve(async (req) => {
       const regularResult = await sendBatchExpoNotifications(regularTokens, regularNotification);
       totalSent += regularResult.success;
       console.log(`Sent ${regularResult.success} regular notifications`);
+    }
+
+    // Send silent notifications for background sync to ALL friends (Discord/Slack pattern)
+    const allTokens = [...anchorTokens, ...regularTokens];
+    if (allTokens.length > 0) {
+      await sendBatchSilentNotifications(allTokens, {
+        sync_type: 'sync_flares',
+        notification_type: 'flare',
+        sender_id: user_id,
+        sender_name: user.display_name,
+        flare_id: flare_id,
+      });
+      console.log(`Sent ${allTokens.length} silent sync notifications`);
     }
 
     return new Response(

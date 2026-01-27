@@ -1,12 +1,9 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Alert } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../stores/appStore';
+import { subscriptionManager } from '../lib/subscriptionManager';
 import { Room, RoomParticipant } from '../types';
-
-// Module-level subscription tracking to prevent duplicates across hook instances
-let activeRoomSubscription: { cleanup: () => void; userId: string; channelIds: string[] } | null = null;
-let subscriptionCounter = 0;
 
 // Throttle mechanism to prevent excessive API calls
 let lastRoomsRefresh = 0;
@@ -155,22 +152,8 @@ export const useRoom = () => {
   const setupRealtimeSubscription = () => {
     if (!currentUser) return () => {};
 
-    // Prevent duplicate subscriptions across hook instances - return existing cleanup
-    if (activeRoomSubscription && activeRoomSubscription.userId === currentUser.id) {
-      // Subscription already exists for this user, return existing cleanup for proper unmount
-      return activeRoomSubscription.cleanup;
-    }
-
-    // Clean up any existing subscription for a different user
-    if (activeRoomSubscription) {
-      activeRoomSubscription.cleanup();
-      activeRoomSubscription = null;
-    }
-
-    // Use unique channel names to prevent duplicate listeners
-    const subscriptionId = ++subscriptionCounter;
-    const roomsChannelName = `rooms-changes-${subscriptionId}`;
-    const participantsChannelName = `participants-changes-${subscriptionId}`;
+    const roomsSubscriptionId = `rooms-${currentUser.id}`;
+    const participantsSubscriptionId = `room-participants-${currentUser.id}`;
 
     // Throttled refresh function
     const throttledRefresh = () => {
@@ -185,55 +168,50 @@ export const useRoom = () => {
       const now = Date.now();
       if (now - lastParticipantsRefresh < REFRESH_THROTTLE_MS) return;
       lastParticipantsRefresh = now;
-      if (currentRoom) {
+      const room = useAppStore.getState().currentRoom;
+      if (room) {
         loadParticipants();
       }
     };
 
-    // Subscribe to room changes
-    const roomsChannel = supabase
-      .channel(roomsChannelName)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'rooms',
-        },
-        throttledRefresh
-      )
-      .subscribe();
+    // Use subscription manager for automatic pause/resume on app background
+    const cleanupRooms = subscriptionManager.register(roomsSubscriptionId, () => {
+      return supabase
+        .channel(roomsSubscriptionId)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'rooms',
+          },
+          throttledRefresh
+        )
+        .subscribe();
+    });
 
-    // Subscribe to participant changes
-    const participantsChannel = supabase
-      .channel(participantsChannelName)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'room_participants',
-        },
-        () => {
-          throttledParticipantsRefresh();
-          throttledRefresh();
-        }
-      )
-      .subscribe();
+    const cleanupParticipants = subscriptionManager.register(participantsSubscriptionId, () => {
+      return supabase
+        .channel(participantsSubscriptionId)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'room_participants',
+          },
+          () => {
+            throttledParticipantsRefresh();
+            throttledRefresh();
+          }
+        )
+        .subscribe();
+    });
 
-    const cleanup = () => {
-      supabase.removeChannel(roomsChannel);
-      supabase.removeChannel(participantsChannel);
-      activeRoomSubscription = null;
+    return () => {
+      cleanupRooms();
+      cleanupParticipants();
     };
-
-    activeRoomSubscription = {
-      cleanup,
-      userId: currentUser.id,
-      channelIds: [roomsChannelName, participantsChannelName]
-    };
-
-    return cleanup;
   };
 
   // Check if user can create a room (max 5 rooms)

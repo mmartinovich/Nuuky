@@ -3,10 +3,8 @@ import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../stores/appStore';
+import { subscriptionManager } from '../lib/subscriptionManager';
 import { AppNotification } from '../types';
-
-// Module-level subscription tracking to prevent duplicates
-let activeNotificationsSubscription: { cleanup: () => void; userId: string } | null = null;
 
 export const useNotifications = () => {
   const router = useRouter();
@@ -174,63 +172,51 @@ export const useNotifications = () => {
   const setupRealtimeSubscription = () => {
     if (!currentUser) return () => {};
 
-    // Prevent duplicate subscriptions
-    if (activeNotificationsSubscription && activeNotificationsSubscription.userId === currentUser.id) {
-      return activeNotificationsSubscription.cleanup;
-    }
+    const subscriptionId = `notifications-${currentUser.id}`;
 
-    if (activeNotificationsSubscription) {
-      activeNotificationsSubscription.cleanup();
-      activeNotificationsSubscription = null;
-    }
-
-    const notificationsChannel = supabase
-      .channel('notifications-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${currentUser.id}`,
-        },
-        (payload) => {
-          try {
-            // Add new notification to the top of the list
-            if (payload.new && typeof payload.new === 'object') {
-              addNotification(payload.new as AppNotification);
+    // Use subscription manager for automatic pause/resume on app background
+    const cleanup = subscriptionManager.register(subscriptionId, () => {
+      return supabase
+        .channel(subscriptionId)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${currentUser.id}`,
+          },
+          (payload) => {
+            try {
+              // Add new notification to the top of the list
+              if (payload.new && typeof payload.new === 'object') {
+                useAppStore.getState().addNotification(payload.new as AppNotification);
+              }
+            } catch (error) {
+              console.error('Error handling new notification:', error);
             }
-          } catch (error) {
-            console.error('Error handling new notification:', error);
           }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${currentUser.id}`,
-        },
-        (payload) => {
-          try {
-            if (payload.old && payload.old.id) {
-              removeNotification(payload.old.id);
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${currentUser.id}`,
+          },
+          (payload) => {
+            try {
+              if (payload.old && payload.old.id) {
+                useAppStore.getState().removeNotification(payload.old.id);
+              }
+            } catch (error) {
+              console.error('Error handling notification deletion:', error);
             }
-          } catch (error) {
-            console.error('Error handling notification deletion:', error);
           }
-        }
-      )
-      .subscribe();
-
-    const cleanup = () => {
-      supabase.removeChannel(notificationsChannel);
-      activeNotificationsSubscription = null;
-    };
-
-    activeNotificationsSubscription = { cleanup, userId: currentUser.id };
+        )
+        .subscribe();
+    });
 
     return cleanup;
   };

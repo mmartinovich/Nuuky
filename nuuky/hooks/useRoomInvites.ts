@@ -2,10 +2,8 @@ import { useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../stores/appStore';
+import { subscriptionManager } from '../lib/subscriptionManager';
 import { RoomInvite } from '../types';
-
-// Module-level subscription tracking to prevent duplicates
-let activeInvitesSubscription: { cleanup: () => void; userId: string } | null = null;
 
 // Throttle mechanism for invite updates
 let lastInvitesRefresh = 0;
@@ -399,15 +397,7 @@ export const useRoomInvites = () => {
   const setupRealtimeSubscription = () => {
     if (!currentUser) return () => {};
 
-    // Prevent duplicate subscriptions - return existing cleanup for proper unmount
-    if (activeInvitesSubscription && activeInvitesSubscription.userId === currentUser.id) {
-      return activeInvitesSubscription.cleanup;
-    }
-
-    if (activeInvitesSubscription) {
-      activeInvitesSubscription.cleanup();
-      activeInvitesSubscription = null;
-    }
+    const subscriptionId = `room-invites-${currentUser.id}`;
 
     // Throttled invite load
     const throttledLoadInvites = () => {
@@ -417,33 +407,29 @@ export const useRoomInvites = () => {
       loadMyInvites();
     };
 
-    const invitesChannel = supabase
-      .channel('room-invites-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'room_invites',
-          filter: `receiver_id=eq.${currentUser.id}`,
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            throttledLoadInvites();
-          } else if (payload.eventType === 'DELETE' ||
-                     (payload.eventType === 'UPDATE' && payload.new.status !== 'pending')) {
-            removeRoomInvite(payload.old?.id || payload.new?.id);
+    // Use subscription manager for automatic pause/resume on app background
+    const cleanup = subscriptionManager.register(subscriptionId, () => {
+      return supabase
+        .channel(subscriptionId)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'room_invites',
+            filter: `receiver_id=eq.${currentUser.id}`,
+          },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              throttledLoadInvites();
+            } else if (payload.eventType === 'DELETE' ||
+                       (payload.eventType === 'UPDATE' && (payload.new as any).status !== 'pending')) {
+              useAppStore.getState().removeRoomInvite((payload.old as any)?.id || (payload.new as any)?.id);
+            }
           }
-        }
-      )
-      .subscribe();
-
-    const cleanup = () => {
-      supabase.removeChannel(invitesChannel);
-      activeInvitesSubscription = null;
-    };
-
-    activeInvitesSubscription = { cleanup, userId: currentUser.id };
+        )
+        .subscribe();
+    });
 
     return cleanup;
   };
