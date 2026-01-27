@@ -344,58 +344,104 @@ export default function RootLayout() {
     };
 
     const initialize = async () => {
-      // Initialize LiveKit WebRTC globals
-      initializeLiveKit();
-
-      // Preload mood images at app startup (only once)
       try {
-        const images = getAllMoodImages();
-        await Asset.loadAsync(images);
-      } catch (_error) {
-        // Silently fail preloading - images will load on demand
-      }
+        // Initialize LiveKit WebRTC globals (synchronous, shouldn't block)
+        initializeLiveKit();
 
-      // Listen for incoming deep links
-      const subscription = Linking.addEventListener("url", (event) => {
-        handleDeepLink(event.url);
-      });
-
-      // Check if app was opened from a deep link
-      const url = await Linking.getInitialURL();
-      if (url) {
-        await handleDeepLink(url);
-      }
-
-      // Check for existing session on mount
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session?.user) {
-        // Fetch user profile
-        const { data, error } = await supabase.from("users").select("*").eq("id", session.user.id).single();
-
-        if (data && !error) {
-          // Ensure mood defaults to neutral if not set
-          if (!data.mood) {
-            data.mood = "neutral";
-          }
-          setCurrentUser(data);
-
-          // Register for push notifications
-          const pushToken = await registerForPushNotificationsAsync();
-          if (pushToken) {
-            await savePushTokenToUser(data.id, pushToken);
-          }
-          // Note: Navigation handled by index.tsx based on auth state
+        // Preload mood images at app startup (only once)
+        try {
+          const images = getAllMoodImages();
+          // Add timeout to prevent hanging
+          await Promise.race([
+            Asset.loadAsync(images),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Asset load timeout')), 5000)),
+          ]);
+        } catch (_error) {
+          // Silently fail preloading - images will load on demand
+          console.log('Asset preload failed or timed out, continuing...');
         }
-      }
 
-      // Mark app as ready after initialization
-      if (mounted) {
-        setIsReady(true);
-      }
+        // Listen for incoming deep links
+        const subscription = Linking.addEventListener("url", (event) => {
+          handleDeepLink(event.url);
+        });
 
-      return subscription;
+        // Check if app was opened from a deep link (with timeout)
+        try {
+          const url = await Promise.race([
+            Linking.getInitialURL(),
+            new Promise<string | null>((resolve) => setTimeout(() => resolve(null), 2000)),
+          ]);
+          if (url) {
+            await handleDeepLink(url);
+          }
+        } catch (error) {
+          console.log('Deep link check failed:', error);
+        }
+
+        // Check for existing session on mount (with timeout protection)
+        try {
+          const sessionPromise = supabase.auth.getSession();
+          const {
+            data: { session },
+          } = await Promise.race([
+            sessionPromise,
+            new Promise<{ data: { session: null } }>((resolve) =>
+              setTimeout(() => resolve({ data: { session: null } }), 5000)
+            ),
+          ]);
+
+          if (session?.user) {
+            // Fetch user profile (with timeout)
+            try {
+              const userPromise = supabase.from("users").select("*").eq("id", session.user.id).single();
+              const { data, error } = await Promise.race([
+                userPromise,
+                new Promise<{ data: null; error: null }>((resolve) =>
+                  setTimeout(() => resolve({ data: null, error: null }), 5000)
+                ),
+              ]);
+
+              if (data && !error) {
+                // Ensure mood defaults to neutral if not set
+                if (!data.mood) {
+                  data.mood = "neutral";
+                }
+                setCurrentUser(data);
+
+                // Register for push notifications (non-blocking, don't wait)
+                registerForPushNotificationsAsync()
+                  .then((pushToken) => {
+                    if (pushToken) {
+                      savePushTokenToUser(data.id, pushToken).catch((err) =>
+                        console.log('Failed to save push token:', err)
+                      );
+                    }
+                  })
+                  .catch((err) => console.log('Push notification registration failed:', err));
+              }
+            } catch (error) {
+              console.log('User profile fetch failed:', error);
+            }
+          }
+        } catch (error) {
+          console.log('Session check failed:', error);
+        }
+
+        // Mark app as ready after initialization (always set, even if some operations failed)
+        if (mounted) {
+          setIsReady(true);
+        }
+
+        return subscription;
+      } catch (error) {
+        console.error('Initialization error:', error);
+        // Always mark as ready even if initialization fails
+        if (mounted) {
+          setIsReady(true);
+        }
+        return null;
+      }
     };
 
     // Listen for auth changes
@@ -420,14 +466,33 @@ export default function RootLayout() {
 
     // Start initialization and get subscription
     let linkingSubscription: ReturnType<typeof Linking.addEventListener> | undefined;
-    initialize().then((subscription) => {
-      linkingSubscription = subscription;
-    });
+    
+    // Fallback timeout: ensure app loads even if initialization hangs
+    const fallbackTimeout = setTimeout(() => {
+      if (mounted) {
+        console.warn('Initialization timeout reached, forcing app ready');
+        setIsReady(true);
+      }
+    }, 10000); // 10 second maximum wait
+
+    initialize()
+      .then((subscription) => {
+        linkingSubscription = subscription;
+        clearTimeout(fallbackTimeout);
+      })
+      .catch((error) => {
+        console.error('Initialization promise rejected:', error);
+        clearTimeout(fallbackTimeout);
+        if (mounted) {
+          setIsReady(true);
+        }
+      });
 
     return () => {
       mounted = false;
       linkingSubscription?.remove();
       authSubscription.unsubscribe();
+      clearTimeout(fallbackTimeout);
     };
   }, []);
 
