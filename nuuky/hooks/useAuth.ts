@@ -135,11 +135,42 @@ export const useAuth = () => {
     }
   };
 
+  /**
+   * Send OTP to email address
+   */
+  const sendEmailOTP = async (email: string) => {
+    const { data, error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: true,
+        emailRedirectTo: undefined, // Disable magic link, force OTP
+      },
+    });
+    if (error) throw error;
+    return data;
+  };
+
+  /**
+   * Verify email OTP and create session
+   */
+  const verifyEmailOTP = async (email: string, token: string) => {
+    const { data, error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: "email",
+    });
+    if (error) throw error;
+    return data;
+  };
+
   return {
     user: currentUser,
     isAuthenticated,
     loading,
     signOut,
     updateOnlineStatus,
+    sendEmailOTP,
+    verifyEmailOTP,
+    fetchUserProfile,
   };
 };

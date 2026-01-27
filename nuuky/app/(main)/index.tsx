@@ -66,6 +66,7 @@ import { usePresence } from "../../hooks/usePresence";
 import { useRoom } from "../../hooks/useRoom";
 import { useRoomInvites } from "../../hooks/useRoomInvites";
 import { useDefaultRoom } from "../../hooks/useDefaultRoom";
+import { useFirstTimeRoom } from "../../hooks/useFirstTimeRoom";
 import { useTheme } from "../../hooks/useTheme";
 import { useAudio } from "../../hooks/useAudio";
 import { useNotifications } from "../../hooks/useNotifications";
@@ -107,6 +108,9 @@ export default function QuantumOrbitScreen() {
   } = useRoom();
   const { roomInvites } = useRoomInvites();
   const { defaultRoom, defaultRoomId, isDefaultRoom, setAsDefaultRoom } = useDefaultRoom();
+  
+  // First-time user setup - creates "My Nūūky" room automatically
+  const { loading: firstTimeLoading } = useFirstTimeRoom();
 
   // Audio integration - connect to default room's audio when available
   const {
@@ -749,11 +753,14 @@ export default function QuantumOrbitScreen() {
 
   // NEVER show loading if we have friends - friends from Zustand always render immediately
   // Only show loading screen if we have no friends AND no user (initial auth)
-  if (loading && friendList.length === 0 && !currentUser) {
+  // Also show loading if first-time room is being created
+  if ((loading && friendList.length === 0 && !currentUser) || (firstTimeLoading && !defaultRoom)) {
     return (
       <LinearGradient colors={theme.gradients.background} style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={[styles.loadingText, { color: theme.colors.text.secondary }]}>✨ loading your vibe...</Text>
+          <Text style={[styles.loadingText, { color: theme.colors.text.secondary }]}>
+            {firstTimeLoading ? "✨ creating your space..." : "✨ loading your vibe..."}
+          </Text>
         </View>
       </LinearGradient>
     );

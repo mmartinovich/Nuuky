@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, Modal, TouchableOpacity, Share, ActivityIndicat
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import * as Clipboard from "expo-clipboard";
 import { colors, spacing, radius, typography, gradients } from "../lib/theme";
 import { useTheme } from "../hooks/useTheme";
 
@@ -41,10 +40,9 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
   const handleCopy = async () => {
     setCopying(true);
     try {
-      await Clipboard.setStringAsync(value);
-      // Show brief feedback (you could use a toast here)
+      await Share.share({ message: value });
     } catch (error) {
-      console.error("Error copying to clipboard:", error);
+      console.error("Error sharing:", error);
     } finally {
       setTimeout(() => setCopying(false), 1000);
     }

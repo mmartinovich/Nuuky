@@ -17,7 +17,8 @@ export default {
     scheme: "nuuky",
     splash: {
       image: "./assets/nuuky_splash.png",
-      resizeMode: "contain",
+      resizeMode: "cover",
+      backgroundColor: "#050510",
     },
     ios: {
       supportsTablet: true,

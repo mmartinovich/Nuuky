@@ -15,7 +15,7 @@ import { useRouter } from "expo-router";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Crypto from "expo-crypto";
 import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-signin";
-import { AntDesign } from "@expo/vector-icons";
+import { AntDesign, Feather } from "@expo/vector-icons";
 import { supabase } from "../../lib/supabase";
 import { useAppStore } from "../../stores/appStore";
 import { colors, gradients, typography, spacing, radius, interactionStates } from "../../lib/theme";
@@ -243,8 +243,26 @@ export default function LoginScreen() {
           </View>
         </View>
 
-        {/* OAuth Buttons - Bottom */}
+        {/* Auth Buttons - Bottom */}
         <View style={styles.bottomSection}>
+          {/* Email Sign-In */}
+          <TouchableOpacity
+            activeOpacity={interactionStates.pressed}
+            onPress={() => router.push("/(auth)/email")}
+            disabled={loading}
+            style={styles.emailButton}
+          >
+            <Feather name="mail" size={20} color={colors.text.primary} />
+            <Text style={styles.emailButtonText}>Continue with Email</Text>
+          </TouchableOpacity>
+
+          {/* Divider */}
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
           <View style={styles.authButtons}>
             {/* Apple Sign-In */}
             {Platform.OS === 'ios' && (
@@ -319,11 +337,43 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   bottomSection: {
-    padding: spacing.screenPadding, // Updated: spacing.xl → screenPadding (24px)
+    padding: spacing.screenPadding,
     paddingBottom: spacing["2xl"],
   },
+  emailButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    height: 56,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.glass.border,
+    backgroundColor: colors.glass.background,
+    gap: spacing.sm,
+  },
+  emailButtonText: {
+    fontSize: typography.size.base,
+    fontWeight: "600" as const,
+    color: colors.text.primary,
+    letterSpacing: 0.2,
+  },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: spacing.md,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.glass.border,
+  },
+  dividerText: {
+    paddingHorizontal: spacing.md,
+    color: colors.text.tertiary,
+    fontSize: typography.size.sm,
+  },
   authButtons: {
-    gap: spacing.sm + 4, // 12px gap between buttons
+    gap: spacing.sm + 4,
     marginBottom: spacing.md,
   },
   appleButton: {

@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react";
 import { Alert, Share } from "react-native";
-import * as Clipboard from "expo-clipboard";
 import { supabase } from "../lib/supabase";
 import { useAppStore } from "../stores/appStore";
 import { RoomInviteLink, Room } from "../types";
@@ -252,14 +251,13 @@ export const useInviteLink = () => {
   );
 
   /**
-   * Copy invite link to clipboard
+   * Copy invite link to clipboard via share sheet
    */
   const copyInviteLink = useCallback(
     async (token: string): Promise<boolean> => {
       try {
         const url = getInviteUrl(token);
-        await Clipboard.setStringAsync(url);
-        Alert.alert("Copied!", "Invite link copied to clipboard");
+        await Share.share({ message: url });
         return true;
       } catch (error) {
         console.error("Error copying link:", error);
