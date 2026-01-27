@@ -431,12 +431,8 @@ export default function RootLayout() {
     };
   }, []);
 
-  // Hide splash screen when app is ready
-  useEffect(() => {
-    if (isReady) {
-      SplashScreen.hideAsync();
-    }
-  }, [isReady]);
+  // Splash screen is now hidden by the main screen when data is loaded
+  // This keeps the native splash visible until the app is fully ready (like Instagram)
 
   // Execute pending deep link when user becomes authenticated
   useEffect(() => {
@@ -495,10 +491,14 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <GestureHandlerRootView style={{ flex: 1 }}>
+        <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#0a0a0f" }}>
           <Stack
             screenOptions={{
               headerShown: false,
+              contentStyle: {
+                backgroundColor: "#0a0a0f",
+              },
+              animation: "slide_from_right",
             }}
           >
             <Stack.Screen name="(auth)" />

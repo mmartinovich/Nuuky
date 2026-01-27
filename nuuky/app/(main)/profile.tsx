@@ -25,20 +25,10 @@ import { useTheme } from "../../hooks/useTheme";
 import { spacing, interactionStates } from "../../lib/theme";
 import { QRCodeModal } from "../../components/QRCode";
 
-// iOS-style icon backgrounds
-const ICON_BACKGROUNDS = {
-  name: "#5856D6",
-  username: "#34C759",
-  email: "#007AFF",
-  phone: "#FF9500",
-  qr: "#AF52DE",
-};
-
 interface ProfileRowProps {
   icon: string;
-  iconBg: string;
   label: string;
-  value: string;
+  value?: string;
   onPress?: () => void;
   showChevron?: boolean;
   isFirst?: boolean;
@@ -48,11 +38,10 @@ interface ProfileRowProps {
 
 const ProfileRow: React.FC<ProfileRowProps> = ({
   icon,
-  iconBg,
   label,
   value,
   onPress,
-  showChevron = false,
+  showChevron = true,
   isFirst = false,
   isLast = false,
   theme,
@@ -62,29 +51,50 @@ const ProfileRow: React.FC<ProfileRowProps> = ({
       style={[
         styles.rowContainer,
         {
-          backgroundColor: theme.colors.glass.background,
-          borderTopLeftRadius: isFirst ? 12 : 0,
-          borderTopRightRadius: isFirst ? 12 : 0,
-          borderBottomLeftRadius: isLast ? 12 : 0,
-          borderBottomRightRadius: isLast ? 12 : 0,
+          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+          borderTopLeftRadius: isFirst ? 16 : 0,
+          borderTopRightRadius: isFirst ? 16 : 0,
+          borderBottomLeftRadius: isLast ? 16 : 0,
+          borderBottomRightRadius: isLast ? 16 : 0,
         },
       ]}
     >
       <View style={styles.rowContent}>
-        <View style={[styles.iconWrapper, { backgroundColor: iconBg }]}>
-          <Ionicons name={icon as any} size={18} color="#FFFFFF" />
+        <Ionicons
+          name={icon as any}
+          size={22}
+          color="#FFFFFF"
+          style={styles.rowIcon}
+        />
+        <Text
+          style={[
+            styles.rowLabel,
+            { color: theme.colors.text.primary },
+          ]}
+        >
+          {label}
+        </Text>
+        <View style={styles.rowRight}>
+          {value && (
+            <Text style={[styles.rowValue, { color: theme.colors.text.tertiary }]}>
+              {value}
+            </Text>
+          )}
+          {showChevron && (
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color={theme.colors.text.tertiary}
+              style={styles.chevron}
+            />
+          )}
         </View>
-        <View style={styles.rowTextContainer}>
-          <Text style={[styles.rowLabel, { color: theme.colors.text.tertiary }]}>{label}</Text>
-          <Text style={[styles.rowValue, { color: theme.colors.text.primary }]} numberOfLines={1}>
-            {value}
-          </Text>
-        </View>
-        {showChevron && <Ionicons name="chevron-forward" size={18} color={theme.colors.text.tertiary} />}
       </View>
       {!isLast && (
         <View style={styles.separatorContainer}>
-          <View style={[styles.separator, { backgroundColor: theme.colors.glass.border }]} />
+          <View
+            style={[styles.separator, { backgroundColor: 'rgba(255, 255, 255, 0.06)' }]}
+          />
         </View>
       )}
     </View>
@@ -92,7 +102,7 @@ const ProfileRow: React.FC<ProfileRowProps> = ({
 
   if (onPress) {
     return (
-      <TouchableOpacity activeOpacity={0.6} onPress={onPress}>
+      <TouchableOpacity activeOpacity={interactionStates.pressed} onPress={onPress}>
         {content}
       </TouchableOpacity>
     );
@@ -302,7 +312,7 @@ export default function ProfileScreen() {
             activeOpacity={0.8}
             style={styles.avatarWrapper}
           >
-            <View style={[styles.avatarContainer, { borderColor: theme.colors.glass.border }]}>
+            <View style={styles.avatarContainer}>
               {previewUri ? (
                 <Image
                   key={`preview-${previewUri}`}
@@ -355,7 +365,7 @@ export default function ProfileScreen() {
         {isEditingName ? (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: theme.colors.text.tertiary }]}>DISPLAY NAME</Text>
-            <View style={[styles.editCard, { backgroundColor: theme.colors.glass.background }]}>
+            <View style={[styles.editCard, { backgroundColor: 'rgba(255, 255, 255, 0.05)' }]}>
               <View style={styles.editInputContainer}>
                 <TextInput
                   style={[styles.nameInput, { color: theme.colors.text.primary }]}
@@ -369,17 +379,17 @@ export default function ProfileScreen() {
                   onSubmitEditing={handleSaveName}
                 />
               </View>
-              <View style={[styles.editDivider, { backgroundColor: theme.colors.glass.border }]} />
+              <View style={[styles.editDivider, { backgroundColor: 'rgba(255, 255, 255, 0.06)' }]} />
               <View style={styles.editButtons}>
-                <TouchableOpacity style={styles.editButton} onPress={handleCancelEdit} activeOpacity={0.6}>
+                <TouchableOpacity style={styles.editButton} onPress={handleCancelEdit} activeOpacity={interactionStates.pressed}>
                   <Text style={[styles.cancelButtonText, { color: theme.colors.text.secondary }]}>Cancel</Text>
                 </TouchableOpacity>
-                <View style={[styles.buttonDivider, { backgroundColor: theme.colors.glass.border }]} />
+                <View style={[styles.buttonDivider, { backgroundColor: 'rgba(255, 255, 255, 0.06)' }]} />
                 <TouchableOpacity
                   style={styles.editButton}
                   onPress={handleSaveName}
                   disabled={loading || editedName.trim().length === 0}
-                  activeOpacity={0.6}
+                  activeOpacity={interactionStates.pressed}
                 >
                   <Text
                     style={[
@@ -396,12 +406,10 @@ export default function ProfileScreen() {
         ) : (
           <ProfileSection title="DISPLAY NAME" footer="This is how your friends will see you in the app." theme={theme}>
             <ProfileRow
-              icon="person"
-              iconBg={ICON_BACKGROUNDS.name}
+              icon="person-outline"
               label="Name"
               value={currentUser?.display_name || "Set your name"}
               onPress={handleEditName}
-              showChevron
               isFirst
               isLast
               theme={theme}
@@ -413,29 +421,33 @@ export default function ProfileScreen() {
         <ProfileSection title="ACCOUNT" theme={theme}>
           {currentUser?.username && (
             <ProfileRow
-              icon="at"
-              iconBg={ICON_BACKGROUNDS.username}
+              icon="at-outline"
               label="Username"
               value={`@${currentUser.username}`}
+              showChevron={false}
               isFirst
+              isLast={!currentUser?.email && !currentUser?.phone}
               theme={theme}
             />
           )}
-          <ProfileRow
-            icon="mail"
-            iconBg={ICON_BACKGROUNDS.email}
-            label="Email"
-            value={currentUser?.email || "Not set"}
-            isFirst={!currentUser?.username}
-            isLast={!currentUser?.phone}
-            theme={theme}
-          />
+          {currentUser?.email && (
+            <ProfileRow
+              icon="mail-outline"
+              label="Email"
+              value={currentUser.email}
+              showChevron={false}
+              isFirst={!currentUser?.username}
+              isLast={!currentUser?.phone}
+              theme={theme}
+            />
+          )}
           {currentUser?.phone && (
             <ProfileRow
-              icon="call"
-              iconBg={ICON_BACKGROUNDS.phone}
+              icon="call-outline"
               label="Phone"
               value={currentUser.phone}
+              showChevron={false}
+              isFirst={!currentUser?.username && !currentUser?.email}
               isLast
               theme={theme}
             />
@@ -450,12 +462,10 @@ export default function ProfileScreen() {
             theme={theme}
           >
             <ProfileRow
-              icon="qr-code"
-              iconBg={ICON_BACKGROUNDS.qr}
+              icon="qr-code-outline"
               label="My QR Code"
               value="Tap to show"
               onPress={() => setShowQRModal(true)}
-              showChevron
               isFirst
               isLast
               theme={theme}
@@ -525,8 +535,6 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     overflow: "hidden",
-    borderWidth: 3,
-    borderColor: "rgba(255,255,255,0.1)",
     ...Platform.select({
       ios: {
         shadowColor: "#000",
@@ -540,8 +548,9 @@ const styles = StyleSheet.create({
     }),
   },
   avatar: {
-    width: "100%",
-    height: "100%",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
   },
   avatarGradient: {
     width: "100%",
@@ -600,27 +609,28 @@ const styles = StyleSheet.create({
   // Section styles
   section: {
     marginBottom: spacing.xl,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.screenPadding,
   },
   sectionTitle: {
     fontSize: 13,
-    fontWeight: "400",
-    letterSpacing: -0.08,
-    marginBottom: spacing.sm,
+    fontWeight: "500",
+    letterSpacing: 0.5,
+    marginBottom: spacing.sm + 4,
     marginLeft: spacing.md,
     textTransform: "uppercase",
   },
   sectionContent: {
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: "hidden",
     ...Platform.select({
       ios: {
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
       },
       android: {
-        elevation: 1,
+        elevation: 3,
       },
     }),
   },
@@ -633,48 +643,45 @@ const styles = StyleSheet.create({
   },
   // Row styles
   rowContainer: {
-    minHeight: 44,
+    minHeight: 56,
   },
   rowContent: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: spacing.md,
-    paddingVertical: 10,
-    minHeight: 58,
+    paddingVertical: 14,
+    minHeight: 56,
   },
-  iconWrapper: {
-    width: 29,
-    height: 29,
-    borderRadius: 6,
-    justifyContent: "center",
-    alignItems: "center",
+  rowIcon: {
     marginRight: 12,
   },
-  rowTextContainer: {
-    flex: 1,
-    marginRight: spacing.sm,
-  },
   rowLabel: {
-    fontSize: 12,
+    flex: 1,
+    fontSize: 16,
     fontWeight: "400",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 2,
+    letterSpacing: -0.41,
+  },
+  rowRight: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   rowValue: {
     fontSize: 17,
     fontWeight: "400",
-    letterSpacing: -0.41,
+    marginRight: spacing.xs,
+  },
+  chevron: {
+    marginLeft: spacing.xs,
   },
   separatorContainer: {
-    paddingLeft: 57,
+    paddingLeft: 50,
   },
   separator: {
     height: StyleSheet.hairlineWidth,
   },
   // Edit name styles
   editCard: {
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: "hidden",
   },
   editInputContainer: {

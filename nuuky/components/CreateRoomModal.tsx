@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,15 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  Switch,
+  Animated,
+  Dimensions,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { colors, spacing, radius, typography } from '../lib/theme';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { useTheme } from '../hooks/useTheme';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface CreateRoomModalProps {
   visible: boolean;
@@ -25,90 +29,163 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
   onClose,
   onCreate,
 }) => {
+  const { theme, isDark } = useTheme();
   const [roomName, setRoomName] = useState('');
-  const [isPrivate, setIsPrivate] = useState(false);
+
+  // Simple animations
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 100,
+          friction: 10,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      scaleAnim.setValue(0.95);
+      opacityAnim.setValue(0);
+    }
+  }, [visible]);
+
+  const canCreate = roomName.trim().length > 0;
 
   const handleCreate = () => {
-    onCreate(roomName.trim() || undefined, isPrivate);
+    if (!canCreate) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onCreate(roomName.trim(), true);
     setRoomName('');
-    setIsPrivate(false);
     onClose();
   };
 
   const handleCancel = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setRoomName('');
-    setIsPrivate(false);
     onClose();
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <BlurView intensity={80} style={styles.overlay}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <BlurView
+        intensity={isDark ? 60 : 40}
+        tint={theme.colors.blurTint}
+        style={styles.overlay}
+      >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
         >
-          <View style={styles.modalContainer}>
-            <BlurView intensity={30} style={styles.modal}>
-              {/* Header */}
-              <View style={styles.header}>
-                <Text style={styles.title}>Create Room</Text>
-                <Text style={styles.subtitle}>
-                  Start a space where friends can hang out
-                </Text>
-              </View>
-
-              {/* Room Name Input */}
-              <View style={styles.inputSection}>
-                <Text style={styles.label}>Room Name (optional)</Text>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="My Room"
-                    placeholderTextColor={colors.text.tertiary}
-                    value={roomName}
-                    onChangeText={setRoomName}
-                    maxLength={50}
-                  />
+          <Animated.View
+            style={[
+              styles.modalContainer,
+              {
+                opacity: opacityAnim,
+                transform: [{ scale: scaleAnim }],
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.modal,
+                {
+                  backgroundColor: theme.colors.bg.secondary,
+                  borderColor: theme.colors.glass.border,
+                },
+              ]}
+            >
+              {/* Header Row */}
+              <View style={styles.headerRow}>
+                <View style={styles.iconContainer}>
+                  <Ionicons name="home" size={24} color={theme.colors.neon.cyan} />
                 </View>
-              </View>
-
-              {/* Private Toggle */}
-              <View style={styles.switchSection}>
-                <View style={styles.switchInfo}>
-                  <Text style={styles.switchLabel}>Private Room</Text>
-                  <Text style={styles.switchDescription}>
-                    Only friends you invite can join
+                <View style={styles.headerText}>
+                  <Text style={[styles.title, { color: theme.colors.text.primary }]}>
+                    Create Room
+                  </Text>
+                  <Text style={[styles.subtitle, { color: theme.colors.text.tertiary }]}>
+                    Start a space for friends
                   </Text>
                 </View>
-                <Switch
-                  value={isPrivate}
-                  onValueChange={setIsPrivate}
-                  trackColor={{
-                    false: colors.glass.background,
-                    true: colors.mood.neutral.base,
-                  }}
-                  thumbColor={colors.text.primary}
+              </View>
+
+              {/* Input */}
+              <View
+                style={[
+                  styles.inputContainer,
+                  { backgroundColor: 'rgba(255, 255, 255, 0.05)' },
+                ]}
+              >
+                <TextInput
+                  style={[styles.input, { color: theme.colors.text.primary }]}
+                  placeholder="Room name"
+                  placeholderTextColor={theme.colors.text.tertiary}
+                  value={roomName}
+                  onChangeText={setRoomName}
+                  maxLength={30}
+                  autoCorrect={false}
+                  autoCapitalize="words"
+                  autoFocus
                 />
               </View>
 
               {/* Buttons */}
               <View style={styles.buttons}>
-                <TouchableOpacity onPress={handleCancel} style={styles.cancelButton}>
-                  <Text style={styles.cancelText}>Cancel</Text>
+                <TouchableOpacity
+                  onPress={handleCancel}
+                  style={[
+                    styles.button,
+                    {
+                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                      borderColor: 'rgba(255, 255, 255, 0.1)',
+                    },
+                  ]}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="close" size={18} color={theme.colors.text.secondary} style={styles.buttonIcon} />
+                  <Text style={[styles.buttonText, { color: theme.colors.text.secondary }]}>
+                    Cancel
+                  </Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={handleCreate} style={styles.createButton}>
-                  <LinearGradient
-                    colors={colors.mood.neutral.gradient}
-                    style={styles.createGradient}
+                <TouchableOpacity
+                  onPress={handleCreate}
+                  style={[
+                    styles.button,
+                    {
+                      backgroundColor: canCreate ? 'rgba(50, 213, 131, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                      borderColor: canCreate ? 'rgba(50, 213, 131, 0.4)' : 'rgba(255, 255, 255, 0.1)',
+                    },
+                  ]}
+                  activeOpacity={0.7}
+                  disabled={!canCreate}
+                >
+                  <Ionicons
+                    name="checkmark"
+                    size={18}
+                    color={canCreate ? '#32D583' : theme.colors.text.tertiary}
+                    style={styles.buttonIcon}
+                  />
+                  <Text
+                    style={[
+                      styles.buttonText,
+                      { color: canCreate ? '#32D583' : theme.colors.text.tertiary },
+                    ]}
                   >
-                    <Text style={styles.createText}>Create</Text>
-                  </LinearGradient>
+                    Create
+                  </Text>
                 </TouchableOpacity>
               </View>
-            </BlurView>
-          </View>
+            </View>
+          </Animated.View>
         </KeyboardAvoidingView>
       </BlurView>
     </Modal>
@@ -120,112 +197,75 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   keyboardView: {
     width: '100%',
     alignItems: 'center',
   },
   modalContainer: {
-    width: '85%',
-    maxWidth: 400,
+    width: SCREEN_WIDTH - 48,
+    maxWidth: 360,
   },
   modal: {
-    borderRadius: radius.xl,
-    overflow: 'hidden',
+    borderRadius: 20,
+    padding: 20,
     borderWidth: 1,
-    borderColor: colors.glass.border,
   },
-  header: {
-    padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.glass.border,
-  },
-  title: {
-    fontSize: typography.sizes['2xl'],
-    fontWeight: typography.weights.bold,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    fontSize: typography.sizes.sm,
-    color: colors.text.secondary,
-  },
-  inputSection: {
-    padding: spacing.lg,
-  },
-  label: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
-    color: colors.text.secondary,
-    marginBottom: spacing.sm,
-  },
-  inputContainer: {
-    backgroundColor: colors.glass.background,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.glass.border,
-  },
-  input: {
-    padding: spacing.md,
-    fontSize: typography.sizes.md,
-    color: colors.text.primary,
-    fontWeight: typography.weights.medium,
-  },
-  switchSection: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
+    marginBottom: 16,
   },
-  switchInfo: {
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(0, 240, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  headerText: {
     flex: 1,
-    marginRight: spacing.md,
   },
-  switchLabel: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-    color: colors.text.primary,
-    marginBottom: spacing.xs / 2,
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    letterSpacing: -0.3,
+    marginBottom: 2,
   },
-  switchDescription: {
-    fontSize: typography.sizes.xs,
-    color: colors.text.tertiary,
+  subtitle: {
+    fontSize: 14,
+    fontWeight: '400',
+  },
+  inputContainer: {
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  input: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    fontWeight: '500',
   },
   buttons: {
     flexDirection: 'row',
-    gap: spacing.md,
-    padding: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.glass.border,
+    gap: 10,
   },
-  cancelButton: {
+  button: {
     flex: 1,
-    padding: spacing.md,
-    borderRadius: radius.full,
-    backgroundColor: colors.glass.background,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.glass.border,
-    alignItems: 'center',
   },
-  cancelText: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-    color: colors.text.secondary,
+  buttonIcon: {
+    marginRight: 6,
   },
-  createButton: {
-    flex: 1,
-    borderRadius: radius.full,
-    overflow: 'hidden',
-  },
-  createGradient: {
-    padding: spacing.md,
-    alignItems: 'center',
-  },
-  createText: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.text.primary,
+  buttonText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

@@ -589,7 +589,7 @@ const styles = StyleSheet.create({
   },
   // Friends List
   friendsList: {
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   friendCard: {
     flexDirection: "row",
@@ -600,6 +600,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.06)",
+    marginBottom: 12,
   },
   friendInfo: {
     flexDirection: "row",

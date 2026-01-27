@@ -6,6 +6,7 @@ import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
+import * as SplashScreen from "expo-splash-screen";
 import { supabase } from "../../lib/supabase";
 import { Animated as RNAnimated, PanResponder, Easing } from "react-native";
 
@@ -755,19 +756,18 @@ export default function QuantumOrbitScreen() {
     router.push(`/(main)/room/${roomId}`);
   }, [joinRoomFn, router]);
 
-  // NEVER show loading if we have friends - friends from Zustand always render immediately
-  // Only show loading screen if we have no friends AND no user (initial auth)
-  // Also show loading if first-time room is being created
-  if ((loading && friendList.length === 0 && !currentUser) || (firstTimeLoading && !defaultRoom)) {
-    return (
-      <LinearGradient colors={theme.gradients.background} style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={[styles.loadingText, { color: theme.colors.text.secondary }]}>
-            {firstTimeLoading ? "✨ creating your space..." : "✨ loading your vibe..."}
-          </Text>
-        </View>
-      </LinearGradient>
-    );
+  // Keep splash screen visible until data is loaded (like Instagram)
+  const isDataReady = !((loading && friendList.length === 0 && !currentUser) || (firstTimeLoading && !defaultRoom));
+
+  useEffect(() => {
+    if (isDataReady) {
+      SplashScreen.hideAsync();
+    }
+  }, [isDataReady]);
+
+  // Keep splash visible while loading - return null to show nothing behind splash
+  if (!isDataReady) {
+    return null;
   }
 
   // Friends from Zustand store are always rendered immediately when they exist
@@ -867,10 +867,10 @@ export default function QuantumOrbitScreen() {
             onPress={() => setShowRoomSettings(true)}
             activeOpacity={0.7}
           >
-            <Ionicons name="home" size={14} color={theme.colors.neon.cyan} />
             <Text style={[styles.roomPillText, { color: theme.colors.text.primary }]}>
               {defaultRoom.name || "Room"}
             </Text>
+            <Ionicons name="chevron-down" size={14} color={theme.colors.text.secondary} />
           </TouchableOpacity>
         ) : (
           <Text style={[styles.moodText, { color: theme.colors.text.secondary }]}>{currentVibe}</Text>

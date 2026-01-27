@@ -19,6 +19,10 @@ export default function MainLayout() {
           color: theme.colors.text.primary,
         },
         headerShadowVisible: false,
+        contentStyle: {
+          backgroundColor: theme.colors.bg.primary,
+        },
+        animation: "slide_from_right",
       }}
     >
       <Stack.Screen

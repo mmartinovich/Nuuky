@@ -392,9 +392,9 @@ export function FriendParticle({
         </View>
       </TouchableOpacity>
 
-      {/* Name label */}
+      {/* Name label - show first name only */}
       <Text style={styles.nameLabel} numberOfLines={1}>
-        {friend.display_name}
+        {friend.display_name.split(' ')[0]}
       </Text>
       </Animated.View>
     </Animated.View>

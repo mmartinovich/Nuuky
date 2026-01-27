@@ -38,6 +38,7 @@ export default function OnboardingScreen() {
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [avatarUri, setAvatarUri] = useState<string | null>(currentUser?.avatar_url || null);
+  const [hasManuallyEditedUsername, setHasManuallyEditedUsername] = useState(!!currentUser?.username);
 
   // Debounce timer for availability check
   const availabilityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -81,17 +82,50 @@ export default function OnboardingScreen() {
     };
   }, [currentUser?.avatar_url]);
 
-  // Auto-suggest username when display name changes (only if username is empty or was auto-generated)
-  useEffect(() => {
-    if (displayName.trim() && !username) {
-      const suggestion = suggestUsername(displayName);
-      setUsername(suggestion);
-    }
-  }, [displayName, suggestUsername]);
+  // Handle display name change - auto-populate username in real-time unless manually edited
+  const handleDisplayNameChange = useCallback(
+    (text: string) => {
+      setDisplayName(text);
+
+      // Auto-populate username if user hasn't manually edited it
+      if (!hasManuallyEditedUsername) {
+        const suggestion = suggestUsername(text);
+        setUsername(suggestion);
+        setUsernameAvailable(null);
+        setUsernameError(null);
+
+        // Clear any pending availability check
+        if (availabilityTimeoutRef.current) {
+          clearTimeout(availabilityTimeoutRef.current);
+        }
+
+        // Validate and check availability for the auto-generated username
+        if (suggestion) {
+          const validation = validateUsername(suggestion);
+          if (!validation.isValid) {
+            setUsernameError(validation.error || null);
+          } else {
+            // Debounce availability check
+            availabilityTimeoutRef.current = setTimeout(async () => {
+              const available = await checkAvailability(suggestion);
+              setUsernameAvailable(available);
+              if (!available) {
+                setUsernameError("Username is already taken");
+              }
+            }, 500);
+          }
+        }
+      }
+    },
+    [hasManuallyEditedUsername, suggestUsername, validateUsername, checkAvailability],
+  );
 
   // Handle username input change with validation and availability check
   const handleUsernameChange = useCallback(
     (input: string) => {
+      // Mark that user has manually edited the username
+      setHasManuallyEditedUsername(true);
+
       const normalized = input.toLowerCase().replace(/[^a-z0-9_]/g, "");
       setUsername(normalized);
       setUsernameAvailable(null);
@@ -334,7 +368,7 @@ export default function OnboardingScreen() {
                   },
                 ]}
                 value={displayName}
-                onChangeText={setDisplayName}
+                onChangeText={handleDisplayNameChange}
                 placeholder="Enter your display name"
                 placeholderTextColor={theme.colors.text.tertiary}
                 maxLength={50}

@@ -86,16 +86,12 @@ export const useUsername = () => {
    * Generate a username suggestion from display name
    */
   const suggestUsername = useCallback((displayName: string): string => {
-    // Clean the name: lowercase, replace spaces with underscores, remove non-alphanumeric
+    // Clean the name: lowercase, remove spaces and non-alphanumeric characters
+    // e.g., "Max Mara" -> "maxmara"
     let suggestion = displayName
       .toLowerCase()
-      .replace(/\s+/g, "_")
-      .replace(/[^a-z0-9_]/g, "");
-
-    // Ensure minimum length
-    if (suggestion.length < USERNAME_MIN_LENGTH) {
-      suggestion = "user_" + suggestion;
-    }
+      .replace(/\s+/g, "")
+      .replace(/[^a-z0-9]/g, "");
 
     // Truncate to max length
     return suggestion.slice(0, USERNAME_MAX_LENGTH);
