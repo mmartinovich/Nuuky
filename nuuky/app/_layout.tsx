@@ -496,8 +496,14 @@ export default function RootLayout() {
     };
   }, []);
 
-  // Splash screen is now hidden by the main screen when data is loaded
-  // This keeps the native splash visible until the app is fully ready (like Instagram)
+  // Hide splash screen once layout is ready
+  // The main screen may also call hideAsync() for a data-loaded transition,
+  // but we must ensure it's called here too for auth/onboarding routes
+  useEffect(() => {
+    if (isReady) {
+      SplashScreen.hideAsync();
+    }
+  }, [isReady]);
 
   // Execute pending deep link when user becomes authenticated
   useEffect(() => {
