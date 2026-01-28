@@ -73,6 +73,13 @@ export default function MainLayout() {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="qr-scanner"
+        options={{
+          headerShown: false,
+          animation: "slide_from_bottom",
+        }}
+      />
     </Stack>
   );
 }

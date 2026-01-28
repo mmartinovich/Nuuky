@@ -342,6 +342,14 @@ export const useFriends = () => {
       // Immediately update local state to prevent the realtime subscription from showing stale data
       setFriends(friends.filter(f => f.friend_id !== friendId));
 
+      // Update room participants if the removed friend is in the currently viewed room
+      const { roomParticipants, currentRoom } = useAppStore.getState();
+      if (currentRoom && roomParticipants.some(p => p.user_id === friendId)) {
+        useAppStore.getState().setRoomParticipants(
+          roomParticipants.filter(p => p.user_id !== friendId)
+        );
+      }
+
       return true;
     } catch (error: any) {
       console.error('Error removing friend:', error);

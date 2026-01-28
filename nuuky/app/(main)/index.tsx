@@ -62,6 +62,8 @@ let lastPresenceRefresh = 0;
 const PRESENCE_REFRESH_THROTTLE_MS = 3000; // Only refresh every 3 seconds
 import { useMood } from "../../hooks/useMood";
 import { useNudge } from "../../hooks/useNudge";
+import { useCallMe } from "../../hooks/useCallMe";
+import { useHeart } from "../../hooks/useHeart";
 import { useFlare } from "../../hooks/useFlare";
 import { usePresence } from "../../hooks/usePresence";
 import { useRoom } from "../../hooks/useRoom";
@@ -93,6 +95,8 @@ export default function QuantumOrbitScreen() {
   const { currentUser, friends, speakingParticipants, activeCustomMood } = useAppStore();
   const { currentMood, changeMood } = useMood();
   const { sendNudge } = useNudge();
+  const { sendCallMe } = useCallMe();
+  const { sendHeart } = useHeart();
   const { sendFlare, activeFlares, myActiveFlare } = useFlare();
   const { updateActivity } = usePresence(); // Track presence while app is active
   const {
@@ -679,22 +683,14 @@ export default function QuantumOrbitScreen() {
 
   const handleCallMe = useCallback(async () => {
     if (selectedFriend) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      // TODO: Integrate with Supabase to send notification to friend to call
-      // For now, just show feedback
-      Alert.alert("Call Me Sent", `You requested ${selectedFriend.display_name} to call you`, [
-        { text: "OK", style: "default" },
-      ]);
+      await sendCallMe(selectedFriend.id, selectedFriend.display_name);
     }
-  }, [selectedFriend]);
+  }, [selectedFriend, sendCallMe]);
 
   const handleHeart = useCallback(async () => {
     if (!selectedFriend) return;
-
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    // Could integrate with Supabase to store heart reactions
-    // Animation is handled in FriendActionBubble component
-  }, [selectedFriend]);
+    await sendHeart(selectedFriend.id, selectedFriend.display_name);
+  }, [selectedFriend, sendHeart]);
 
   const getMoodLabel = useCallback((mood: User["mood"]) => {
     switch (mood) {

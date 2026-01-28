@@ -76,7 +76,7 @@ const ProfileRow: React.FC<ProfileRowProps> = ({
         </Text>
         <View style={styles.rowRight}>
           {value && (
-            <Text style={[styles.rowValue, { color: theme.colors.text.tertiary }]}>
+            <Text style={[styles.rowValue, { color: theme.colors.text.tertiary }]} numberOfLines={1}>
               {value}
             </Text>
           )}
@@ -358,7 +358,7 @@ export default function ProfileScreen() {
           <Text style={[styles.userName, { color: theme.colors.text.primary }]}>
             {currentUser?.display_name || "Your Name"}
           </Text>
-          <Text style={[styles.userEmail, { color: theme.colors.text.tertiary }]}>{currentUser?.email || ""}</Text>
+          <Text style={[styles.userEmail, { color: theme.colors.text.tertiary }]} numberOfLines={1}>{currentUser?.email || ""}</Text>
         </Animated.View>
 
         {/* Edit Name Section */}
@@ -467,6 +467,13 @@ export default function ProfileScreen() {
               value="Tap to show"
               onPress={() => setShowQRModal(true)}
               isFirst
+              theme={theme}
+            />
+            <ProfileRow
+              icon="scan-outline"
+              label="Scan QR Code"
+              value="Add friends"
+              onPress={() => router.push("/(main)/qr-scanner")}
               isLast
               theme={theme}
             />
@@ -664,11 +671,13 @@ const styles = StyleSheet.create({
   rowRight: {
     flexDirection: "row",
     alignItems: "center",
+    flexShrink: 1,
   },
   rowValue: {
     fontSize: 17,
     fontWeight: "400",
     marginRight: spacing.xs,
+    flexShrink: 1,
   },
   chevron: {
     marginLeft: spacing.xs,

@@ -106,42 +106,51 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
 
   // Handle delete with haptic feedback
   const handleDelete = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    swipeableRef.current?.close();
-    onDelete();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    // Animate out before deleting
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      onDelete();
+    });
   };
 
-  // Render swipe action (delete button)
+  // iOS-style swipe action - red background that reveals as you swipe
   const renderRightActions = (
     progress: Animated.AnimatedInterpolation<number>,
     dragX: Animated.AnimatedInterpolation<number>
   ) => {
-    const translateX = dragX.interpolate({
-      inputRange: [-80, 0],
-      outputRange: [0, 80],
+    // Scale up the icon as user swipes further
+    const scale = dragX.interpolate({
+      inputRange: [-100, -50, 0],
+      outputRange: [1.2, 1, 0.8],
+      extrapolate: 'clamp',
+    });
+
+    // Fade in the icon
+    const opacity = dragX.interpolate({
+      inputRange: [-80, -40, 0],
+      outputRange: [1, 0.8, 0],
       extrapolate: 'clamp',
     });
 
     return (
-      <Animated.View
-        style={[
-          styles.deleteAction,
-          { transform: [{ translateX }] },
-        ]}
-      >
-        <LinearGradient
-          colors={[theme.colors.mood.reachOut.base, '#BE185D']}
-          style={styles.deleteGradient}
+      <View style={[styles.deleteAction, { backgroundColor: '#FF3B30' }]}>
+        <Animated.View
+          style={[
+            styles.deleteButton,
+            {
+              opacity,
+              transform: [{ scale }],
+            },
+          ]}
         >
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={handleDelete}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="trash-outline" size={22} color="#FFFFFF" />
-          </TouchableOpacity>
-        </LinearGradient>
-      </Animated.View>
+          <Ionicons name="trash" size={22} color="#FFFFFF" />
+          <Text style={styles.deleteText}>Delete</Text>
+        </Animated.View>
+      </View>
     );
   };
 
@@ -158,11 +167,16 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
       <Swipeable
         ref={swipeableRef}
         renderRightActions={renderRightActions}
-        rightThreshold={40}
+        rightThreshold={80}
         overshootRight={false}
-        friction={2}
+        friction={1.5}
         onSwipeableWillOpen={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        }}
+        onSwipeableOpen={(direction) => {
+          if (direction === 'right') {
+            handleDelete();
+          }
         }}
       >
         <TouchableOpacity activeOpacity={0.8} onPress={onPress}>
@@ -314,17 +328,22 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   deleteAction: {
-    width: 80,
+    width: 90,
     marginBottom: spacing.sm,
-  },
-  deleteGradient: {
-    flex: 1,
-    borderRadius: radius.lg,
-    marginLeft: spacing.xs,
-  },
-  deleteButton: {
-    flex: 1,
+    borderTopRightRadius: radius.lg,
+    borderBottomRightRadius: radius.lg,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: -1,
+  },
+  deleteButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 2,
+  },
+  deleteText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

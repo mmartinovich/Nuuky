@@ -50,6 +50,32 @@ export const useProfile = () => {
     }
   };
 
+  const updatePhone = async (phone: string): Promise<boolean> => {
+    if (!currentUser) {
+      Alert.alert('Error', 'You must be logged in');
+      return false;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ phone })
+        .eq('id', currentUser.id);
+
+      if (error) throw error;
+
+      // Update store
+      setCurrentUser({ ...currentUser, phone });
+      return true;
+    } catch (_error: any) {
+      Alert.alert('Error', 'Failed to save phone number');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const pickAndUploadAvatar = async (
     source: 'camera' | 'gallery'
   ): Promise<boolean> => {
@@ -270,6 +296,7 @@ export const useProfile = () => {
     uploadProgress,
     previewUri,
     updateDisplayName,
+    updatePhone,
     pickAndUploadAvatar,
     deleteAvatar,
     completeProfile,

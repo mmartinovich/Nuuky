@@ -265,7 +265,7 @@ export const useRoomInvites = () => {
       // Check if room is full (max 10 members)
       const { data: participants, error: countError } = await supabase
         .from('room_participants')
-        .select('id')
+        .select('id, user_id')
         .eq('room_id', invite.room_id);
 
       if (countError) throw countError;
@@ -273,6 +273,25 @@ export const useRoomInvites = () => {
       if (participants && participants.length >= 10) {
         Alert.alert('Room Full', 'This room has reached its maximum capacity of 10 members');
         return false;
+      }
+
+      // Check if user is already a participant
+      const alreadyInRoom = participants?.some(p => p.user_id === currentUser.id);
+      if (alreadyInRoom) {
+        // User is already in the room, just update the invite status and remove from UI
+        const { error: updateError } = await supabase
+          .from('room_invites')
+          .update({
+            status: 'accepted',
+            responded_at: new Date().toISOString(),
+          })
+          .eq('id', inviteId);
+
+        if (updateError) throw updateError;
+
+        removeRoomInvite(inviteId);
+        Alert.alert('Already Joined', 'You are already a member of this room!');
+        return true;
       }
 
       // Update invite status

@@ -80,6 +80,12 @@ export default {
           cameraPermission: "Nūūky needs access to your camera so you can take a profile picture.",
         },
       ],
+      [
+        "expo-camera",
+        {
+          cameraPermission: "Nūūky needs camera access to scan QR codes.",
+        },
+      ],
       "@livekit/react-native-expo-plugin",
       "@react-native-google-signin/google-signin",
     ],

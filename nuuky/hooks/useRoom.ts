@@ -626,6 +626,11 @@ export const useRoom = () => {
 
       if (error) throw error;
 
+      // Immediately update local state for instant UI feedback
+      const currentParticipants = useAppStore.getState().roomParticipants;
+      setRoomParticipants(currentParticipants.filter(p => p.user_id !== userId));
+
+      // Then reload for full consistency
       await loadParticipants();
       await loadMyRooms();
 
