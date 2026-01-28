@@ -17,6 +17,7 @@ import { colors, spacing, radius, typography, gradients } from "../lib/theme";
 import { UserSearchResult } from "../types";
 import { useUserSearch } from "../hooks/useUserSearch";
 import { useFriends } from "../hooks/useFriends";
+import { isUserTrulyOnline } from "../lib/utils";
 
 interface UserSearchModalProps {
   visible: boolean;
@@ -186,7 +187,7 @@ const UserResultItem: React.FC<UserResultItemProps> = ({ user, isFriend, isAddin
           )}
 
           {/* Online indicator */}
-          {user.is_online && (
+          {isUserTrulyOnline(user.is_online, user.last_seen_at) && (
             <View style={styles.onlineIndicator}>
               <View style={styles.onlineDot} />
             </View>

@@ -20,6 +20,7 @@ import { colors, getMoodColor, interactionStates } from "../lib/theme";
 import { useTheme } from "../hooks/useTheme";
 import { useInviteLink } from "../hooks/useInviteLink";
 import { RoomParticipant } from "../types";
+import { isUserTrulyOnline } from "../lib/utils";
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -179,6 +180,7 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
     if (!user) return null;
 
     const moodColors = getMoodColor(user.mood || "neutral");
+    const isOnline = isUserTrulyOnline(user.is_online, user.last_seen_at);
 
     return (
       <View
@@ -194,7 +196,7 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
             style={[
               styles.stackedAvatar,
               {
-                borderColor: user.is_online ? moodColors.base : "rgba(255,255,255,0.2)",
+                borderColor: isOnline ? moodColors.base : "rgba(255,255,255,0.2)",
               },
             ]}
           />
@@ -205,14 +207,14 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
               styles.stackedAvatarPlaceholder,
               {
                 backgroundColor: accent.soft,
-                borderColor: user.is_online ? moodColors.base : "rgba(255,255,255,0.2)",
+                borderColor: isOnline ? moodColors.base : "rgba(255,255,255,0.2)",
               },
             ]}
           >
             <Ionicons name="person" size={16} color={accent.primary} />
           </View>
         )}
-        {user.is_online && <View style={styles.stackedOnlineIndicator} />}
+        {isOnline && <View style={styles.stackedOnlineIndicator} />}
       </View>
     );
   };
@@ -227,6 +229,7 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
     const canRemove = isCreator && !isCurrentUser && onRemoveParticipant;
     const isRemoving = removingUserId === user.id;
     const moodColors = getMoodColor(user.mood || "neutral");
+    const isOnline = isUserTrulyOnline(user.is_online, user.last_seen_at);
 
     return (
       <React.Fragment key={participant.id}>
@@ -241,7 +244,7 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                   style={[
                     styles.memberAvatar,
                     {
-                      borderColor: user.is_online ? moodColors.base : "rgba(255,255,255,0.1)",
+                      borderColor: isOnline ? moodColors.base : "rgba(255,255,255,0.1)",
                     },
                   ]}
                 />
@@ -252,14 +255,14 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                     styles.memberAvatarPlaceholder,
                     {
                       backgroundColor: accent.soft,
-                      borderColor: user.is_online ? moodColors.base : "rgba(255,255,255,0.1)",
+                      borderColor: isOnline ? moodColors.base : "rgba(255,255,255,0.1)",
                     },
                   ]}
                 >
                   <Ionicons name="person" size={18} color={accent.primary} />
                 </View>
               )}
-              {user.is_online && <View style={styles.onlineIndicator} />}
+              {isOnline && <View style={styles.onlineIndicator} />}
             </View>
 
             {/* Name and status */}
@@ -275,7 +278,7 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                   </View>
                 )}
               </View>
-              <Text style={styles.memberStatus}>{user.is_online ? "Online" : "Offline"}</Text>
+              <Text style={styles.memberStatus}>{isOnline ? "Online" : "Offline"}</Text>
             </View>
           </View>
 
@@ -427,49 +430,48 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
               {/* Actions Section - Grouped Card */}
               <View style={styles.section}>
                 <Text style={styles.sectionTitleText}>ACTIONS</Text>
-                <View style={styles.groupedCard}>
-                  {/* Invite Friends */}
-                  <TouchableOpacity
-                    style={styles.groupedCardRow}
-                    onPress={onInviteFriends}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.actionIconContainer, { backgroundColor: accent.soft }]}>
-                      <Ionicons name="person-add-outline" size={18} color={accent.primary} />
-                    </View>
-                    <View style={styles.actionTextContainer}>
-                      <Text style={styles.actionTitle}>Invite Friends</Text>
-                      <Text style={styles.actionSubtitle}>Add people to this room</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.3)" />
-                  </TouchableOpacity>
+                {/* Invite & Share Actions (Creator Only) */}
+                {isCreator && (
+                  <View style={styles.groupedCard}>
+                    {/* Invite Friends */}
+                    <TouchableOpacity
+                      style={styles.groupedCardRow}
+                      onPress={onInviteFriends}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.actionIconContainer, { backgroundColor: accent.soft }]}>
+                        <Ionicons name="person-add-outline" size={18} color={accent.primary} />
+                      </View>
+                      <View style={styles.actionTextContainer}>
+                        <Text style={styles.actionTitle}>Invite Friends</Text>
+                        <Text style={styles.actionSubtitle}>Add people to this room</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.3)" />
+                    </TouchableOpacity>
 
-                  {/* Share Link (Creator Only) */}
-                  {isCreator && (
-                    <>
-                      <View style={styles.internalSeparator} />
-                      <TouchableOpacity
-                        style={styles.groupedCardRow}
-                        onPress={handleShareLink}
-                        disabled={sharingLink}
-                        activeOpacity={0.7}
-                      >
-                        <View style={[styles.actionIconContainer, { backgroundColor: accent.soft }]}>
-                          {sharingLink ? (
-                            <ActivityIndicator size="small" color={accent.primary} />
-                          ) : (
-                            <Ionicons name="link-outline" size={18} color={accent.primary} />
-                          )}
-                        </View>
-                        <View style={styles.actionTextContainer}>
-                          <Text style={styles.actionTitle}>Share Link</Text>
-                          <Text style={styles.actionSubtitle}>Anyone with link can join</Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.3)" />
-                      </TouchableOpacity>
-                    </>
-                  )}
-                </View>
+                    {/* Share Link */}
+                    <View style={styles.internalSeparator} />
+                    <TouchableOpacity
+                      style={styles.groupedCardRow}
+                      onPress={handleShareLink}
+                      disabled={sharingLink}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.actionIconContainer, { backgroundColor: accent.soft }]}>
+                        {sharingLink ? (
+                          <ActivityIndicator size="small" color={accent.primary} />
+                        ) : (
+                          <Ionicons name="link-outline" size={18} color={accent.primary} />
+                        )}
+                      </View>
+                      <View style={styles.actionTextContainer}>
+                        <Text style={styles.actionTitle}>Share Link</Text>
+                        <Text style={styles.actionSubtitle}>Anyone with link can join</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.3)" />
+                    </TouchableOpacity>
+                  </View>
+                )}
 
                 {/* Leave Room - Separate Card */}
                 <View style={[styles.groupedCard, styles.leaveCard]}>

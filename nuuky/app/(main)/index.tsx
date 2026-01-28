@@ -102,10 +102,8 @@ export default function QuantumOrbitScreen() {
     updateRoomName,
     deleteRoom,
     inviteFriendToRoom,
-    participants,
     removeParticipant,
     myRooms,
-    currentRoom,
   } = useRoom();
   const { roomInvites } = useRoomInvites();
   const { defaultRoom, defaultRoomId, isDefaultRoom, setAsDefaultRoom } = useDefaultRoom();
@@ -263,31 +261,22 @@ export default function QuantumOrbitScreen() {
     .map((f) => f.friend as User)
     .filter((f): f is User => f !== null && f !== undefined && f.id !== currentUser?.id);
 
+  // Get room participants from myRooms using defaultRoomId
+  // This ensures immediate updates when switching rooms
+  const roomParticipants = useMemo(() => {
+    if (!defaultRoomId) return [];
+    const roomData = myRooms.find((r) => r.id === defaultRoomId);
+    return roomData?.participants || [];
+  }, [defaultRoomId, myRooms]);
+
   // Get participant users from room (when in room mode)
-  // Derive directly from myRooms using defaultRoom.id to avoid stale currentRoom data
   // Filter out the current user - they are represented by the central orb character
   const participantUsers: User[] = useMemo(() => {
-    if (!defaultRoom) return [];
-
-    // Get participants directly from myRooms - this is always up to date
-    const roomData = myRooms.find((r) => r.id === defaultRoom.id);
-    if (roomData && roomData.participants && roomData.participants.length > 0) {
-      return roomData.participants
-        .map((p) => p.user)
-        .filter((u): u is User => u !== null && u !== undefined && u.id !== currentUser?.id);
-    }
-
-    // Only use participants fallback if currentRoom matches defaultRoom
-    // This prevents showing stale data from the previous room during transitions
-    if (currentRoom?.id === defaultRoom.id && participants.length > 0) {
-      return participants
-        .map((p) => p.user)
-        .filter((u): u is User => u !== null && u !== undefined && u.id !== currentUser?.id);
-    }
-
-    // Return empty array during room transitions - data will load shortly
-    return [];
-  }, [defaultRoom?.id, myRooms, participants, currentRoom?.id, currentUser?.id]);
+    if (roomParticipants.length === 0) return [];
+    return roomParticipants
+      .map((p) => p.user)
+      .filter((u): u is User => u !== null && u !== undefined && u.id !== currentUser?.id);
+  }, [roomParticipants, currentUser?.id]);
 
   // Use participants when in room mode, friends otherwise
   const orbitUsers = defaultRoom ? participantUsers : friendList;
@@ -1009,7 +998,7 @@ export default function QuantumOrbitScreen() {
                 style={styles.navTab}
               >
                 <Ionicons name="grid-outline" size={24} color="rgba(255, 255, 255, 0.85)" />
-                <Text style={styles.navLabel}>Rooms</Text>
+                <Text style={styles.navLabel}>Nuuks</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
@@ -1089,7 +1078,7 @@ export default function QuantumOrbitScreen() {
           roomId={defaultRoom.id}
           isCreator={defaultRoom.creator_id === currentUser?.id}
           creatorId={defaultRoom.creator_id}
-          participants={participants}
+          participants={roomParticipants}
           currentUserId={currentUser?.id || ""}
           onClose={() => setShowRoomSettings(false)}
           onRename={async (name) => {
@@ -1118,7 +1107,7 @@ export default function QuantumOrbitScreen() {
         <InviteFriendsModal
           visible={showInviteFriendsFromDefault}
           friends={friendList}
-          participantIds={participants.map((p) => p.user_id)}
+          participantIds={roomParticipants.map((p) => p.user_id)}
           onClose={() => setShowInviteFriendsFromDefault(false)}
           onInvite={async (friendId) => { await inviteFriendToRoom(defaultRoom.id, friendId); }}
         />

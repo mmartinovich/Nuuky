@@ -29,6 +29,7 @@ export interface User {
   fcm_token?: string;
   auth_provider?: "google" | "apple" | "email"; // OAuth provider
   default_room_id?: string;
+  home_room_id?: string; // Permanently pinned "My Nuuky" room from first login
   profile_completed?: boolean; // Whether user has completed onboarding
   created_at: string;
 }
@@ -40,6 +41,7 @@ export interface UserSearchResult {
   display_name: string;
   avatar_url?: string;
   is_online: boolean;
+  last_seen_at?: string;
   mood: PresetMood;
 }
 
@@ -66,6 +68,10 @@ export interface Room {
   created_at: string;
   closed_at?: string;
   participants?: RoomParticipant[];
+  creator?: {
+    id: string;
+    display_name: string;
+  };
 }
 
 export interface RoomParticipant {

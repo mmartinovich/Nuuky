@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, StyleSheet, Alert, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRoom } from '../../../hooks/useRoom';
@@ -28,6 +28,8 @@ export default function RoomScreen() {
     updateRoomName,
     deleteRoom,
     inviteFriendToRoom,
+    removeParticipant,
+    loadParticipants,
     loading,
     clearLastJoinedRoom,
   } = useRoom();
@@ -61,6 +63,15 @@ export default function RoomScreen() {
       clearLastJoinedRoom();
     };
   }, [id, audioDisconnect]);
+
+  // Refresh participants when screen gains focus (e.g., returning from friends page)
+  useFocusEffect(
+    useCallback(() => {
+      if (currentRoom) {
+        loadParticipants();
+      }
+    }, [currentRoom?.id, loadParticipants])
+  );
 
   const handleJoinRoom = async () => {
     if (!id) return;
@@ -144,6 +155,11 @@ export default function RoomScreen() {
     setShowInviteFriends(true);
   };
 
+  const handleRemoveParticipant = async (userId: string) => {
+    if (!currentRoom) return;
+    await removeParticipant(currentRoom.id, userId);
+  };
+
   if (!currentRoom || loading || !currentUser) {
     return <View style={[styles.container, { backgroundColor: theme.colors.bg.primary }]} />;
   }
@@ -204,11 +220,15 @@ export default function RoomScreen() {
         roomName={currentRoom.name || 'Room'}
         roomId={currentRoom.id}
         isCreator={currentRoom.creator_id === currentUser?.id}
+        creatorId={currentRoom.creator_id}
+        participants={participants}
+        currentUserId={currentUser.id}
         onClose={() => setShowSettings(false)}
         onRename={handleRename}
         onDelete={handleDelete}
         onLeave={handleLeaveRoom}
         onInviteFriends={handleOpenInviteFriends}
+        onRemoveParticipant={handleRemoveParticipant}
       />
 
       <InviteFriendsModal

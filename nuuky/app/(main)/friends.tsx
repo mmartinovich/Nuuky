@@ -38,7 +38,7 @@ const FriendCard = memo(
     const moodColors = getMoodColor(friend.mood);
 
     return (
-      <TouchableOpacity style={styles.friendCard} activeOpacity={0.7} onLongPress={onLongPress}>
+      <View style={styles.friendCard}>
         <View style={styles.friendInfo}>
           <View style={styles.friendAvatarWrapper}>
             {friend.avatar_url ? (
@@ -71,10 +71,10 @@ const FriendCard = memo(
           </View>
         </View>
 
-        <View style={styles.chevronContainer}>
-          <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.3)" />
-        </View>
-      </TouchableOpacity>
+        <TouchableOpacity style={styles.removeButton} onPress={onLongPress} activeOpacity={0.7}>
+          <Ionicons name="close-circle" size={24} color="#EF4444" />
+        </TouchableOpacity>
+      </View>
     );
   },
   (prevProps, nextProps) => {
@@ -644,9 +644,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "rgba(255,255,255,0.5)",
   },
-  chevronContainer: {
-    width: 32,
-    height: 32,
+  removeButton: {
+    width: 40,
+    height: 40,
     justifyContent: "center",
     alignItems: "center",
   },

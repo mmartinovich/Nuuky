@@ -96,6 +96,10 @@ export const useRoom = () => {
         .from('rooms')
         .select(`
           *,
+          creator:creator_id (
+            id,
+            display_name
+          ),
           participants:room_participants (
             id,
             user_id,
@@ -106,7 +110,8 @@ export const useRoom = () => {
               display_name,
               avatar_url,
               mood,
-              is_online
+              is_online,
+              last_seen_at
             )
           )
         `)
@@ -328,12 +333,13 @@ export const useRoom = () => {
       return false;
     }
 
-    // Prevent multiple simultaneous calls or rejoining the same room
+    // Prevent multiple simultaneous calls
     if (isJoiningRoom) {
       return false;
     }
     if (lastJoinedRoomId === roomId && currentRoom?.id === roomId) {
-      // Already in this room, no need to rejoin
+      // Already in this room, but refresh participants to ensure fresh data
+      await loadParticipants();
       return true;
     }
 
@@ -778,6 +784,7 @@ export const useRoom = () => {
     inviteFriendToRoom,
     loadActiveRooms,
     loadMyRooms,
+    loadParticipants,
     clearLastJoinedRoom,
   };
 };

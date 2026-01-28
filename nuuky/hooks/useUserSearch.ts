@@ -39,7 +39,7 @@ export const useUserSearch = () => {
         // Search by username prefix
         let searchQuery = supabase
           .from("users")
-          .select("id, username, display_name, avatar_url, is_online, mood")
+          .select("id, username, display_name, avatar_url, is_online, last_seen_at, mood")
           .ilike("username", `${trimmedQuery}%`)
           .limit(20);
 
@@ -87,7 +87,7 @@ export const useUserSearch = () => {
     try {
       const { data, error: fetchError } = await supabase
         .from("users")
-        .select("id, username, display_name, avatar_url, is_online, mood")
+        .select("id, username, display_name, avatar_url, is_online, last_seen_at, mood")
         .eq("username", normalized)
         .single();
 

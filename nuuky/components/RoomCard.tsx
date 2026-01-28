@@ -5,20 +5,24 @@ import { Ionicons } from '@expo/vector-icons';
 import { Room, User } from '../types';
 import { colors, gradients, spacing, radius, typography, getMoodColor, interactionStates } from '../lib/theme';
 import { useTheme } from '../hooks/useTheme';
+import { isUserTrulyOnline } from '../lib/utils';
 
 interface RoomCardProps {
   room: Room;
   onPress: () => void;
   isCreator?: boolean;
   isDefault?: boolean;
+  creatorName?: string;
 }
 
-const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, isCreator = false, isDefault = false }) => {
+const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, isCreator = false, isDefault = false, creatorName }) => {
   const { accent } = useTheme();
   const participants = room.participants || [];
   const participantCount = participants.length;
   const maxMembers = 10;
-  const hasOnlineMembers = participants.some(p => p.user?.is_online);
+  const hasOnlineMembers = participants.some(p =>
+    p.user && isUserTrulyOnline(p.user.is_online, p.user.last_seen_at)
+  );
 
   // Show first 5 participant avatars
   const displayedParticipants = participants.slice(0, 5);
@@ -46,9 +50,17 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, isCreator =
             {hasOnlineMembers && (
               <View style={styles.onlineIndicator} />
             )}
-            <Text style={styles.roomName} numberOfLines={1}>
-              {room.name || 'Unnamed Room'}
-            </Text>
+            <View style={styles.titleTextContainer}>
+              <Text style={styles.roomName} numberOfLines={1}>
+                {room.name || 'Unnamed Room'}
+              </Text>
+              {/* Show creator name for rooms you were invited to */}
+              {!isCreator && creatorName && (
+                <Text style={styles.creatorSubtitle} numberOfLines={1}>
+                  {creatorName}'s room
+                </Text>
+              )}
+            </View>
           </View>
           
           {/* Right side: member count + selected badge */}
@@ -71,7 +83,7 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, isCreator =
             if (!user) return null;
 
             const moodColors = getMoodColor(user.mood);
-            const isOnline = user.is_online;
+            const isOnline = isUserTrulyOnline(user.is_online, user.last_seen_at);
             
             return (
               <View
@@ -170,6 +182,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     flex: 1,
   },
+  titleTextContainer: {
+    flex: 1,
+  },
   onlineIndicator: {
     width: 8,
     height: 8,
@@ -180,7 +195,12 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
     color: '#FFFFFF',
-    flex: 1,
+  },
+  creatorSubtitle: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: 'rgba(255, 255, 255, 0.5)',
+    marginTop: 2,
   },
   headerRight: {
     flexDirection: 'row',
@@ -255,9 +275,10 @@ export const RoomCard = memo(RoomCardComponent, (prevProps, nextProps) => {
     prevProps.room.name === nextProps.room.name &&
     prevProps.isDefault === nextProps.isDefault &&
     prevProps.isCreator === nextProps.isCreator &&
+    prevProps.creatorName === nextProps.creatorName &&
     prevProps.room.participants?.length === nextProps.room.participants?.length &&
-    // Check if participants changed (by comparing user online status)
-    JSON.stringify(prevProps.room.participants?.map(p => ({ id: p.id, online: p.user?.is_online }))) ===
-    JSON.stringify(nextProps.room.participants?.map(p => ({ id: p.id, online: p.user?.is_online })))
+    // Check if participants changed (by comparing user online status and last_seen_at)
+    JSON.stringify(prevProps.room.participants?.map(p => ({ id: p.id, online: p.user?.is_online, lastSeen: p.user?.last_seen_at }))) ===
+    JSON.stringify(nextProps.room.participants?.map(p => ({ id: p.id, online: p.user?.is_online, lastSeen: p.user?.last_seen_at })))
   );
 });

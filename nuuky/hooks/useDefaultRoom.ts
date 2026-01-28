@@ -42,33 +42,34 @@ export const useDefaultRoom = () => {
       return;
     }
 
+    // If we already have a defaultRoomId in Zustand, don't override it
+    // This prevents race conditions when navigating after room selection
+    const currentDefaultRoomId = useAppStore.getState().defaultRoomId;
+    if (currentDefaultRoomId) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       // Step 1: Load from AsyncStorage for fast startup
       const cachedRoomId = await AsyncStorage.getItem(DEFAULT_ROOM_KEY);
       if (cachedRoomId) {
         setDefaultRoomId(cachedRoomId);
+        setLoading(false);
+        return;
       }
 
-      // Step 2: Sync with Supabase (source of truth for cross-device)
+      // Step 2: Only fetch from Supabase if no local cache exists
       const { data: userData, error } = await supabase
         .from('users')
         .select('default_room_id')
         .eq('id', currentUser.id)
         .single();
 
-      if (!error && userData) {
-        const supabaseRoomId = userData.default_room_id;
-
-        // Update if different from cached value
-        if (supabaseRoomId !== cachedRoomId) {
-          setDefaultRoomId(supabaseRoomId);
-          if (supabaseRoomId) {
-            await AsyncStorage.setItem(DEFAULT_ROOM_KEY, supabaseRoomId);
-          } else {
-            await AsyncStorage.removeItem(DEFAULT_ROOM_KEY);
-          }
-        }
+      if (!error && userData && userData.default_room_id) {
+        setDefaultRoomId(userData.default_room_id);
+        await AsyncStorage.setItem(DEFAULT_ROOM_KEY, userData.default_room_id);
       }
     } catch (error) {
       console.error('Error initializing default room:', error);
@@ -77,32 +78,27 @@ export const useDefaultRoom = () => {
     }
   };
 
-  const setAsDefaultRoom = async (roomId: string): Promise<boolean> => {
+  const setAsDefaultRoom = (roomId: string): boolean => {
     if (!currentUser) return false;
 
-    try {
-      // Optimistic update: Set locally first for instant UI
-      setDefaultRoomId(roomId);
-      await AsyncStorage.setItem(DEFAULT_ROOM_KEY, roomId);
+    // Optimistic update: Set locally first for instant UI
+    setDefaultRoomId(roomId);
 
-      // Sync to Supabase
-      const { error } = await supabase
-        .from('users')
-        .update({ default_room_id: roomId })
-        .eq('id', currentUser.id);
+    // Persist in background (don't block navigation)
+    AsyncStorage.setItem(DEFAULT_ROOM_KEY, roomId).catch(console.error);
 
-      if (error) {
-        // Rollback on error
-        const cachedRoomId = await AsyncStorage.getItem(DEFAULT_ROOM_KEY);
-        setDefaultRoomId(cachedRoomId);
-        throw error;
-      }
+    // Sync to Supabase in background
+    supabase
+      .from('users')
+      .update({ default_room_id: roomId })
+      .eq('id', currentUser.id)
+      .then(({ error }) => {
+        if (error) {
+          console.error('Error syncing default room to Supabase:', error);
+        }
+      });
 
-      return true;
-    } catch (error) {
-      console.error('Error setting default room:', error);
-      return false;
-    }
+    return true;
   };
 
   const clearDefaultRoom = async (): Promise<boolean> => {

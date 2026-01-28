@@ -23,6 +23,9 @@ interface AppState {
   // Default room state
   defaultRoomId: string | null;
 
+  // Home room state (permanently pinned "My Nuuky" room)
+  homeRoomId: string | null;
+
   // Theme state
   themeMode: ThemeMode;
 
@@ -71,6 +74,7 @@ interface AppState {
   markAllNotificationsRead: () => void;
   removeNotification: (notificationId: string) => void;
   setDefaultRoomId: (roomId: string | null) => void;
+  setHomeRoomId: (roomId: string | null) => void;
   setThemeMode: (mode: ThemeMode) => void;
   setLowPowerMode: (enabled: boolean) => void;
   setAudioConnectionStatus: (status: AudioConnectionStatus) => void;
@@ -95,6 +99,7 @@ export const useNotificationsStore = () => useAppStore((state) => state.notifica
 export const useUnreadNotificationCount = () => useAppStore((state) => state.unreadNotificationCount);
 export const useThemeMode = () => useAppStore((state) => state.themeMode);
 export const useDefaultRoomId = () => useAppStore((state) => state.defaultRoomId);
+export const useHomeRoomId = () => useAppStore((state) => state.homeRoomId);
 export const useAudioConnectionStatus = () => useAppStore((state) => state.audioConnectionStatus);
 export const useLowPowerMode = () => useAppStore((state) => state.lowPowerMode);
 
@@ -112,6 +117,7 @@ export const useAppStore = create<AppState>()(
   roomParticipants: [],
   roomInvites: [],
   defaultRoomId: null,
+  homeRoomId: null,
   themeMode: 'dark' as ThemeMode,
   lowPowerMode: false,
   audioConnectionStatus: 'disconnected' as AudioConnectionStatus,
@@ -242,6 +248,8 @@ export const useAppStore = create<AppState>()(
 
   setDefaultRoomId: (roomId) => set({ defaultRoomId: roomId }),
 
+  setHomeRoomId: (roomId) => set({ homeRoomId: roomId }),
+
   setThemeMode: (mode) => set({ themeMode: mode }),
 
   setLowPowerMode: (enabled) => set({ lowPowerMode: enabled }),
@@ -273,6 +281,7 @@ export const useAppStore = create<AppState>()(
     roomParticipants: [],
     roomInvites: [],
     defaultRoomId: null,
+    homeRoomId: null,
     // Reset audio state
     audioConnectionStatus: 'disconnected' as AudioConnectionStatus,
     audioError: null,
@@ -294,6 +303,7 @@ export const useAppStore = create<AppState>()(
         currentUser: state.currentUser,
         themeMode: state.themeMode,
         defaultRoomId: state.defaultRoomId,
+        homeRoomId: state.homeRoomId,
         lowPowerMode: state.lowPowerMode,
       }),
     }

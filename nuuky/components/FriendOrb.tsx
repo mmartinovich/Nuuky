@@ -1,7 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import { User } from '../types';
 import { colors, getMoodColor, getMoodDisplay, spacing, radius } from '../lib/theme';
+import { isUserTrulyOnline } from '../lib/utils';
 
 interface FriendOrbProps {
   friend: User;
@@ -12,14 +13,20 @@ export const FriendOrb: React.FC<FriendOrbProps> = ({ friend, onPress }) => {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0.6)).current;
 
+  // Check if user is truly online (handles stale is_online flags from force-closed apps)
+  const isOnline = useMemo(
+    () => isUserTrulyOnline(isOnline, friend.last_seen_at),
+    [isOnline, friend.last_seen_at]
+  );
+
   // Get mood display (handles both preset and custom moods)
   const moodDisplay = getMoodDisplay(friend, friend.custom_mood);
   const moodColors = moodDisplay.type === 'custom' ? moodDisplay.color : getMoodColor(friend.mood);
 
   useEffect(() => {
     let pulseAnimation: Animated.CompositeAnimation | null = null;
-    
-    if (friend.is_online) {
+
+    if (isOnline) {
       // Pulse animation for online friends
       pulseAnimation = Animated.loop(
         Animated.sequence([
@@ -56,7 +63,7 @@ export const FriendOrb: React.FC<FriendOrbProps> = ({ friend, onPress }) => {
     return () => {
       pulseAnimation?.stop();
     };
-  }, [friend.is_online]);
+  }, [isOnline]);
 
   return (
     <TouchableOpacity
@@ -71,8 +78,8 @@ export const FriendOrb: React.FC<FriendOrbProps> = ({ friend, onPress }) => {
             styles.outerGlow,
             {
               backgroundColor: moodColors.glow,
-              opacity: friend.is_online ? glowAnim : 0.3,
-              transform: [{ scale: friend.is_online ? pulseAnim : 1 }],
+              opacity: isOnline ? glowAnim : 0.3,
+              transform: [{ scale: isOnline ? pulseAnim : 1 }],
             },
           ]}
         />
@@ -83,8 +90,8 @@ export const FriendOrb: React.FC<FriendOrbProps> = ({ friend, onPress }) => {
             styles.middleGlow,
             {
               backgroundColor: moodColors.glow,
-              opacity: friend.is_online ? 0.5 : 0.2,
-              transform: [{ scale: friend.is_online ? pulseAnim : 1 }],
+              opacity: isOnline ? 0.5 : 0.2,
+              transform: [{ scale: isOnline ? pulseAnim : 1 }],
             },
           ]}
         />
@@ -95,7 +102,7 @@ export const FriendOrb: React.FC<FriendOrbProps> = ({ friend, onPress }) => {
             styles.orb,
             {
               backgroundColor: moodColors.base,
-              opacity: friend.is_online ? 1 : 0.5,
+              opacity: isOnline ? 1 : 0.5,
             },
           ]}
         >
@@ -106,7 +113,7 @@ export const FriendOrb: React.FC<FriendOrbProps> = ({ friend, onPress }) => {
         </View>
 
         {/* Online indicator */}
-        {friend.is_online && (
+        {isOnline && (
           <View style={styles.onlineRing}>
             <View
               style={[

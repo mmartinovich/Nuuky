@@ -1,10 +1,11 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { View, StyleSheet, Dimensions, TouchableOpacity, Animated, Easing, Text, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { User } from '../types';
 import { getMoodColor } from '../lib/theme';
 import { useLowPowerMode } from '../stores/appStore';
+import { isUserTrulyOnline } from '../lib/utils';
 
 const { width, height } = Dimensions.get('window');
 const CENTER_X = width / 2;
@@ -38,6 +39,12 @@ export function FriendParticle({
   orbitAngle,
 }: FriendParticleProps) {
   const lowPowerMode = useLowPowerMode();
+
+  // Check if user is truly online (handles stale is_online flags from force-closed apps)
+  const isOnline = useMemo(
+    () => isUserTrulyOnline(friend.is_online, friend.last_seen_at),
+    [friend.is_online, friend.last_seen_at]
+  );
   const pulseAnim = useRef(new Animated.Value(0)).current;
   const flareAnim = useRef(new Animated.Value(0)).current;
   const bounceAnim = useRef(new Animated.Value(0)).current;
@@ -187,7 +194,7 @@ export function FriendParticle({
 
     // Gentle pulse for online friends only
     let pulseAnimation: Animated.CompositeAnimation | null = null;
-    if (friend.is_online) {
+    if (isOnline) {
       pulseAnimation = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
@@ -212,7 +219,7 @@ export function FriendParticle({
       bounceAnimation.stop();
       pulseAnimation?.stop();
     };
-  }, [friend.is_online, index, lowPowerMode]);
+  }, [isOnline, index, lowPowerMode]);
 
   useEffect(() => {
     let flareAnimation: Animated.CompositeAnimation | null = null;
@@ -324,7 +331,7 @@ export function FriendParticle({
             style={[
               styles.glow,
               {
-                opacity: friend.is_online ? glowOpacity : 0.12,
+                opacity: isOnline ? glowOpacity : 0.12,
                 zIndex: -1,
               },
             ]}
@@ -370,7 +377,7 @@ export function FriendParticle({
           </View>
 
           {/* Online indicator - positioned outside avatar circle at top-right */}
-          {friend.is_online && (
+          {isOnline && (
             <Animated.View 
               style={[
                 styles.onlineIndicator,

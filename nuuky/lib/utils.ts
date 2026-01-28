@@ -37,3 +37,33 @@ export function getNotificationTimeGroup(dateString: string): 'today' | 'yesterd
   }
   return 'earlier';
 }
+
+/**
+ * Presence timeout in milliseconds.
+ * Users are considered offline if last_seen_at is older than this threshold.
+ * Must match the OFFLINE_TIMEOUT in usePresence hook (2 minutes).
+ */
+export const PRESENCE_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes
+
+/**
+ * Checks if a user is truly online by verifying both is_online flag
+ * and that last_seen_at is recent (within PRESENCE_TIMEOUT_MS).
+ *
+ * This handles the edge case where a user force-closes the app
+ * without the cleanup function running, leaving them stuck as "online".
+ */
+export function isUserTrulyOnline(isOnline: boolean, lastSeenAt: string | null | undefined): boolean {
+  // If not marked as online, definitely offline
+  if (!isOnline) return false;
+
+  // If no last_seen_at, trust the is_online flag
+  if (!lastSeenAt) return isOnline;
+
+  // Check if last_seen_at is within the timeout window
+  const lastSeenDate = new Date(lastSeenAt);
+  const now = new Date();
+  const diffMs = now.getTime() - lastSeenDate.getTime();
+
+  // If last seen more than PRESENCE_TIMEOUT_MS ago, they're actually offline
+  return diffMs < PRESENCE_TIMEOUT_MS;
+}

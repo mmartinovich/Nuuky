@@ -11,9 +11,10 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors, spacing, radius, typography, gradients } from '../lib/theme';
+import { colors, spacing, radius, typography } from '../lib/theme';
+import { useTheme } from '../hooks/useTheme';
 import { User } from '../types';
+import { isUserTrulyOnline } from '../lib/utils';
 
 interface InviteFriendsModalProps {
   visible: boolean;
@@ -30,6 +31,7 @@ export const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({
   onClose,
   onInvite,
 }) => {
+  const { accent } = useTheme();
   const [inviting, setInviting] = useState<Set<string>>(new Set());
 
   // Filter out friends who are already in the room
@@ -81,6 +83,7 @@ export const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({
                       friend={friend}
                       onInvite={() => handleInvite(friend.id)}
                       isInviting={inviting.has(friend.id)}
+                      accent={accent}
                     />
                   ))}
                 </View>
@@ -97,9 +100,10 @@ interface FriendItemProps {
   friend: User;
   onInvite: () => void;
   isInviting: boolean;
+  accent: { primary: string; soft: string };
 }
 
-const FriendItem: React.FC<FriendItemProps> = ({ friend, onInvite, isInviting }) => {
+const FriendItem: React.FC<FriendItemProps> = ({ friend, onInvite, isInviting, accent }) => {
   return (
     <View style={styles.friendItem}>
       <View style={styles.friendInfo}>
@@ -114,7 +118,7 @@ const FriendItem: React.FC<FriendItemProps> = ({ friend, onInvite, isInviting })
           )}
 
           {/* Online indicator */}
-          {friend.is_online && (
+          {isUserTrulyOnline(friend.is_online, friend.last_seen_at) && (
             <View style={styles.onlineIndicator}>
               <View style={styles.onlineDot} />
             </View>
@@ -127,21 +131,19 @@ const FriendItem: React.FC<FriendItemProps> = ({ friend, onInvite, isInviting })
 
       {/* Invite Button */}
       <TouchableOpacity
-        style={styles.inviteButton}
+        style={[styles.inviteButton, { backgroundColor: accent.primary }]}
         onPress={onInvite}
         disabled={isInviting}
         activeOpacity={0.8}
       >
-        <LinearGradient colors={gradients.neonCyan} style={styles.inviteGradient}>
-          {isInviting ? (
-            <ActivityIndicator size="small" color={colors.text.primary} />
-          ) : (
-            <>
-              <Ionicons name="send" size={16} color={colors.text.primary} />
-              <Text style={styles.inviteButtonText}>Invite</Text>
-            </>
-          )}
-        </LinearGradient>
+        {isInviting ? (
+          <ActivityIndicator size="small" color={colors.text.primary} />
+        ) : (
+          <>
+            <Ionicons name="send" size={16} color={colors.text.primary} />
+            <Text style={styles.inviteButtonText}>Invite</Text>
+          </>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -256,9 +258,6 @@ const styles = StyleSheet.create({
   },
   inviteButton: {
     borderRadius: radius.md,
-    overflow: 'hidden',
-  },
-  inviteGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
