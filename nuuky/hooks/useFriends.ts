@@ -305,6 +305,31 @@ export const useFriends = () => {
 
     setLoading(true);
     try {
+      // First, get all rooms where the current user is the creator
+      const { data: myRooms, error: roomsError } = await supabase
+        .from('rooms')
+        .select('id')
+        .eq('creator_id', currentUser.id)
+        .eq('is_active', true);
+
+      if (roomsError) {
+        console.error('Error fetching rooms:', roomsError);
+      }
+
+      // Remove the friend from all rooms where the current user is the creator
+      if (myRooms && myRooms.length > 0) {
+        const roomIds = myRooms.map(r => r.id);
+        const { error: removeParticipantError } = await supabase
+          .from('room_participants')
+          .delete()
+          .eq('user_id', friendId)
+          .in('room_id', roomIds);
+
+        if (removeParticipantError) {
+          console.error('Error removing friend from rooms:', removeParticipantError);
+        }
+      }
+
       // Delete both directions of the friendship
       const { error } = await supabase
         .from('friendships')

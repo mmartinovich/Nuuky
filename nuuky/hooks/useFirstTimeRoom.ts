@@ -3,11 +3,13 @@ import { supabase } from '../lib/supabase';
 import { useAppStore } from '../stores/appStore';
 import { useRoom } from './useRoom';
 import { useDefaultRoom } from './useDefaultRoom';
+import { useHomeRoom } from './useHomeRoom';
 
 export const useFirstTimeRoom = () => {
   const { currentUser } = useAppStore();
   const { myRooms, loadMyRooms, createRoom } = useRoom();
   const { setAsDefaultRoom } = useDefaultRoom();
+  const { setAsHomeRoom } = useHomeRoom();
   const [isFirstTime, setIsFirstTime] = useState(false);
   const [loading, setLoading] = useState(true);
   const [defaultRoomCreated, setDefaultRoomCreated] = useState(false);
@@ -57,8 +59,9 @@ export const useFirstTimeRoom = () => {
 
       if (room) {
         setDefaultRoomCreated(true);
-        // Set as default room
+        // Set as default room and home room (permanently pinned)
         await setAsDefaultRoom(room.id);
+        await setAsHomeRoom(room.id);
         await loadMyRooms();
       }
     } catch (error: any) {

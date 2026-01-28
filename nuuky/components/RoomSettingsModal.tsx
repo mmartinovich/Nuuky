@@ -430,49 +430,48 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
               {/* Actions Section - Grouped Card */}
               <View style={styles.section}>
                 <Text style={styles.sectionTitleText}>ACTIONS</Text>
-                <View style={styles.groupedCard}>
-                  {/* Invite Friends */}
-                  <TouchableOpacity
-                    style={styles.groupedCardRow}
-                    onPress={onInviteFriends}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.actionIconContainer, { backgroundColor: accent.soft }]}>
-                      <Ionicons name="person-add-outline" size={18} color={accent.primary} />
-                    </View>
-                    <View style={styles.actionTextContainer}>
-                      <Text style={styles.actionTitle}>Invite Friends</Text>
-                      <Text style={styles.actionSubtitle}>Add people to this room</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.3)" />
-                  </TouchableOpacity>
+                {/* Invite & Share Actions (Creator Only) */}
+                {isCreator && (
+                  <View style={styles.groupedCard}>
+                    {/* Invite Friends */}
+                    <TouchableOpacity
+                      style={styles.groupedCardRow}
+                      onPress={onInviteFriends}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.actionIconContainer, { backgroundColor: accent.soft }]}>
+                        <Ionicons name="person-add-outline" size={18} color={accent.primary} />
+                      </View>
+                      <View style={styles.actionTextContainer}>
+                        <Text style={styles.actionTitle}>Invite Friends</Text>
+                        <Text style={styles.actionSubtitle}>Add people to this room</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.3)" />
+                    </TouchableOpacity>
 
-                  {/* Share Link (Creator Only) */}
-                  {isCreator && (
-                    <>
-                      <View style={styles.internalSeparator} />
-                      <TouchableOpacity
-                        style={styles.groupedCardRow}
-                        onPress={handleShareLink}
-                        disabled={sharingLink}
-                        activeOpacity={0.7}
-                      >
-                        <View style={[styles.actionIconContainer, { backgroundColor: accent.soft }]}>
-                          {sharingLink ? (
-                            <ActivityIndicator size="small" color={accent.primary} />
-                          ) : (
-                            <Ionicons name="link-outline" size={18} color={accent.primary} />
-                          )}
-                        </View>
-                        <View style={styles.actionTextContainer}>
-                          <Text style={styles.actionTitle}>Share Link</Text>
-                          <Text style={styles.actionSubtitle}>Anyone with link can join</Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.3)" />
-                      </TouchableOpacity>
-                    </>
-                  )}
-                </View>
+                    {/* Share Link */}
+                    <View style={styles.internalSeparator} />
+                    <TouchableOpacity
+                      style={styles.groupedCardRow}
+                      onPress={handleShareLink}
+                      disabled={sharingLink}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.actionIconContainer, { backgroundColor: accent.soft }]}>
+                        {sharingLink ? (
+                          <ActivityIndicator size="small" color={accent.primary} />
+                        ) : (
+                          <Ionicons name="link-outline" size={18} color={accent.primary} />
+                        )}
+                      </View>
+                      <View style={styles.actionTextContainer}>
+                        <Text style={styles.actionTitle}>Share Link</Text>
+                        <Text style={styles.actionSubtitle}>Anyone with link can join</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.3)" />
+                    </TouchableOpacity>
+                  </View>
+                )}
 
                 {/* Leave Room - Separate Card */}
                 <View style={[styles.groupedCard, styles.leaveCard]}>

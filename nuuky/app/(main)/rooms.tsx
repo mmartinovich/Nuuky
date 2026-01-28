@@ -18,6 +18,7 @@ import { useAppStore } from "../../stores/appStore";
 import { useRoom } from "../../hooks/useRoom";
 import { useFirstTimeRoom } from "../../hooks/useFirstTimeRoom";
 import { useDefaultRoom } from "../../hooks/useDefaultRoom";
+import { useHomeRoom } from "../../hooks/useHomeRoom";
 import { useTheme } from "../../hooks/useTheme";
 import { RoomCard } from "../../components/RoomCard";
 import { CreateRoomModal } from "../../components/CreateRoomModal";
@@ -33,6 +34,7 @@ export default function RoomsScreen() {
   const { loadMyRooms, canCreateRoom, createRoom } = useRoom();
   const { loading: firstTimeLoading } = useFirstTimeRoom();
   const { isDefaultRoom, setAsDefaultRoom } = useDefaultRoom();
+  const { isHomeRoom } = useHomeRoom();
 
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
@@ -85,16 +87,16 @@ export default function RoomsScreen() {
     }
   };
 
-  const handleRoomPress = async (roomId: string) => {
-    await setAsDefaultRoom(roomId);
+  const handleRoomPress = (roomId: string) => {
+    setAsDefaultRoom(roomId);
     router.replace("/(main)");
   };
 
   const hasRooms = myRooms.length > 0;
 
-  // Separate default room from other rooms
-  const defaultRoom = myRooms.find(room => isDefaultRoom(room.id));
-  const otherRooms = myRooms.filter(room => !isDefaultRoom(room.id));
+  // Separate home room (permanently pinned) from other rooms
+  const homeRoom = myRooms.find(room => isHomeRoom(room.id));
+  const otherRooms = myRooms.filter(room => !isHomeRoom(room.id));
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.bg.primary }]}>
@@ -110,7 +112,7 @@ export default function RoomsScreen() {
             <Ionicons name="chevron-back" size={28} color={theme.colors.text.primary} />
           </TouchableOpacity>
 
-          <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>Rooms</Text>
+          <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>Nuuks</Text>
 
           <TouchableOpacity
             style={[styles.createButton, { backgroundColor: accent.soft }]}
@@ -132,19 +134,19 @@ export default function RoomsScreen() {
         >
           {hasRooms ? (
             <>
-              {/* My Nūūky Section - Default Room */}
-              {defaultRoom && (
+              {/* My Nūūky Section - Home Room (permanently pinned) */}
+              {homeRoom && (
                 <View style={styles.section}>
                   <View style={styles.sectionHeader}>
                     <Text style={[styles.sectionTitle, { color: 'rgba(255,255,255,0.5)' }]}>MY NŪŪKY</Text>
                   </View>
                   <View style={styles.defaultRoomContainer}>
                     <RoomCard
-                      room={defaultRoom}
-                      onPress={() => handleRoomPress(defaultRoom.id)}
-                      isCreator={defaultRoom.creator_id === currentUser?.id}
-                      isDefault={true}
-                      creatorName={defaultRoom.creator?.display_name}
+                      room={homeRoom}
+                      onPress={() => handleRoomPress(homeRoom.id)}
+                      isCreator={homeRoom.creator_id === currentUser?.id}
+                      isDefault={isDefaultRoom(homeRoom.id)}
+                      creatorName={homeRoom.creator?.display_name}
                     />
                   </View>
                 </View>
@@ -163,7 +165,7 @@ export default function RoomsScreen() {
                         room={room}
                         onPress={() => handleRoomPress(room.id)}
                         isCreator={room.creator_id === currentUser?.id}
-                        isDefault={false}
+                        isDefault={isDefaultRoom(room.id)}
                         creatorName={room.creator?.display_name}
                       />
                     ))}
