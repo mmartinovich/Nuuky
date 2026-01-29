@@ -1,16 +1,14 @@
-import React, { useState, useRef, useEffect, useCallback, memo } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Alert,
   RefreshControl,
   ActivityIndicator,
   StatusBar,
   ListRenderItem,
-  Image,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,73 +22,7 @@ import { useTheme } from "../../hooks/useTheme";
 import { typography, spacing, radius, getMoodColor, interactionStates } from "../../lib/theme";
 import { User, MatchedContact, Friendship } from "../../types";
 import { UserSearchModal } from "../../components/UserSearchModal";
-
-// Memoized Friend Card component to prevent unnecessary re-renders
-interface FriendCardProps {
-  friendship: Friendship;
-  onLongPress: () => void;
-  textPrimaryColor: string;
-}
-
-const FriendCard = memo(
-  ({ friendship, onLongPress, textPrimaryColor }: FriendCardProps) => {
-    const friend = friendship.friend as User;
-    const moodColors = getMoodColor(friend.mood);
-
-    return (
-      <View style={styles.friendCard}>
-        <View style={styles.friendInfo}>
-          <View style={styles.friendAvatarWrapper}>
-            {friend.avatar_url ? (
-              <Image
-                source={{ uri: friend.avatar_url }}
-                style={[
-                  styles.friendAvatar,
-                  {
-                    borderColor: friend.is_online ? moodColors.base : "rgba(255,255,255,0.1)",
-                  },
-                ]}
-              />
-            ) : (
-              <View
-                style={[
-                  styles.friendAvatar,
-                  {
-                    backgroundColor: moodColors.base,
-                    borderColor: friend.is_online ? moodColors.base : "rgba(255,255,255,0.1)",
-                  },
-                ]}
-              />
-            )}
-            {friend.is_online && <View style={styles.onlineIndicator} />}
-          </View>
-
-          <View style={styles.friendText}>
-            <Text style={[styles.friendName, { color: textPrimaryColor }]}>{friend.display_name}</Text>
-            <Text style={styles.friendStatus}>{friend.is_online ? "Online" : "Offline"}</Text>
-          </View>
-        </View>
-
-        <TouchableOpacity style={styles.removeButton} onPress={onLongPress} activeOpacity={0.7}>
-          <Ionicons name="close-circle" size={24} color="#EF4444" />
-        </TouchableOpacity>
-      </View>
-    );
-  },
-  (prevProps, nextProps) => {
-    // Custom comparison - only re-render if relevant data changed
-    const prevFriend = prevProps.friendship.friend as User;
-    const nextFriend = nextProps.friendship.friend as User;
-    return (
-      prevProps.friendship.id === nextProps.friendship.id &&
-      prevFriend.display_name === nextFriend.display_name &&
-      prevFriend.mood === nextFriend.mood &&
-      prevFriend.is_online === nextFriend.is_online &&
-      prevFriend.avatar_url === nextFriend.avatar_url &&
-      prevProps.textPrimaryColor === nextProps.textPrimaryColor
-    );
-  },
-);
+import { SwipeableFriendCard } from "../../components/SwipeableFriendCard";
 
 export default function FriendsScreen() {
   const router = useRouter();
@@ -156,16 +88,9 @@ export default function FriendsScreen() {
   };
 
   const handleRemoveFriend = useCallback(
-    (friendship: any) => {
+    (friendship: Friendship) => {
       const friend = friendship.friend as User;
-      Alert.alert("Remove Friend", `Remove ${friend.display_name} from your friends?`, [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: () => removeFriendship(friend.id),
-        },
-      ]);
+      removeFriendship(friend.id);
     },
     [removeFriendship],
   );
@@ -173,9 +98,9 @@ export default function FriendsScreen() {
   // Memoized render function for FlatList
   const renderFriendItem: ListRenderItem<Friendship> = useCallback(
     ({ item: friendship }) => (
-      <FriendCard
+      <SwipeableFriendCard
         friendship={friendship}
-        onLongPress={() => handleRemoveFriend(friendship)}
+        onRemove={handleRemoveFriend}
         textPrimaryColor={theme.colors.text.primary}
       />
     ),
@@ -586,69 +511,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#FFFFFF",
-  },
-  // Friends List
-  friendsList: {
-    gap: spacing.md,
-  },
-  friendCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.04)",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.06)",
-    marginBottom: 12,
-  },
-  friendInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    gap: 12,
-  },
-  friendAvatarWrapper: {
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  friendAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
-  },
-  onlineIndicator: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: "#22C55E",
-    borderWidth: 2,
-    borderColor: "#0d0d1a",
-  },
-  friendText: {
-    flex: 1,
-  },
-  friendName: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 2,
-  },
-  friendStatus: {
-    fontSize: 13,
-    color: "rgba(255,255,255,0.5)",
-  },
-  removeButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
   },
   // Empty State
   emptyState: {

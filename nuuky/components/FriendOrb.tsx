@@ -15,8 +15,8 @@ export const FriendOrb: React.FC<FriendOrbProps> = ({ friend, onPress }) => {
 
   // Check if user is truly online (handles stale is_online flags from force-closed apps)
   const isOnline = useMemo(
-    () => isUserTrulyOnline(isOnline, friend.last_seen_at),
-    [isOnline, friend.last_seen_at]
+    () => isUserTrulyOnline(friend.is_online, friend.last_seen_at),
+    [friend.is_online, friend.last_seen_at]
   );
 
   // Get mood display (handles both preset and custom moods)

@@ -28,6 +28,17 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, isCreator =
   const displayedParticipants = participants.slice(0, 5);
   const remainingCount = Math.max(0, participantCount - 5);
 
+  // Check if this is a home room (My Nūūky)
+  const isHomeRoom = room.name === 'My Nūūky';
+
+  // Format the room name for display
+  const displayName = isHomeRoom && !isCreator && creatorName
+    ? `${creatorName}'s Nūūky`
+    : (room.name || 'Unnamed Room');
+
+  // Only show subtitle for non-home rooms
+  const showSubtitle = !isHomeRoom && !isCreator && creatorName;
+
   return (
     <TouchableOpacity
       activeOpacity={interactionStates?.pressed || 0.7}
@@ -52,10 +63,10 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, isCreator =
             )}
             <View style={styles.titleTextContainer}>
               <Text style={styles.roomName} numberOfLines={1}>
-                {room.name || 'Unnamed Room'}
+                {displayName}
               </Text>
-              {/* Show creator name for rooms you were invited to */}
-              {!isCreator && creatorName && (
+              {/* Show creator name for non-home rooms you were invited to */}
+              {showSubtitle && (
                 <Text style={styles.creatorSubtitle} numberOfLines={1}>
                   {creatorName}'s room
                 </Text>
