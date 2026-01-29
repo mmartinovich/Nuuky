@@ -94,15 +94,9 @@ export const useNudge = () => {
         // Don't fail the nudge if notification fails
       }
 
-      // Success - play haptic feedback
+      // Success - play haptic feedback (no alert needed)
       await Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Success
-      );
-
-      Alert.alert(
-        'Nudge Sent! 👋',
-        `${friendName} will feel a gentle vibration`,
-        [{ text: 'OK', style: 'default' }]
       );
 
       return true;

@@ -276,14 +276,21 @@ export const validatePhone = (
   countryCode: CountryCode
 ): PhoneValidation => {
   // Remove all non-digits
-  const digits = rawNumber.replace(/\D/g, "");
+  let digits = rawNumber.replace(/\D/g, "");
 
   // Empty check
   if (!digits || digits.length === 0) {
     return { isValid: false, normalized: "", error: "Phone number is required" };
   }
 
-  // Minimum length check (most countries have at least 7 digits)
+  // Strip leading 0 for countries that use it in national format
+  // Most countries (except US, CA, and a few others) use leading 0 nationally
+  const countriesWithoutLeadingZero = ["US", "CA", "DO", "PR"];
+  if (!countriesWithoutLeadingZero.includes(countryCode) && digits.startsWith("0")) {
+    digits = digits.slice(1);
+  }
+
+  // Minimum length check (most countries have at least 7 digits after stripping leading 0)
   if (digits.length < 7) {
     return { isValid: false, normalized: "", error: "Phone number is too short" };
   }

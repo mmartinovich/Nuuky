@@ -20,12 +20,19 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, isCreator =
   const participants = room.participants || [];
   const participantCount = participants.length;
   const maxMembers = 10;
-  const hasOnlineMembers = participants.some(p =>
-    p.user && isUserTrulyOnline(p.user.is_online, p.user.last_seen_at)
-  );
 
-  // Show first 5 participant avatars
-  const displayedParticipants = participants.slice(0, 5);
+  // Sort participants: online users first, then offline users
+  const sortedParticipants = [...participants].sort((a, b) => {
+    const aOnline = a.user && isUserTrulyOnline(a.user.is_online, a.user.last_seen_at);
+    const bOnline = b.user && isUserTrulyOnline(b.user.is_online, b.user.last_seen_at);
+
+    if (aOnline && !bOnline) return -1;
+    if (!aOnline && bOnline) return 1;
+    return 0;
+  });
+
+  // Show first 5 participant avatars (online users will be first)
+  const displayedParticipants = sortedParticipants.slice(0, 5);
   const remainingCount = Math.max(0, participantCount - 5);
 
   // Check if this is a home room (My Nūūky)
@@ -57,10 +64,6 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, isCreator =
         {/* Room Header */}
         <View style={styles.header}>
           <View style={styles.titleRow}>
-            {/* Online indicator */}
-            {hasOnlineMembers && (
-              <View style={styles.onlineIndicator} />
-            )}
             <View style={styles.titleTextContainer}>
               <Text style={styles.roomName} numberOfLines={1}>
                 {displayName}
@@ -74,16 +77,13 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, isCreator =
             </View>
           </View>
           
-          {/* Right side: member count + selected badge */}
+          {/* Right side: selected badge */}
           <View style={styles.headerRight}>
             {isDefault && (
               <View style={[styles.activeBadge, { backgroundColor: accent.soft }]}>
                 <Text style={[styles.activeBadgeText, { color: accent.primary }]}>Active</Text>
               </View>
             )}
-            <Text style={styles.memberCount}>
-              {participantCount}/{maxMembers}
-            </Text>
           </View>
         </View>
 
@@ -119,6 +119,11 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, isCreator =
                     </Text>
                   </View>
                 )}
+
+                {/* Per-avatar online indicator */}
+                {isOnline && (
+                  <View style={styles.avatarOnlineDot} />
+                )}
               </View>
             );
           })}
@@ -129,6 +134,13 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, isCreator =
                 <Text style={styles.remainingText}>+{remainingCount}</Text>
               </View>
             </View>
+          )}
+
+          {/* Member count inline with avatars */}
+          {participantCount > 0 && (
+            <Text style={styles.memberCountInline}>
+              {participantCount}{participantCount >= 8 ? '/' + maxMembers : ''}
+            </Text>
           )}
 
           {participantCount === 0 && (
@@ -196,12 +208,6 @@ const styles = StyleSheet.create({
   titleTextContainer: {
     flex: 1,
   },
-  onlineIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#22C55E',
-  },
   roomName: {
     fontSize: 17,
     fontWeight: '600',
@@ -229,11 +235,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  memberCount: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: 'rgba(255, 255, 255, 0.5)',
-  },
   avatarRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -260,6 +261,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
+  avatarOnlineDot: {
+    position: 'absolute',
+    bottom: -1,
+    right: -1,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#22C55E',
+    borderWidth: 2,
+    borderColor: 'rgba(15, 15, 30, 1)',
+  },
   remainingAvatar: {
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderColor: 'rgba(255, 255, 255, 0.08)',
@@ -268,6 +280,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: 'rgba(255, 255, 255, 0.5)',
+  },
+  memberCountInline: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.4)',
+    marginLeft: 8,
   },
   emptyText: {
     fontSize: 14,

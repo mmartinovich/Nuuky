@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -13,17 +13,20 @@ import {
   Animated,
   Image,
   KeyboardAvoidingView,
+  Keyboard,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import CountryPicker, { Country, CountryCode, DARK_THEME } from "react-native-country-picker-modal";
 import { useAppStore } from "../../stores/appStore";
 import { useProfile } from "../../hooks/useProfile";
 import { useTheme } from "../../hooks/useTheme";
 import { spacing, interactionStates } from "../../lib/theme";
 import { QRCodeModal } from "../../components/QRCode";
+import { validatePhone, formatPhoneDisplay, getDialCode, getPhonePlaceholder, getMaxPhoneLength, COUNTRY_DIAL_CODES } from "../../lib/phoneUtils";
 
 interface ProfileRowProps {
   icon: string;
@@ -140,12 +143,23 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { theme, isDark } = useTheme();
   const { currentUser } = useAppStore();
-  const { loading, previewUri, pickAndUploadAvatar, updateDisplayName, deleteAvatar } = useProfile();
+  const { loading, previewUri, pickAndUploadAvatar, updateDisplayName, updatePhone, deleteAvatar } = useProfile();
 
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(currentUser?.display_name || "");
+  const [isEditingPhone, setIsEditingPhone] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [countryCode, setCountryCode] = useState<CountryCode>("US");
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [imageKey, setImageKey] = useState(Date.now());
   const [showQRModal, setShowQRModal] = useState(false);
+
+  const phoneInputRef = useRef<TextInput>(null);
+
+  // Phone formatting helpers
+  const dialCode = getDialCode(countryCode);
+  const phonePlaceholder = getPhonePlaceholder(countryCode);
+  const maxPhoneLength = getMaxPhoneLength(countryCode);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -265,6 +279,85 @@ export default function ProfileScreen() {
   const handleEditName = () => {
     setEditedName(currentUser?.display_name || "");
     setIsEditingName(true);
+  };
+
+  const handlePhoneChange = useCallback((text: string) => {
+    const digits = text.replace(/\D/g, "");
+    setPhoneNumber(digits.slice(0, maxPhoneLength));
+  }, [maxPhoneLength]);
+
+  const handleCountrySelect = useCallback((country: Country) => {
+    setCountryCode(country.cca2);
+    setShowCountryPicker(false);
+    setTimeout(() => phoneInputRef.current?.focus(), 100);
+  }, []);
+
+  const handleCountryPress = useCallback(() => {
+    Keyboard.dismiss();
+    setShowCountryPicker(true);
+  }, []);
+
+  const handleSavePhone = async () => {
+    if (phoneNumber.length === 0) {
+      // Allow empty - remove phone number
+      const success = await updatePhone("");
+      if (success) {
+        setIsEditingPhone(false);
+        Alert.alert("Success", "Phone number removed");
+      }
+      return;
+    }
+
+    const phoneValidation = validatePhone(phoneNumber, countryCode);
+    if (!phoneValidation.isValid) {
+      Alert.alert("Invalid Phone", phoneValidation.error || "Please enter a valid phone number");
+      return;
+    }
+
+    const success = await updatePhone(phoneValidation.normalized);
+    if (success) {
+      setIsEditingPhone(false);
+      Alert.alert("Success", "Phone number updated");
+    }
+  };
+
+  const handleCancelPhoneEdit = () => {
+    setPhoneNumber("");
+    setCountryCode("US");
+    setIsEditingPhone(false);
+  };
+
+  const handleEditPhone = () => {
+    // Parse existing phone to extract country code and number
+    if (currentUser?.phone) {
+      const fullNumber = currentUser.phone.replace(/\D/g, "");
+
+      // Try to detect country code by matching dial codes
+      let detectedCountry: CountryCode = "US";
+      let nationalNumber = fullNumber;
+
+      // Sort countries by dial code length (longest first) to match most specific first
+      const sortedEntries = Object.entries(COUNTRY_DIAL_CODES)
+        .sort((a: any, b: any) => b[1].length - a[1].length);
+
+      // Find matching country by checking if phone starts with the dial code
+      for (const [country, dialCode] of sortedEntries) {
+        const codeDigits = (dialCode as string).replace(/\D/g, "");
+
+        if (fullNumber.startsWith(codeDigits)) {
+          detectedCountry = country as CountryCode;
+          nationalNumber = fullNumber.slice(codeDigits.length);
+          break;
+        }
+      }
+
+      setCountryCode(detectedCountry);
+      setPhoneNumber(nationalNumber);
+    } else {
+      setPhoneNumber("");
+      setCountryCode("US");
+    }
+    setIsEditingPhone(true);
   };
 
   return (
@@ -418,41 +511,150 @@ export default function ProfileScreen() {
         )}
 
         {/* Account Info Section */}
-        <ProfileSection title="ACCOUNT" theme={theme}>
-          {currentUser?.username && (
-            <ProfileRow
-              icon="at-outline"
-              label="Username"
-              value={`@${currentUser.username}`}
-              showChevron={false}
-              isFirst
-              isLast={!currentUser?.email && !currentUser?.phone}
-              theme={theme}
-            />
-          )}
-          {currentUser?.email && (
-            <ProfileRow
-              icon="mail-outline"
-              label="Email"
-              value={currentUser.email}
-              showChevron={false}
-              isFirst={!currentUser?.username}
-              isLast={!currentUser?.phone}
-              theme={theme}
-            />
-          )}
-          {currentUser?.phone && (
+        {!isEditingPhone ? (
+          <ProfileSection title="ACCOUNT" theme={theme}>
+            {currentUser?.username && (
+              <ProfileRow
+                icon="at-outline"
+                label="Username"
+                value={`@${currentUser.username}`}
+                showChevron={false}
+                isFirst
+                isLast={!currentUser?.email}
+                theme={theme}
+              />
+            )}
+            {currentUser?.email && (
+              <ProfileRow
+                icon="mail-outline"
+                label="Email"
+                value={currentUser.email}
+                showChevron={false}
+                isFirst={!currentUser?.username}
+                isLast={false}
+                theme={theme}
+              />
+            )}
             <ProfileRow
               icon="call-outline"
               label="Phone"
-              value={currentUser.phone}
-              showChevron={false}
+              value={currentUser?.phone || "Add phone number"}
+              onPress={handleEditPhone}
               isFirst={!currentUser?.username && !currentUser?.email}
               isLast
               theme={theme}
             />
-          )}
-        </ProfileSection>
+          </ProfileSection>
+        ) : (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text.tertiary }]}>PHONE NUMBER</Text>
+            <View style={[styles.editCard, { backgroundColor: 'rgba(255, 255, 255, 0.05)' }]}>
+              <View style={styles.phoneInputContainer}>
+                {/* Country Picker */}
+                <TouchableOpacity
+                  onPress={handleCountryPress}
+                  activeOpacity={interactionStates.pressed}
+                  style={styles.countryButton}
+                >
+                  <CountryPicker
+                    visible={showCountryPicker}
+                    onClose={() => setShowCountryPicker(false)}
+                    onSelect={handleCountrySelect}
+                    countryCode={countryCode}
+                    withFlag
+                    withFilter
+                    withCallingCode
+                    withEmoji
+                    withCloseButton={false}
+                    theme={{
+                      ...DARK_THEME,
+                      backgroundColor: '#0a0a20',
+                      onBackgroundTextColor: '#ffffff',
+                      filterPlaceholderTextColor: 'rgba(255, 255, 255, 0.35)',
+                    }}
+                    containerButtonStyle={styles.pickerTrigger}
+                    renderCountryFilter={(props: any) => (
+                      <View style={pickerStyles.filterContainer}>
+                        <View style={pickerStyles.filterRow}>
+                          <TouchableOpacity
+                            onPress={() => setShowCountryPicker(false)}
+                            style={pickerStyles.closeButton}
+                            activeOpacity={0.7}
+                          >
+                            <Ionicons name="close" size={22} color="rgba(255,255,255,0.6)" />
+                          </TouchableOpacity>
+                          <View style={pickerStyles.searchInputWrapper}>
+                            <Ionicons name="search" size={18} color="rgba(255,255,255,0.35)" style={pickerStyles.searchIcon} />
+                            <TextInput
+                              {...props}
+                              placeholder="Search country..."
+                              placeholderTextColor="rgba(255,255,255,0.3)"
+                              autoFocus
+                              style={pickerStyles.searchInput}
+                            />
+                          </View>
+                        </View>
+                      </View>
+                    )}
+                    flatListProps={{
+                      style: { backgroundColor: '#0a0a20' },
+                      contentContainerStyle: { paddingBottom: 60, paddingTop: 4 },
+                      showsVerticalScrollIndicator: false,
+                    }}
+                  />
+                  <Text style={[styles.dialCode, { color: theme.colors.text.primary }]}>
+                    {dialCode}
+                  </Text>
+                  <Ionicons name="chevron-down" size={16} color={theme.colors.text.tertiary} />
+                </TouchableOpacity>
+
+                {/* Divider */}
+                <View style={[styles.phoneDivider, { backgroundColor: theme.colors.glass.border }]} />
+
+                {/* Phone Input */}
+                <TextInput
+                  ref={phoneInputRef}
+                  style={[styles.phoneInput, { color: theme.colors.text.primary }]}
+                  value={formatPhoneDisplay(phoneNumber, countryCode)}
+                  onChangeText={handlePhoneChange}
+                  placeholder={phonePlaceholder}
+                  placeholderTextColor={theme.colors.text.tertiary}
+                  keyboardType="phone-pad"
+                  autoCorrect={false}
+                  autoComplete="tel"
+                  textContentType="telephoneNumber"
+                  returnKeyType="done"
+                  onSubmitEditing={handleSavePhone}
+                />
+              </View>
+              <View style={[styles.editDivider, { backgroundColor: 'rgba(255, 255, 255, 0.06)' }]} />
+              <View style={styles.editButtons}>
+                <TouchableOpacity style={styles.editButton} onPress={handleCancelPhoneEdit} activeOpacity={interactionStates.pressed}>
+                  <Text style={[styles.cancelButtonText, { color: theme.colors.text.secondary }]}>Cancel</Text>
+                </TouchableOpacity>
+                <View style={[styles.buttonDivider, { backgroundColor: 'rgba(255, 255, 255, 0.06)' }]} />
+                <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={handleSavePhone}
+                  disabled={loading}
+                  activeOpacity={interactionStates.pressed}
+                >
+                  <Text
+                    style={[
+                      styles.saveButtonText,
+                      loading && styles.saveButtonDisabled,
+                    ]}
+                  >
+                    {loading ? "Saving..." : "Save"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            <Text style={[styles.sectionFooter, { color: theme.colors.text.tertiary }]}>
+              Optional. Used for account recovery and notifications. Leave blank to remove.
+            </Text>
+          </View>
+        )}
 
         {/* Share Profile Section */}
         {currentUser?.username && (
@@ -731,5 +933,85 @@ const styles = StyleSheet.create({
   },
   saveButtonDisabled: {
     opacity: 0.4,
+  },
+  // Phone input styles
+  phoneInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
+    minHeight: 56,
+  },
+  countryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingRight: spacing.sm,
+  },
+  pickerTrigger: {
+    marginRight: 8,
+  },
+  dialCode: {
+    fontSize: 17,
+    fontWeight: "400",
+    marginRight: 4,
+  },
+  phoneDivider: {
+    width: 1,
+    height: 28,
+    marginHorizontal: spacing.sm,
+  },
+  phoneInput: {
+    flex: 1,
+    fontSize: 17,
+    fontWeight: "400",
+    letterSpacing: -0.41,
+    padding: 0,
+  },
+});
+
+// Picker modal styles
+const pickerStyles = StyleSheet.create({
+  filterContainer: {
+    width: '100%',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchInputWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.07)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    paddingHorizontal: 12,
+    height: 42,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '400',
+    letterSpacing: -0.2,
+    padding: 0,
   },
 });
