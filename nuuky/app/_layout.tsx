@@ -15,6 +15,7 @@ import {
 import { useAppStore } from "../stores/appStore";
 import { supabase } from "../lib/supabase";
 import { ThemeProvider } from "../context/ThemeContext";
+import { NotificationBannerProvider, useNotificationBanner } from "../context/NotificationBannerContext";
 import { initializeLiveKit } from "../lib/livekit";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { getAllMoodImages } from "../lib/theme";
@@ -24,6 +25,7 @@ import {
   registerForPushNotificationsAsync,
   savePushTokenToUser,
   setupNotificationListeners,
+  isSilentNotification,
 } from "../lib/notifications";
 
 // Type for pending deep link actions (to execute after login)
@@ -34,6 +36,15 @@ interface PendingDeepLinkAction {
 
 // Keep the splash screen visible while we initialize
 SplashScreen.preventAutoHideAsync();
+
+// Helper component to connect notification banner context with ref
+function NotificationBannerConnector({ onReady }: { onReady: (fn: any) => void }) {
+  const { showNotification } = useNotificationBanner();
+  useEffect(() => {
+    onReady(showNotification);
+  }, [showNotification, onReady]);
+  return null;
+}
 
 export default function RootLayout() {
   const { currentUser, setCurrentUser } = useAppStore();
@@ -47,6 +58,7 @@ export default function RootLayout() {
   });
   const notificationCleanupRef = useRef<(() => void) | null>(null);
   const pendingDeepLinkRef = useRef<PendingDeepLinkAction | null>(null);
+  const showNotificationBannerRef = useRef<((notification: any) => void) | null>(null);
 
   // Handle notification tap navigation
   const handleNotificationNavigation = (data: any) => {
@@ -76,7 +88,57 @@ export default function RootLayout() {
     const cleanup = setupNotificationListeners(
       // On notification received (foreground)
       (notification) => {
-        console.log("Notification received:", notification.request.content);
+        // Skip silent notifications (they're for background data sync only)
+        if (isSilentNotification(notification)) {
+          return;
+        }
+
+        const content = notification.request.content;
+        const data = content.data || {};
+
+        // Show in-app banner for foreground notifications
+        if (showNotificationBannerRef.current) {
+          // Get notification style based on type
+          let icon = 'notifications';
+          let color = '#A855F7';
+
+          switch (data.type) {
+            case 'nudge':
+              icon = 'hand-left';
+              color = '#8B5CF6';
+              break;
+            case 'flare':
+              icon = 'flame';
+              color = '#F97316';
+              break;
+            case 'friend_request':
+              icon = 'person-add';
+              color = '#06B6D4';
+              break;
+            case 'friend_accepted':
+              icon = 'checkmark-circle';
+              color = '#10B981';
+              break;
+            case 'room_invite':
+              icon = 'home';
+              color = '#A855F7';
+              break;
+            case 'call_me':
+              icon = 'call';
+              color = '#10B981';
+              break;
+          }
+
+          showNotificationBannerRef.current({
+            id: notification.request.identifier,
+            title: content.title || 'Notification',
+            body: content.body || '',
+            icon,
+            color,
+            avatarUrl: data.sender_avatar_url || data.friend_avatar_url,
+            onPress: () => handleNotificationNavigation(data),
+          });
+        }
       },
       // On notification response (tap)
       (response) => {
@@ -581,21 +643,28 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#0a0a0f" }}>
-          <OfflineBanner />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: {
-                backgroundColor: "#0a0a0f",
-              },
-              animation: "slide_from_right",
+        <NotificationBannerProvider>
+          <NotificationBannerConnector
+            onReady={(showNotification) => {
+              showNotificationBannerRef.current = showNotification;
             }}
-          >
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(main)" />
-          </Stack>
-        </GestureHandlerRootView>
+          />
+          <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#0a0a0f" }}>
+            <OfflineBanner />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: {
+                  backgroundColor: "#0a0a0f",
+                },
+                animation: "slide_from_right",
+              }}
+            >
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(main)" />
+            </Stack>
+          </GestureHandlerRootView>
+        </NotificationBannerProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

@@ -110,7 +110,7 @@ export const SwipeableRoomCard: React.FC<SwipeableRoomCardProps> = ({
       const totalActions = 1;
 
       return (
-        <View style={{ width: ACTION_WIDTH * totalActions, flexDirection: 'row' }}>
+        <View style={{ width: ACTION_WIDTH * totalActions + 20, flexDirection: 'row', marginLeft: -20 }}>
           {/* Single destructive action */}
           <RightAction
             drag={drag}
@@ -183,13 +183,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   actionButton: {
-    width: ACTION_WIDTH,
+    width: ACTION_WIDTH + 20, // Extended to go underneath card
     height: '100%',
   },
   actionButtonInner: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'flex-end', // Align content to the right
+    paddingRight: 20, // Space from right edge
     gap: 4,
   },
   actionText: {

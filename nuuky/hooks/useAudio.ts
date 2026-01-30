@@ -9,6 +9,7 @@ import {
   setLocalMicrophoneEnabled,
   isConnected,
   isMicrophoneEnabled,
+  getCurrentRoom,
 } from '../lib/livekit';
 import { AudioConnectionStatus } from '../types';
 
@@ -38,6 +39,33 @@ export const useAudio = (roomId: string | null) => {
       isInitialized.current = true;
     }
   }, []);
+
+  // iOS Audio Management - dynamically manages audio session for proper speaker routing
+  // This ensures audio always routes to speaker and remote audio is audible
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+
+    const room = getCurrentRoom();
+    if (!room) return;
+
+    // Import AudioSession for iOS configuration
+    const { AudioSession } = require('@livekit/react-native');
+
+    // Set up iOS-specific audio configuration for voice chat
+    const configureIOSAudio = async () => {
+      try {
+        await AudioSession.setAppleAudioConfiguration({
+          audioCategory: 'playAndRecord',
+          audioCategoryOptions: ['defaultToSpeaker', 'allowBluetooth', 'allowBluetoothA2DP'],
+          audioMode: 'videoChat',
+        });
+      } catch (error) {
+        console.error('[useAudio] Failed to configure iOS audio:', error);
+      }
+    };
+
+    configureIOSAudio();
+  }, [audioConnectionStatus]); // Re-run when connection status changes
 
   // Set up event callbacks with proper cleanup
   useEffect(() => {

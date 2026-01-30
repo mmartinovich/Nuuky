@@ -200,6 +200,30 @@ export const useNotifications = () => {
         .on(
           'postgres_changes',
           {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${currentUser.id}`,
+          },
+          (payload) => {
+            try {
+              // Update notification in the list (e.g., when marked as read)
+              if (payload.new && typeof payload.new === 'object') {
+                const updatedNotif = payload.new as AppNotification;
+                const store = useAppStore.getState();
+                const notifications = store.notifications.map((n) =>
+                  n.id === updatedNotif.id ? updatedNotif : n
+                );
+                store.setNotifications(notifications);
+              }
+            } catch (error) {
+              console.error('Error handling notification update:', error);
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
             event: 'DELETE',
             schema: 'public',
             table: 'notifications',

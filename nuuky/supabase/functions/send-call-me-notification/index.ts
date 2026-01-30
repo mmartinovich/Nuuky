@@ -146,10 +146,12 @@ serve(async (req) => {
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     } else {
-      console.error(`✗ Failed to send call me notification to ${receiver.display_name}`);
+      // Push notification failed but DB notification was still created
+      // Return 200 since the notification is persisted and will be visible in-app
+      console.warn(`⚠ Push notification failed for ${receiver.display_name}, but DB notification created`);
       return new Response(
-        JSON.stringify({ message: 'Failed to send notification', sent: false }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({ message: 'Notification created in DB (push failed)', sent: false }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     }
 

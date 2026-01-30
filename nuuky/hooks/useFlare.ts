@@ -200,22 +200,34 @@ export const useFlare = () => {
                   .single();
 
                 if (error) {
+                  console.error('[Flare] Database insert error:', error);
                   throw error;
                 }
 
                 // Send push notifications to all friends via Edge Function
                 // (session already verified above)
+                // Don't fail the flare if notification fails - flare is already created
                 try {
                   if (flareData) {
-                    await supabase.functions.invoke("send-flare-notification", {
+                    const { data, error: notifError } = await supabase.functions.invoke("send-flare-notification", {
                       body: {
                         user_id: currentUser.id,
                         flare_id: flareData.id,
                       },
                     });
+
+                    if (notifError) {
+                      console.warn('[Flare] Notification warning:', notifError);
+                      // Log but continue - notifications are best-effort
+                    }
+
+                    if (data) {
+                      console.log('[Flare] Notification result:', data);
+                    }
                   }
-                } catch (_notifError) {
-                  // Don't fail the flare if notification fails
+                } catch (notifError) {
+                  console.error('[Flare] Notification error:', notifError);
+                  // Don't fail the flare if notification fails - flare is already created
                 }
 
                 // Play strong haptic feedback
@@ -228,8 +240,9 @@ export const useFlare = () => {
 
                 await loadActiveFlares();
                 resolve(true);
-              } catch (_error: any) {
-                Alert.alert("Error", "Failed to send flare");
+              } catch (error: any) {
+                console.error('[Flare] Failed to send flare:', error);
+                Alert.alert("Error", error?.message || "Failed to send flare");
                 resolve(false);
               } finally {
                 setLoading(false);

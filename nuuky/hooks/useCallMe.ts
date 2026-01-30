@@ -53,19 +53,19 @@ export const useCallMe = () => {
         },
       });
 
-      // Edge Functions sometimes return 500 status even when notification sends successfully
-      // If we got any response data (not null/undefined), consider it a success
-      // This handles cases where the function succeeds but returns non-2xx status
+      console.log('[CallMe] Response data:', data);
       if (error) {
-        console.log('Call me response data:', data);
-        console.log('Call me error:', error);
+        console.warn('[CallMe] Edge function returned error:', error);
+      }
 
-        // If there's any data payload, the notification likely succeeded
-        if (!data || (typeof data === 'object' && Object.keys(data).length === 0)) {
-          // Only throw if we truly got no response
-          throw error;
-        }
-        // Otherwise continue - notification was sent despite error status
+      // Edge Functions may return error status even when notification is created in DB
+      // Check if notification was actually sent by looking at the response
+      const notificationSent = data?.sent !== false; // Treat undefined/true as success
+
+      if (!notificationSent && error) {
+        // Only fail if explicitly marked as failed AND there's an error
+        console.error('[CallMe] Failed to send notification');
+        throw new Error('Failed to send call request');
       }
 
       // Success - play haptic feedback (no alert needed)
@@ -75,8 +75,8 @@ export const useCallMe = () => {
 
       return true;
     } catch (error: any) {
-      console.error('Error sending call request:', error);
-      Alert.alert('Error', 'Failed to send call request');
+      console.error('[CallMe] Error sending call request:', error);
+      Alert.alert('Error', error?.message || 'Failed to send call request');
       return false;
     } finally {
       setLoading(false);

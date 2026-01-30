@@ -136,9 +136,15 @@ export const connectToAudioRoom = async (roomId: string): Promise<boolean> => {
     eventCallbacks?.onConnectionStatusChange('connecting');
 
     // Configure audio to use speaker output for louder playback
+    // This ensures audio routes to speaker instead of earpiece
     AudioSession.configureAudio({
       ios: { defaultOutput: 'speaker' },
-      android: { audioTypeOptions: { focusMode: 'gain' } },
+      android: {
+        audioTypeOptions: {
+          focusMode: 'gain',
+          audioMode: 'inCommunication', // Proper mode for voice chat
+        }
+      },
     });
 
     // OPTIMIZATION: Run audio session and token request in parallel
@@ -162,6 +168,8 @@ export const connectToAudioRoom = async (roomId: string): Promise<boolean> => {
           noiseSuppression: true,
           autoGainControl: true,
         },
+        // Ensure remote audio is auto-subscribed for immediate playback
+        autoSubscribe: true,
       });
 
       // Set up event listeners only once
@@ -297,6 +305,15 @@ const setupRoomEventListeners = (room: Room) => {
       eventCallbacks?.onParticipantSpeaking(participant.identity, false);
     }
   );
+
+  // Handle track subscribed - ensures remote audio is properly played
+  room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+    if (track.kind === Track.Kind.Audio) {
+      console.log(`[LiveKit] Audio track subscribed from ${participant.identity}`);
+      // Audio tracks should play automatically, but we log for debugging
+      // If issues persist, we may need to explicitly call track.attach() here
+    }
+  });
 
   room.on(RoomEvent.TrackMuted, (publication, _participant) => {
     if (publication.kind === Track.Kind.Audio) {

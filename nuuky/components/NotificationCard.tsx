@@ -328,13 +328,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   deleteAction: {
-    width: 90,
+    width: 110, // Wider to extend under card
     marginBottom: spacing.sm,
     borderTopRightRadius: radius.lg,
     borderBottomRightRadius: radius.lg,
     justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: -1,
+    alignItems: 'flex-end', // Align content to the right
+    paddingRight: 20, // Space from right edge
+    marginLeft: -20, // Extend underneath the card's rounded corner
   },
   deleteButton: {
     justifyContent: 'center',

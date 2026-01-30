@@ -92,7 +92,7 @@ export const SwipeableFriendCard: React.FC<SwipeableFriendCardProps> = ({
   const renderRightActions = useCallback(
     (prog: SharedValue<number>, drag: SharedValue<number>) => {
       return (
-        <View style={{ width: ACTION_WIDTH, flexDirection: 'row' }}>
+        <View style={{ width: ACTION_WIDTH + 20, flexDirection: 'row', marginLeft: -20 }}>
           <RightAction
             drag={drag}
             iconName="trash-outline"
@@ -191,13 +191,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   actionButton: {
-    width: ACTION_WIDTH,
+    width: ACTION_WIDTH + 20, // Extended to go underneath card
     height: '100%',
   },
   actionButtonInner: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'flex-end', // Align content to the right
+    paddingRight: 20, // Space from right edge
     gap: 4,
   },
   actionText: {
