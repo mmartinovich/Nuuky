@@ -28,6 +28,21 @@ export const useFlare = () => {
     };
   }, [currentUser?.id]); // Use id to avoid re-running on mood change
 
+  // Auto-clear flare when it expires
+  useEffect(() => {
+    if (!myActiveFlare) return;
+    const remaining = new Date(myActiveFlare.expires_at).getTime() - Date.now();
+    if (remaining <= 0) {
+      setMyActiveFlare(null);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setMyActiveFlare(null);
+      loadActiveFlares();
+    }, remaining);
+    return () => clearTimeout(timer);
+  }, [myActiveFlare?.id, myActiveFlare?.expires_at]);
+
   // MOCK MODE FLAG - should match useRoom.ts
   const USE_MOCK_DATA = false;
 
