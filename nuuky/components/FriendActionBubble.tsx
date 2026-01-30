@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, Platform, Easing } from 'react-native';
 import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { User } from '../types';
@@ -27,9 +27,13 @@ export function FriendActionBubble({
   const scaleAnim = useRef(new Animated.Value(0.3)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
+  // Track which button was sent for checkmark feedback
+  const [sentAction, setSentAction] = useState<'nudge' | 'call' | 'heart' | null>(null);
+
   // Button animation values
   const nudgeScale = useRef(new Animated.Value(1)).current;
   const callRotate = useRef(new Animated.Value(0)).current;
+  const callScale = useRef(new Animated.Value(1)).current;
   const heartScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -66,97 +70,95 @@ export function FriendActionBubble({
   const tailOffset = position.x - bubbleX;
 
   const handleNudgePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (sentAction) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 
-    // Slow wobble like waving
+    // Punchy scale with overshoot
     Animated.sequence([
-      Animated.timing(nudgeScale, {
-        toValue: 1.15,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(nudgeScale, {
-        toValue: 0.95,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(nudgeScale, {
-        toValue: 1.1,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(nudgeScale, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }),
+        Animated.timing(nudgeScale, { toValue: 1.5, duration: 100, easing: Easing.out(Easing.back(2)), useNativeDriver: true }),
+        Animated.timing(nudgeScale, { toValue: 0.8, duration: 100, useNativeDriver: true }),
+        Animated.timing(nudgeScale, { toValue: 1.3, duration: 100, useNativeDriver: true }),
+        Animated.timing(nudgeScale, { toValue: 0.9, duration: 80, useNativeDriver: true }),
+        // Squish to zero for icon swap
+        Animated.timing(nudgeScale, { toValue: 0, duration: 100, easing: Easing.in(Easing.ease), useNativeDriver: true }),
     ]).start(() => {
+      setSentAction('nudge');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onNudge();
+      Animated.spring(nudgeScale, { toValue: 1, tension: 300, friction: 10, useNativeDriver: true }).start(() => {
+        setTimeout(() => {
+          Animated.timing(nudgeScale, { toValue: 0, duration: 100, useNativeDriver: true }).start(() => {
+            setSentAction(null);
+            Animated.spring(nudgeScale, { toValue: 1, tension: 300, friction: 10, useNativeDriver: true }).start();
+          });
+        }, 1000);
+      });
     });
   };
 
   const handleCallPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (sentAction) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 
-    // Quick wobble like phone ringing
-    Animated.sequence([
-      Animated.timing(callRotate, {
-        toValue: 1,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(callRotate, {
-        toValue: -1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(callRotate, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(callRotate, {
-        toValue: -1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(callRotate, {
-        toValue: 0,
-        duration: 50,
-        useNativeDriver: true,
-      }),
+    // Scale pop + aggressive ring shake
+    Animated.parallel([
+      Animated.sequence([
+        Animated.timing(callScale, { toValue: 1.4, duration: 80, easing: Easing.out(Easing.back(2)), useNativeDriver: true }),
+        Animated.timing(callScale, { toValue: 1, duration: 200, useNativeDriver: true }),
+      ]),
+      Animated.sequence([
+        Animated.timing(callRotate, { toValue: 1, duration: 40, useNativeDriver: true }),
+        Animated.timing(callRotate, { toValue: -1, duration: 60, useNativeDriver: true }),
+        Animated.timing(callRotate, { toValue: 1, duration: 60, useNativeDriver: true }),
+        Animated.timing(callRotate, { toValue: -1, duration: 60, useNativeDriver: true }),
+        Animated.timing(callRotate, { toValue: 1, duration: 60, useNativeDriver: true }),
+        Animated.timing(callRotate, { toValue: -1, duration: 60, useNativeDriver: true }),
+        Animated.timing(callRotate, { toValue: 0, duration: 40, useNativeDriver: true }),
+      ]),
     ]).start(() => {
-      onCallMe();
+      // Squish to zero for icon swap
+      Animated.timing(callScale, { toValue: 0, duration: 100, easing: Easing.in(Easing.ease), useNativeDriver: true }).start(() => {
+        setSentAction('call');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        onCallMe();
+        Animated.spring(callScale, { toValue: 1, tension: 300, friction: 10, useNativeDriver: true }).start(() => {
+          setTimeout(() => {
+            Animated.timing(callScale, { toValue: 0, duration: 100, useNativeDriver: true }).start(() => {
+              setSentAction(null);
+              Animated.spring(callScale, { toValue: 1, tension: 300, friction: 10, useNativeDriver: true }).start();
+            });
+          }, 1000);
+        });
+      });
     });
   };
 
   const handleHeartPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (sentAction) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 
-    // Quick double-pulse
+    // Heartbeat then squish down to swap icon, pop back as checkmark
     Animated.sequence([
-      Animated.timing(heartScale, {
-        toValue: 1.3,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(heartScale, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(heartScale, {
-        toValue: 1.3,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(heartScale, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
+        Animated.timing(heartScale, { toValue: 1.6, duration: 100, easing: Easing.out(Easing.back(2)), useNativeDriver: true }),
+        Animated.timing(heartScale, { toValue: 0.8, duration: 100, useNativeDriver: true }),
+        Animated.delay(80),
+        Animated.timing(heartScale, { toValue: 1.5, duration: 100, easing: Easing.out(Easing.back(2)), useNativeDriver: true }),
+        // Squish to zero to hide icon for swap
+        Animated.timing(heartScale, { toValue: 0, duration: 100, easing: Easing.in(Easing.ease), useNativeDriver: true }),
     ]).start(() => {
+      setSentAction('heart');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onHeart();
+      // Pop checkmark back in
+      Animated.spring(heartScale, { toValue: 1, tension: 300, friction: 10, useNativeDriver: true }).start(() => {
+        setTimeout(() => {
+          // Squish out checkmark, swap back to heart, pop in
+          Animated.timing(heartScale, { toValue: 0, duration: 100, useNativeDriver: true }).start(() => {
+            setSentAction(null);
+            Animated.spring(heartScale, { toValue: 1, tension: 300, friction: 10, useNativeDriver: true }).start();
+          });
+        }, 1000);
+      });
     });
   };
 
@@ -210,9 +212,13 @@ export function FriendActionBubble({
               accessibilityRole="button"
             >
               <Animated.View style={{ transform: [{ scale: nudgeScale }] }}>
-                <MaterialCommunityIcons name="hand-wave" size={18} color="#3B82F6" />
+                {sentAction === 'nudge' ? (
+                  <Ionicons name="checkmark-circle" size={20} color="#3B82F6" />
+                ) : (
+                  <MaterialCommunityIcons name="hand-wave" size={20} color="#3B82F6" />
+                )}
               </Animated.View>
-              <Text style={styles.actionLabel}>Nudge</Text>
+              <Text style={styles.actionLabel}>{sentAction === 'nudge' ? 'Sent!' : 'Nudge'}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -225,18 +231,23 @@ export function FriendActionBubble({
               <Animated.View
                 style={{
                   transform: [
+                    { scale: callScale },
                     {
                       rotate: callRotate.interpolate({
                         inputRange: [-1, 1],
-                        outputRange: ['-15deg', '15deg'],
+                        outputRange: ['-20deg', '20deg'],
                       }),
                     },
                   ],
                 }}
               >
-                <Ionicons name="call" size={18} color="#22C55E" />
+                {sentAction === 'call' ? (
+                  <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+                ) : (
+                  <Ionicons name="call" size={20} color="#22C55E" />
+                )}
               </Animated.View>
-              <Text style={styles.actionLabel}>Call me</Text>
+              <Text style={styles.actionLabel}>{sentAction === 'call' ? 'Sent!' : 'Call me'}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -247,9 +258,13 @@ export function FriendActionBubble({
               accessibilityRole="button"
             >
               <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-                <Ionicons name="heart" size={18} color="#EF4444" />
+                {sentAction === 'heart' ? (
+                  <Ionicons name="checkmark-circle" size={20} color="#EF4444" />
+                ) : (
+                  <Ionicons name="heart" size={20} color="#EF4444" />
+                )}
               </Animated.View>
-              <Text style={styles.actionLabel}>Heart</Text>
+              <Text style={styles.actionLabel}>{sentAction === 'heart' ? 'Sent!' : 'Heart'}</Text>
             </TouchableOpacity>
           </View>
         </View>

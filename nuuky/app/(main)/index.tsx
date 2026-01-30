@@ -9,6 +9,7 @@ import * as Haptics from "expo-haptics";
 import * as SplashScreen from "expo-splash-screen";
 import { supabase } from "../../lib/supabase";
 import { Animated as RNAnimated, PanResponder, Easing } from "react-native";
+import AnimatedGlow from "../../components/AnimatedGlow";
 
 // AsyncStorage with fallback for when package isn't installed
 let AsyncStorage: {
@@ -86,7 +87,7 @@ import { AudioConnectionBadge } from "../../components/AudioConnectionBadge";
 
 const { width, height } = Dimensions.get("window");
 const CENTER_X = width / 2;
-const CENTER_Y = height / 2;
+const CENTER_Y = height / 2 - 20;
 
 export default function QuantumOrbitScreen() {
   const router = useRouter();
@@ -769,6 +770,9 @@ export default function QuantumOrbitScreen() {
 
       {/* Neon Cyber Background */}
       <LinearGradient colors={theme.gradients.background} style={StyleSheet.absoluteFill} />
+
+      {/* Animated Blue Glow (Revolut-style) */}
+      <AnimatedGlow />
 
       {/* Animated Star Field */}
       <StarField />

@@ -148,7 +148,7 @@ const lightColors = {
 // Dark Theme Gradients
 // ============================================
 const darkGradients = {
-  background: ['#050510', '#0a0a20', '#141428'] as const,
+  background: ['#0B0E1A', '#0A0D18', '#080B14'] as const,
   backgroundAlt: ['#0a0a20', '#141428', '#0f0f24'] as const,
   card: ['rgba(255, 255, 255, 0.06)', 'rgba(255, 255, 255, 0.03)'] as const,
   glass: ['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.05)'] as const,

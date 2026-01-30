@@ -59,7 +59,7 @@ export const useFlare = () => {
             mood,
             avatar_url
           )
-        `,
+        `
         )
         .gte("expires_at", new Date().toISOString())
         .neq("user_id", user.id);
@@ -119,7 +119,7 @@ export const useFlare = () => {
             if (payload.eventType === "INSERT" && payload.new.user_id !== user?.id) {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             }
-          },
+          }
         )
         .subscribe();
     });
@@ -138,7 +138,7 @@ export const useFlare = () => {
     if (currentUser.take_break_until && new Date(currentUser.take_break_until) > now) {
       Alert.alert(
         "Break Mode Active",
-        "You cannot send flares while on a break. End your break first if you need support.",
+        "You cannot send flares while on a break. End your break first if you need support."
       );
       return false;
     }
@@ -153,7 +153,7 @@ export const useFlare = () => {
     // MOCK MODE: Skip Supabase, just show success
     if (USE_MOCK_DATA) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("Flare Sent! 🚨", "Your friends have been notified. The flare will remain active for 30 minutes.");
+      Alert.alert("Flare Sent! 🚨", "Your friends have been notified. The flare will remain active for 5 minutes.");
       return true;
     }
 
@@ -187,8 +187,8 @@ export const useFlare = () => {
                   return;
                 }
 
-                // Flare expires in 30 minutes
-                const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+                // Flare expires in 5 minutes
+                const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
                 const { data: flareData, error } = await supabase
                   .from("flares")
@@ -200,7 +200,7 @@ export const useFlare = () => {
                   .single();
 
                 if (error) {
-                  console.error('[Flare] Database insert error:', error);
+                  console.error("[Flare] Database insert error:", error);
                   throw error;
                 }
 
@@ -217,31 +217,28 @@ export const useFlare = () => {
                     });
 
                     if (notifError) {
-                      console.warn('[Flare] Notification warning:', notifError);
+                      console.warn("[Flare] Notification warning:", notifError);
                       // Log but continue - notifications are best-effort
                     }
 
                     if (data) {
-                      console.log('[Flare] Notification result:', data);
+                      console.log("[Flare] Notification result:", data);
                     }
                   }
                 } catch (notifError) {
-                  console.error('[Flare] Notification error:', notifError);
+                  console.error("[Flare] Notification error:", notifError);
                   // Don't fail the flare if notification fails - flare is already created
                 }
 
                 // Play strong haptic feedback
                 await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-                Alert.alert(
-                  "Flare Sent! 🚨",
-                  "Your friends have been notified. The flare will remain active for 30 minutes.",
-                );
+                Alert.alert("Flare Sent! 🚨", "Your friends have been notified. The  active for 30 minutes.");
 
                 await loadActiveFlares();
                 resolve(true);
               } catch (error: any) {
-                console.error('[Flare] Failed to send flare:', error);
+                console.error("[Flare] Failed to send flare:", error);
                 Alert.alert("Error", error?.message || "Failed to send flare");
                 resolve(false);
               } finally {
@@ -249,7 +246,7 @@ export const useFlare = () => {
               }
             },
           },
-        ],
+        ]
       );
     });
   };

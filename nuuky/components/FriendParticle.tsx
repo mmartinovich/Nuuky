@@ -9,7 +9,7 @@ import { isUserTrulyOnline } from '../lib/utils';
 
 const { width, height } = Dimensions.get('window');
 const CENTER_X = width / 2;
-const CENTER_Y = height / 2;
+const CENTER_Y = height / 2 - 20;
 const PARTICLE_SIZE = 60;
 
 // Track active listeners by friend ID to prevent accumulation

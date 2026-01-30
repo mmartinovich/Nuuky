@@ -108,12 +108,20 @@ function CentralOrbComponent({
     
     if (hasActiveFlare) {
       flareAnimation = Animated.loop(
-        Animated.timing(flareAnim, {
-          toValue: 1,
-          duration: 400,
-          easing: Easing.ease,
-          useNativeDriver: true,
-        })
+        Animated.sequence([
+          Animated.timing(flareAnim, {
+            toValue: 1,
+            duration: 1200,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(flareAnim, {
+            toValue: 0,
+            duration: 1200,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
       );
       flareAnimation.start();
     } else {
@@ -252,7 +260,7 @@ function CentralOrbComponent({
         />
       )}
 
-      {/* Emergency Flare Effect */}
+      {/* Emergency Flare Effect - soft radial glow */}
       {hasActiveFlare && (
         <Animated.View
           style={[
@@ -264,10 +272,14 @@ function CentralOrbComponent({
           ]}
           pointerEvents="none"
         >
-          <LinearGradient
-            colors={["rgba(244, 112, 182, 0.4)", "rgba(236, 72, 153, 0.2)", "transparent"]}
-            style={styles.flareCircle}
-          />
+          {/* Outer soft layer */}
+          <View style={[styles.flareCircle, { backgroundColor: 'rgba(239, 68, 68, 0.06)' }]} />
+          {/* Mid layer */}
+          <View style={[styles.flareRing, { width: '75%', height: '75%', backgroundColor: 'rgba(239, 68, 68, 0.10)' }]} />
+          {/* Inner layer */}
+          <View style={[styles.flareRing, { width: '50%', height: '50%', backgroundColor: 'rgba(239, 68, 68, 0.15)' }]} />
+          {/* Core glow */}
+          <View style={[styles.flareRing, { width: '30%', height: '30%', backgroundColor: 'rgba(239, 68, 68, 0.20)' }]} />
         </Animated.View>
       )}
 
@@ -442,6 +454,12 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: ORB_SIZE * 2.5,
     height: ORB_SIZE * 2.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  flareRing: {
+    position: 'absolute',
+    borderRadius: 9999,
   },
   flareCircle: {
     width: "100%",
