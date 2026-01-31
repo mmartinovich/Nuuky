@@ -142,7 +142,7 @@ export default function RootLayout() {
               color = '#10B981';
               break;
             case 'room_invite':
-              icon = 'home';
+              icon = 'people';
               color = '#A855F7';
               break;
             case 'call_me':

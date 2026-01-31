@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,47 +6,38 @@ import {
   Modal,
   TouchableOpacity,
   ScrollView,
-  Image,
   ActivityIndicator,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, typography } from '../lib/theme';
 import { useTheme } from '../hooks/useTheme';
-import { User } from '../types';
-import { isUserTrulyOnline } from '../lib/utils';
+import { Room } from '../types';
 
-interface InviteFriendsModalProps {
+interface PickRoomModalProps {
   visible: boolean;
-  friends: User[];
-  participantIds: string[];
+  rooms: Room[];
+  friendName: string;
   onClose: () => void;
-  onInvite: (friendId: string) => Promise<void>;
+  onPick: (roomId: string) => Promise<void>;
 }
 
-export const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({
+export const PickRoomModal: React.FC<PickRoomModalProps> = ({
   visible,
-  friends,
-  participantIds,
+  rooms,
+  friendName,
   onClose,
-  onInvite,
+  onPick,
 }) => {
   const { theme, accent } = useTheme();
-  const [inviting, setInviting] = useState<Set<string>>(new Set());
+  const [inviting, setInviting] = useState<string | null>(null);
 
-  // Filter out friends who are already in the room
-  const availableFriends = friends.filter((friend) => !participantIds.includes(friend.id));
-
-  const handleInvite = async (friendId: string) => {
-    setInviting((prev) => new Set(prev).add(friendId));
+  const handlePick = async (roomId: string) => {
+    setInviting(roomId);
     try {
-      await onInvite(friendId);
+      await onPick(roomId);
     } finally {
-      setInviting((prev) => {
-        const next = new Set(prev);
-        next.delete(friendId);
-        return next;
-      });
+      setInviting(null);
     }
   };
 
@@ -55,11 +46,11 @@ export const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({
       <View style={styles.overlay}>
         <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
 
-        <View style={styles.modalContainer}>
+        <View style={[styles.modalContainer, { borderColor: theme.colors.glass.border }]}>
           <BlurView intensity={80} tint="dark" style={styles.modal}>
             {/* Header */}
-            <View style={styles.header}>
-              <Text style={styles.title}>Invite Friends</Text>
+            <View style={[styles.header, { borderBottomColor: theme.colors.glass.border }]}>
+              <Text style={[styles.title, { color: theme.colors.text.primary }]}>Invite {friendName}</Text>
               <TouchableOpacity style={[styles.closeButton, { backgroundColor: theme.colors.glass.background }]} onPress={onClose} activeOpacity={0.8}>
                 <Ionicons name="close" size={24} color={theme.colors.text.primary} />
               </TouchableOpacity>
@@ -67,22 +58,23 @@ export const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({
 
             {/* Content */}
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-              {availableFriends.length === 0 ? (
+              {rooms.length === 0 ? (
                 <View style={styles.emptyState}>
                   <Ionicons name="people-outline" size={48} color={theme.colors.text.tertiary} />
-                  <Text style={styles.emptyTitle}>No Friends Available</Text>
-                  <Text style={styles.emptyMessage}>
-                    All your friends are already in this room or you have no friends to invite.
+                  <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>No Rooms</Text>
+                  <Text style={[styles.emptyMessage, { color: theme.colors.text.tertiary }]}>
+                    Create a room first to invite friends.
                   </Text>
                 </View>
               ) : (
-                <View style={styles.friendsList}>
-                  {availableFriends.map((friend) => (
-                    <FriendItem
-                      key={friend.id}
-                      friend={friend}
-                      onInvite={() => handleInvite(friend.id)}
-                      isInviting={inviting.has(friend.id)}
+                <View style={styles.roomsList}>
+                  <Text style={[styles.subtitle, { color: theme.colors.text.tertiary }]}>Choose a Room</Text>
+                  {rooms.map((room) => (
+                    <RoomItem
+                      key={room.id}
+                      room={room}
+                      onPick={() => handlePick(room.id)}
+                      isInviting={inviting === room.id}
                       accent={accent}
                     />
                   ))}
@@ -96,52 +88,37 @@ export const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({
   );
 };
 
-interface FriendItemProps {
-  friend: User;
-  onInvite: () => void;
+interface RoomItemProps {
+  room: Room;
+  onPick: () => void;
   isInviting: boolean;
   accent: { primary: string; soft: string };
 }
 
-const FriendItem: React.FC<FriendItemProps> = ({ friend, onInvite, isInviting, accent }) => {
+const RoomItem: React.FC<RoomItemProps> = ({ room, onPick, isInviting, accent }) => {
   const { theme } = useTheme();
   return (
-    <View style={styles.friendItem}>
-      <View style={styles.friendInfo}>
-        {/* Avatar */}
-        <View style={styles.avatarContainer}>
-          {friend.avatar_url ? (
-            <Image source={{ uri: friend.avatar_url }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]}>
-              <Text style={styles.avatarText}>{friend.display_name.charAt(0).toUpperCase()}</Text>
-            </View>
-          )}
-
-          {/* Online indicator */}
-          {isUserTrulyOnline(friend.is_online, friend.last_seen_at) && (
-            <View style={styles.onlineIndicator}>
-              <View style={styles.onlineDot} />
-            </View>
-          )}
+    <View style={[styles.roomItem, { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border }]}>
+      <View style={styles.roomInfo}>
+        <View style={[styles.roomIcon, { backgroundColor: accent.soft }]}>
+          <Ionicons name="people" size={20} color={accent.primary} />
         </View>
-
-        {/* Name */}
-        <Text style={styles.friendName}>{friend.display_name}</Text>
+        <Text style={[styles.roomName, { color: theme.colors.text.primary }]} numberOfLines={1}>
+          {room.name || 'Unnamed Room'}
+        </Text>
       </View>
 
-      {/* Invite Button */}
       <TouchableOpacity
         style={[styles.inviteButton, { backgroundColor: accent.primary }]}
-        onPress={onInvite}
+        onPress={onPick}
         disabled={isInviting}
         activeOpacity={0.8}
       >
         {isInviting ? (
-          <ActivityIndicator size="small" color={theme.colors.text.primary} />
+          <ActivityIndicator size="small" color="#FFFFFF" />
         ) : (
           <>
-            <Ionicons name="send" size={16} color={theme.colors.text.primary} />
+            <Ionicons name="send" size={16} color="#FFFFFF" />
             <Text style={styles.inviteButtonText}>Invite</Text>
           </>
         )}
@@ -164,7 +141,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.glass.border,
   },
   modal: {
     flex: 1,
@@ -176,12 +152,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.glass.border,
   },
   title: {
     fontSize: typography.size.xl,
     fontWeight: typography.weight.bold as any,
-    color: colors.text.primary,
+    flex: 1,
   },
   closeButton: {
     width: 32,
@@ -193,67 +168,40 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  friendsList: {
-    padding: spacing.md,
-    gap: spacing.sm,
+  subtitle: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.medium as any,
+    letterSpacing: 0.3,
+    marginBottom: spacing.sm,
   },
-  friendItem: {
+  roomsList: {
+    padding: spacing.md,
+  },
+  roomItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: spacing.md,
-    backgroundColor: colors.glass.background,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.glass.border,
+    marginBottom: spacing.sm,
   },
-  friendInfo: {
+  roomInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     flex: 1,
   },
-  avatarContainer: {
-    position: 'relative',
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-  },
-  avatarPlaceholder: {
-    backgroundColor: colors.glass.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.glass.border,
-  },
-  avatarText: {
-    fontSize: typography.size.md,
-    fontWeight: typography.weight.bold as any,
-    color: colors.text.primary,
-  },
-  onlineIndicator: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: colors.bg.primary,
+  roomIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  onlineDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.mood.good.base,
-  },
-  friendName: {
+  roomName: {
     fontSize: typography.size.md,
     fontWeight: typography.weight.semibold as any,
-    color: colors.text.primary,
     flex: 1,
   },
   inviteButton: {
@@ -267,7 +215,7 @@ const styles = StyleSheet.create({
   inviteButtonText: {
     fontSize: typography.size.sm,
     fontWeight: typography.weight.semibold as any,
-    color: colors.text.primary,
+    color: '#FFFFFF',
   },
   emptyState: {
     alignItems: 'center',
@@ -278,13 +226,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: typography.size.lg,
     fontWeight: typography.weight.bold as any,
-    color: colors.text.primary,
     marginTop: spacing.md,
     marginBottom: spacing.xs,
   },
   emptyMessage: {
     fontSize: typography.size.sm,
-    color: colors.text.tertiary,
     textAlign: 'center',
   },
 });

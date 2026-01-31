@@ -157,7 +157,7 @@ export const BottomNavBar = React.memo(function BottomNavBar({
               accessibilityRole="button"
             >
               <Ionicons name="grid-outline" size={24} color={theme.colors.text.secondary} />
-              <Text style={[styles.navLabel, { color: theme.colors.text.tertiary }]}>Nuuks</Text>
+              <Text style={[styles.navLabel, { color: theme.colors.text.tertiary }]}>Rooms</Text>
             </TouchableOpacity>
 
             <TouchableOpacity

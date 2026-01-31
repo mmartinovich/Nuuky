@@ -7,7 +7,12 @@ import {
   Image,
   Animated,
 } from 'react-native';
-import { Swipeable } from 'react-native-gesture-handler';
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import Reanimated, {
+  SharedValue,
+  useAnimatedStyle,
+  interpolate,
+} from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +21,9 @@ import { AppNotification, NotificationType } from '../types';
 import { spacing, radius, typography } from '../lib/theme';
 import { formatRelativeTime } from '../lib/utils';
 import { useTheme } from '../hooks/useTheme';
+
+const ACTION_WIDTH = 74;
+const ACTION_GAP = 10;
 
 interface NotificationCardProps {
   notification: AppNotification;
@@ -53,7 +61,7 @@ const getNotificationStyle = (type: NotificationType, theme: any) => {
       };
     case 'room_invite':
       return {
-        icon: 'home' as const,
+        icon: 'people' as const,
         color: theme.colors.neon.purple,
         label: 'Room Invite',
       };
@@ -79,7 +87,7 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
   animationDelay = 0,
 }) => {
   const { theme, isDark } = useTheme();
-  const swipeableRef = useRef<Swipeable>(null);
+  const swipeableRef = useRef<any>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
 
@@ -107,7 +115,6 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
   // Handle delete with haptic feedback
   const handleDelete = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    // Animate out before deleting
     Animated.timing(fadeAnim, {
       toValue: 0,
       duration: 200,
@@ -117,40 +124,18 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
     });
   };
 
-  // iOS-style swipe action - red background that reveals as you swipe
   const renderRightActions = (
-    progress: Animated.AnimatedInterpolation<number>,
-    dragX: Animated.AnimatedInterpolation<number>
+    _prog: SharedValue<number>,
+    drag: SharedValue<number>,
   ) => {
-    // Scale up the icon as user swipes further
-    const scale = dragX.interpolate({
-      inputRange: [-100, -50, 0],
-      outputRange: [1.2, 1, 0.8],
-      extrapolate: 'clamp',
-    });
-
-    // Fade in the icon
-    const opacity = dragX.interpolate({
-      inputRange: [-80, -40, 0],
-      outputRange: [1, 0.8, 0],
-      extrapolate: 'clamp',
-    });
-
     return (
-      <View style={[styles.deleteAction, { backgroundColor: theme.colors.status.error }]}>
-        <Animated.View
-          style={[
-            styles.deleteButton,
-            {
-              opacity,
-              transform: [{ scale }],
-            },
-          ]}
-        >
-          <Ionicons name="trash" size={22} color={theme.colors.text.primary} />
-          <Text style={[styles.deleteText, { color: theme.colors.text.primary }]}>Delete</Text>
-        </Animated.View>
-      </View>
+      <RightActionButton
+        drag={drag}
+        onPress={() => {
+          swipeableRef.current?.close();
+          handleDelete();
+        }}
+      />
     );
   };
 
@@ -164,20 +149,16 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
         },
       ]}
     >
-      <Swipeable
+      <ReanimatedSwipeable
         ref={swipeableRef}
         renderRightActions={renderRightActions}
-        rightThreshold={80}
+        rightThreshold={ACTION_WIDTH}
         overshootRight={false}
         friction={1.5}
         onSwipeableWillOpen={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         }}
-        onSwipeableOpen={(direction) => {
-          if (direction === 'right') {
-            handleDelete();
-          }
-        }}
+        enableTrackpadTwoFingerGesture
       >
         <TouchableOpacity activeOpacity={0.8} onPress={onPress}>
           <BlurView
@@ -267,10 +248,51 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
             </LinearGradient>
           </BlurView>
         </TouchableOpacity>
-      </Swipeable>
+      </ReanimatedSwipeable>
     </Animated.View>
   );
 };
+
+function RightActionButton({
+  drag,
+  onPress,
+}: {
+  drag: SharedValue<number>;
+  onPress: () => void;
+}) {
+  const animatedStyle = useAnimatedStyle(() => {
+    const dragValue = Math.abs(drag.value);
+    const translateX = interpolate(
+      dragValue,
+      [0, ACTION_WIDTH + ACTION_GAP],
+      [ACTION_WIDTH + ACTION_GAP, 0],
+      'clamp'
+    );
+    const opacity = interpolate(
+      dragValue,
+      [0, ACTION_WIDTH * 0.5],
+      [0, 1],
+      'clamp'
+    );
+    return {
+      transform: [{ translateX }],
+      opacity,
+    };
+  });
+
+  return (
+    <Reanimated.View style={[styles.actionWrapper, animatedStyle]}>
+      <TouchableOpacity
+        style={styles.actionButton}
+        onPress={onPress}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="trash-outline" size={22} color="#FFFFFF" />
+        <Text style={styles.actionLabel}>Delete</Text>
+      </TouchableOpacity>
+    </Reanimated.View>
+  );
+}
 
 const styles = StyleSheet.create({
   animatedContainer: {
@@ -329,23 +351,23 @@ const styles = StyleSheet.create({
     fontSize: typography.size.xs,
     marginTop: 2,
   },
-  deleteAction: {
-    width: 110, // Wider to extend under card
-    marginBottom: spacing.sm,
-    borderTopRightRadius: radius.lg,
-    borderBottomRightRadius: radius.lg,
+  actionWrapper: {
+    width: ACTION_WIDTH + ACTION_GAP,
+    paddingLeft: ACTION_GAP,
     justifyContent: 'center',
-    alignItems: 'flex-end', // Align content to the right
-    paddingRight: 20, // Space from right edge
-    marginLeft: -20, // Extend underneath the card's rounded corner
+    marginBottom: spacing.sm,
   },
-  deleteButton: {
+  actionButton: {
+    flex: 1,
+    backgroundColor: '#EF4444',
+    borderRadius: radius.md,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 2,
+    gap: 4,
   },
-  deleteText: {
+  actionLabel: {
     fontSize: 12,
     fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

@@ -12,7 +12,6 @@ import {
   Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../hooks/useTheme';
 import { radius } from '../lib/theme';
@@ -31,7 +30,7 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
   onCreate,
 }) => {
   const { theme, accent } = useTheme();
-  const [roomName, setRoomName] = useState('');
+  const [roomName, setNuukName] = useState('');
 
   // Simple animations
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
@@ -64,13 +63,13 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
     if (!canCreate) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onCreate(roomName.trim(), true);
-    setRoomName('');
+    setNuukName('');
     onClose();
   };
 
   const handleCancel = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setRoomName('');
+    setNuukName('');
     onClose();
   };
 
@@ -96,12 +95,9 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
             >
               {/* Header Section */}
               <View style={styles.headerSection}>
-                <View style={[styles.iconContainer, { backgroundColor: accent.soft }]}>
-                  <Ionicons name="home" size={22} color={accent.primary} />
-                </View>
                 <View style={styles.headerText}>
                   <Text style={[styles.title, { color: theme.colors.text.primary }]}>Create Room</Text>
-                  <Text style={[styles.subtitle, { color: theme.colors.text.tertiary }]}>Start a space for friends</Text>
+                  <Text style={[styles.subtitle, { color: theme.colors.text.tertiary }]}>Start a room with friends</Text>
                 </View>
               </View>
 
@@ -114,7 +110,7 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
                     placeholder="Enter a name..."
                     placeholderTextColor={theme.colors.text.tertiary}
                     value={roomName}
-                    onChangeText={setRoomName}
+                    onChangeText={setNuukName}
                     maxLength={30}
                     autoCorrect={false}
                     autoCapitalize="words"
@@ -169,7 +165,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   keyboardView: {
+    flex: 1,
     width: '100%',
+    justifyContent: 'center',
     alignItems: 'center',
   },
   modalContainer: {
@@ -188,14 +186,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 24,
-  },
-  iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
   },
   headerText: {
     flex: 1,

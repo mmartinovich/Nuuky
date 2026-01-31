@@ -29,6 +29,7 @@ export default {
         icon: "./assets/icon.png",
       },
       infoPlist: {
+        NSFaceIDUsageDescription: "Nūūky uses Face ID to verify your identity before signing in.",
         NSMicrophoneUsageDescription: "Nūūky needs microphone access to let you talk with friends in rooms.",
         NSCameraUsageDescription: "Nūūky needs camera access for video calls with friends.",
         UIBackgroundModes: ["audio"],
@@ -88,6 +89,12 @@ export default {
         },
       ],
       "@livekit/react-native-expo-plugin",
+      [
+        "expo-local-authentication",
+        {
+          faceIDPermission: "Nūūky uses Face ID to verify your identity before signing in.",
+        },
+      ],
       "@react-native-google-signin/google-signin",
     ],
     owner: "mmartinovich",

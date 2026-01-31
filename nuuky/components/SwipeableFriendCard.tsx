@@ -1,7 +1,6 @@
 import React, { useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, Alert, Image, TouchableOpacity } from 'react-native';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import { RectButton } from 'react-native-gesture-handler';
 import Reanimated, {
   SharedValue,
   useAnimatedStyle,
@@ -11,69 +10,24 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { User, Friendship, Streak } from '../types';
 import { getMoodColor, radius } from '../lib/theme';
-import { isUserTrulyOnline } from '../lib/utils';
+import { isUserTrulyOnline, formatRelativeTime } from '../lib/utils';
 import { BoltIcon, BoltTier } from './StreakBadge';
 import { useTheme } from '../hooks/useTheme';
 
-const ACTION_WIDTH = 74; // Per-action width, iOS standard
+const ACTION_WIDTH = 74;
+const ACTION_GAP = 10;
 
 interface SwipeableFriendCardProps {
   friendship: Friendship;
+  onPress?: () => void;
   onRemove: (friendship: Friendship) => void;
   textPrimaryColor: string;
   streak?: Streak;
 }
 
-function RightAction({
-  drag,
-  iconName,
-  label,
-  color,
-  index,
-  totalActions,
-  onPress,
-  theme,
-}: {
-  drag: SharedValue<number>;
-  iconName: string;
-  label: string;
-  color: string;
-  index: number;
-  totalActions: number;
-  onPress: () => void;
-  theme: ReturnType<typeof useTheme>['theme'];
-}) {
-  const actionOffset = ACTION_WIDTH * (totalActions - index);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    const dragValue = Math.abs(drag.value);
-    const translateX = interpolate(
-      dragValue,
-      [0, actionOffset],
-      [actionOffset, 0],
-      'clamp'
-    );
-
-    return {
-      transform: [{ translateX }],
-    };
-  });
-
-  return (
-    <Reanimated.View style={[styles.actionButton, animatedStyle]}>
-      <RectButton
-        style={[styles.actionButtonInner, { backgroundColor: color }]}
-        onPress={onPress}
-      >
-        <Ionicons name={iconName as any} size={24} color={theme.colors.text.primary} />
-        <Text style={[styles.actionText, { color: theme.colors.text.primary }]}>{label}</Text>
-      </RectButton>
-    </Reanimated.View>
-  );
-}
-
 export const SwipeableFriendCard: React.FC<SwipeableFriendCardProps> = ({
   friendship,
+  onPress,
   onRemove,
   textPrimaryColor,
   streak,
@@ -96,31 +50,21 @@ export const SwipeableFriendCard: React.FC<SwipeableFriendCardProps> = ({
   }, []);
 
   const renderRightActions = useCallback(
-    (prog: SharedValue<number>, drag: SharedValue<number>) => {
+    (_prog: SharedValue<number>, drag: SharedValue<number>) => {
       return (
-        <View style={{ width: ACTION_WIDTH + 20, flexDirection: 'row', marginLeft: -20 }}>
-          <RightAction
-            drag={drag}
-            iconName="trash-outline"
-            label="Remove"
-            color={theme.colors.action.delete}
-            index={0}
-            totalActions={1}
-            onPress={handleRemoveAction}
-            theme={theme}
-          />
-        </View>
+        <RightActionButton
+          drag={drag}
+          iconName="trash-outline"
+          label="Remove"
+          onPress={handleRemoveAction}
+        />
       );
     },
-    [handleRemoveAction, theme]
+    [handleRemoveAction]
   );
 
-  const onSwipeableOpen = useCallback((direction: string) => {
+  const onSwipeableOpen = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    if (direction === 'right') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    }
   }, []);
 
   const onSwipeableClose = useCallback(() => {
@@ -140,21 +84,31 @@ export const SwipeableFriendCard: React.FC<SwipeableFriendCardProps> = ({
       ref={swipeableRef}
       renderRightActions={renderRightActions}
       rightThreshold={ACTION_WIDTH}
-      overshootRight={true}
-      overshootFriction={8}
+      overshootRight={false}
       friction={1.5}
       onSwipeableOpen={onSwipeableOpen}
       onSwipeableClose={onSwipeableClose}
-      containerStyle={styles.swipeableContainer}
       enableTrackpadTwoFingerGesture
     >
-      <View style={[
-        styles.friendCard,
-        {
-          backgroundColor: theme.colors.glass.background,
-          borderColor: theme.colors.glass.border,
-        }
-      ]}>
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={onPress}
+        onLongPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          Alert.alert(friend.display_name, '', [
+            { text: 'Remove Friend', style: 'destructive', onPress: performRemoveAction },
+            { text: 'Cancel', style: 'cancel' },
+          ]);
+        }}
+        delayLongPress={400}
+        style={[
+          styles.friendCard,
+          {
+            backgroundColor: theme.colors.glass.background,
+            borderColor: theme.colors.glass.border,
+          }
+        ]}
+      >
         <View style={styles.friendInfo}>
           <View style={styles.friendAvatarWrapper}>
             {friend.avatar_url ? (
@@ -184,12 +138,16 @@ export const SwipeableFriendCard: React.FC<SwipeableFriendCardProps> = ({
                 </Text>
               </View>
             )}
-            {isOnline && <View style={styles.onlineIndicator} />}
+            {isOnline && <View style={[styles.onlineIndicator, { borderColor: theme.colors.bg.primary }]} />}
           </View>
 
           <View style={styles.friendText}>
             <Text style={[styles.friendName, { color: textPrimaryColor }]}>{friend.display_name}</Text>
-            <Text style={[styles.friendStatus, { color: theme.colors.text.tertiary }]}>{isOnline ? "Online" : "Offline"}</Text>
+            {isOnline ? (
+              <Text style={[styles.friendStatus, { color: '#22C55E' }]}>Online</Text>
+            ) : friend.last_seen_at ? (
+              <Text style={[styles.friendStatus, { color: theme.colors.text.tertiary }]}>{formatRelativeTime(friend.last_seen_at)}</Text>
+            ) : null}
           </View>
         </View>
 
@@ -213,31 +171,74 @@ export const SwipeableFriendCard: React.FC<SwipeableFriendCardProps> = ({
             </View>
           );
         })()}
-      </View>
+      </TouchableOpacity>
     </ReanimatedSwipeable>
   );
 };
 
+function RightActionButton({
+  drag,
+  iconName,
+  label,
+  onPress,
+}: {
+  drag: SharedValue<number>;
+  iconName: string;
+  label: string;
+  onPress: () => void;
+}) {
+  const animatedStyle = useAnimatedStyle(() => {
+    const dragValue = Math.abs(drag.value);
+    const translateX = interpolate(
+      dragValue,
+      [0, ACTION_WIDTH + ACTION_GAP],
+      [ACTION_WIDTH + ACTION_GAP, 0],
+      'clamp'
+    );
+    const opacity = interpolate(
+      dragValue,
+      [0, ACTION_WIDTH * 0.5],
+      [0, 1],
+      'clamp'
+    );
+    return {
+      transform: [{ translateX }],
+      opacity,
+    };
+  });
+
+  return (
+    <Reanimated.View style={[styles.actionWrapper, animatedStyle]}>
+      <TouchableOpacity
+        style={styles.actionButton}
+        onPress={onPress}
+        activeOpacity={0.7}
+      >
+        <Ionicons name={iconName as any} size={22} color="#FFFFFF" />
+        <Text style={styles.actionLabel}>{label}</Text>
+      </TouchableOpacity>
+    </Reanimated.View>
+  );
+}
+
 const styles = StyleSheet.create({
-  swipeableContainer: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 12,
+  actionWrapper: {
+    width: ACTION_WIDTH + ACTION_GAP,
+    paddingLeft: ACTION_GAP,
+    justifyContent: 'center',
   },
   actionButton: {
-    width: ACTION_WIDTH + 20, // Extended to go underneath card
-    height: '100%',
-  },
-  actionButtonInner: {
     flex: 1,
+    backgroundColor: '#EF4444',
+    borderRadius: radius.md,
     justifyContent: 'center',
-    alignItems: 'flex-end', // Align content to the right
-    paddingRight: 20, // Space from right edge
+    alignItems: 'center',
     gap: 4,
   },
-  actionText: {
+  actionLabel: {
     fontSize: 12,
     fontWeight: '600',
+    color: '#FFFFFF',
   },
   friendCard: {
     flexDirection: "row",
@@ -269,7 +270,7 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF', // Keep white for avatar text as it's on colored background
+    color: '#FFFFFF',
   },
   onlineIndicator: {
     position: "absolute",
@@ -280,7 +281,6 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     backgroundColor: "#22C55E",
     borderWidth: 2,
-    borderColor: "#0d0d1a",
   },
   friendText: {
     flex: 1,

@@ -1,7 +1,6 @@
 import React, { useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import { RectButton } from 'react-native-gesture-handler';
 import Reanimated, {
   SharedValue,
   useAnimatedStyle,
@@ -14,7 +13,8 @@ import { Room } from '../types';
 import { radius } from '../lib/theme';
 import { useTheme } from '../hooks/useTheme';
 
-const ACTION_WIDTH = 74; // Per-action width, iOS standard
+const ACTION_WIDTH = 74;
+const ACTION_GAP = 10;
 
 interface SwipeableRoomCardProps {
   room: Room;
@@ -24,55 +24,6 @@ interface SwipeableRoomCardProps {
   creatorName?: string;
   onDelete: (roomId: string) => Promise<boolean>;
   onLeave: (roomId: string) => Promise<void>;
-}
-
-function RightAction({
-  drag,
-  iconName,
-  label,
-  color,
-  index,
-  totalActions,
-  onPress,
-  textColor,
-}: {
-  drag: SharedValue<number>;
-  iconName: string;
-  label: string;
-  color: string;
-  index: number;
-  totalActions: number;
-  onPress: () => void;
-  textColor: string;
-}) {
-  const actionOffset = ACTION_WIDTH * (totalActions - index);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    const dragValue = Math.abs(drag.value);
-    // Each action slides in progressively
-    const translateX = interpolate(
-      dragValue,
-      [0, actionOffset],
-      [actionOffset, 0],
-      'clamp'
-    );
-
-    return {
-      transform: [{ translateX }],
-    };
-  });
-
-  return (
-    <Reanimated.View style={[styles.actionButton, animatedStyle]}>
-      <RectButton
-        style={[styles.actionButtonInner, { backgroundColor: color }]}
-        onPress={onPress}
-      >
-        <Ionicons name={iconName as any} size={24} color={textColor} />
-        <Text style={[styles.actionText, { color: textColor }]}>{label}</Text>
-      </RectButton>
-    </Reanimated.View>
-  );
 }
 
 export const SwipeableRoomCard: React.FC<SwipeableRoomCardProps> = ({
@@ -103,39 +54,24 @@ export const SwipeableRoomCard: React.FC<SwipeableRoomCardProps> = ({
   }, []);
 
   const renderRightActions = useCallback(
-    (prog: SharedValue<number>, drag: SharedValue<number>) => {
+    (_prog: SharedValue<number>, drag: SharedValue<number>) => {
       const destructiveLabel = isCreator ? 'Delete' : 'Leave';
       const destructiveIcon = isCreator ? 'trash-outline' : 'exit-outline';
-      const destructiveColor = isCreator ? theme.colors.action.delete : theme.colors.action.archive;
-      const totalActions = 1;
 
       return (
-        <View style={{ width: ACTION_WIDTH * totalActions + 20, flexDirection: 'row', marginLeft: -20 }}>
-          {/* Single destructive action */}
-          <RightAction
-            drag={drag}
-            iconName={destructiveIcon}
-            label={destructiveLabel}
-            color={destructiveColor}
-            index={0}
-            totalActions={totalActions}
-            onPress={handleDestructiveAction}
-            textColor={theme.colors.text.primary}
-          />
-        </View>
+        <RightActionButton
+          drag={drag}
+          iconName={destructiveIcon}
+          label={destructiveLabel}
+          onPress={handleDestructiveAction}
+        />
       );
     },
-    [isCreator, handleDestructiveAction, theme]
+    [isCreator, handleDestructiveAction]
   );
 
-  const onSwipeableOpen = useCallback((direction: string) => {
-    // Light haptic when actions fully reveal
+  const onSwipeableOpen = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    if (direction === 'right') {
-      // Full swipe triggers heavy haptic
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    }
   }, []);
 
   const onSwipeableClose = useCallback(() => {
@@ -159,12 +95,10 @@ export const SwipeableRoomCard: React.FC<SwipeableRoomCardProps> = ({
       ref={swipeableRef}
       renderRightActions={renderRightActions}
       rightThreshold={ACTION_WIDTH}
-      overshootRight={true}
-      overshootFriction={8}
+      overshootRight={false}
       friction={1.5}
       onSwipeableOpen={onSwipeableOpen}
       onSwipeableClose={onSwipeableClose}
-      containerStyle={styles.swipeableContainer}
       enableTrackpadTwoFingerGesture
     >
       <RoomCard
@@ -178,24 +112,68 @@ export const SwipeableRoomCard: React.FC<SwipeableRoomCardProps> = ({
   );
 };
 
+function RightActionButton({
+  drag,
+  iconName,
+  label,
+  onPress,
+}: {
+  drag: SharedValue<number>;
+  iconName: string;
+  label: string;
+  onPress: () => void;
+}) {
+  const animatedStyle = useAnimatedStyle(() => {
+    const dragValue = Math.abs(drag.value);
+    const translateX = interpolate(
+      dragValue,
+      [0, ACTION_WIDTH + ACTION_GAP],
+      [ACTION_WIDTH + ACTION_GAP, 0],
+      'clamp'
+    );
+    const opacity = interpolate(
+      dragValue,
+      [0, ACTION_WIDTH * 0.5],
+      [0, 1],
+      'clamp'
+    );
+    return {
+      transform: [{ translateX }],
+      opacity,
+    };
+  });
+
+  return (
+    <Reanimated.View style={[styles.actionWrapper, animatedStyle]}>
+      <TouchableOpacity
+        style={styles.actionButton}
+        onPress={onPress}
+        activeOpacity={0.7}
+      >
+        <Ionicons name={iconName as any} size={22} color="#FFFFFF" />
+        <Text style={styles.actionLabel}>{label}</Text>
+      </TouchableOpacity>
+    </Reanimated.View>
+  );
+}
+
 const styles = StyleSheet.create({
-  swipeableContainer: {
-    borderRadius: radius.md,
-    overflow: 'hidden',
+  actionWrapper: {
+    width: ACTION_WIDTH + ACTION_GAP,
+    paddingLeft: ACTION_GAP,
+    justifyContent: 'center',
   },
   actionButton: {
-    width: ACTION_WIDTH + 20, // Extended to go underneath card
-    height: '100%',
-  },
-  actionButtonInner: {
     flex: 1,
+    backgroundColor: '#EF4444',
+    borderRadius: radius.md,
     justifyContent: 'center',
-    alignItems: 'flex-end', // Align content to the right
-    paddingRight: 20, // Space from right edge
+    alignItems: 'center',
     gap: 4,
   },
-  actionText: {
+  actionLabel: {
     fontSize: 12,
     fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

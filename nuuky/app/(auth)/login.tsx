@@ -14,6 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Crypto from "expo-crypto";
+import * as LocalAuthentication from "expo-local-authentication";
 import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-signin";
 import { AntDesign, Feather } from "@expo/vector-icons";
 import { supabase } from "../../lib/supabase";
@@ -108,6 +109,21 @@ export default function LoginScreen() {
   const handleAppleSignIn = async () => {
     setLoading(true);
     try {
+      // Prompt Face ID / biometrics before proceeding
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+      if (hasHardware && isEnrolled) {
+        const authResult = await LocalAuthentication.authenticateAsync({
+          promptMessage: "Verify your identity",
+          fallbackLabel: "Use passcode",
+          disableDeviceFallback: false,
+        });
+        if (!authResult.success) {
+          setLoading(false);
+          return;
+        }
+      }
+
       // Check if Apple Authentication is available
       const isAvailable = await AppleAuthentication.isAvailableAsync();
       if (!isAvailable) {

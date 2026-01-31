@@ -10,6 +10,7 @@ import {
   StatusBar,
   ListRenderItem,
   TextInput,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,12 +20,14 @@ import { useFriends } from "../../hooks/useFriends";
 import { useContactSync } from "../../hooks/useContactSync";
 import { useInvite } from "../../hooks/useInvite";
 import { useStreaks } from "../../hooks/useStreaks";
+import { useRoom } from "../../hooks/useRoom";
 import { useAppStore } from "../../stores/appStore";
 import { useTheme } from "../../hooks/useTheme";
 import { typography, spacing, radius, getMoodColor, interactionStates } from "../../lib/theme";
 import { User, MatchedContact, Friendship } from "../../types";
 import { UserSearchModal } from "../../components/UserSearchModal";
 import { SwipeableFriendCard } from "../../components/SwipeableFriendCard";
+import { PickRoomModal } from "../../components/PickRoomModal";
 
 export default function FriendsScreen() {
   const router = useRouter();
@@ -41,11 +44,13 @@ export default function FriendsScreen() {
     refreshFriends,
   } = useFriends();
 
-  const { setFriends } = useAppStore();
+  const { currentUser, setFriends } = useAppStore();
 
   const { loading: syncLoading, hasSynced, matches, syncContacts, clearMatches } = useContactSync();
 
   const { sending, shareInvite } = useInvite();
+  const { inviteFriendToRoom } = useRoom();
+  const { myRooms } = useAppStore();
 
   const { streaks } = useStreaks();
   const streakMap = useMemo(() => {
@@ -61,6 +66,7 @@ export default function FriendsScreen() {
   const [isMounted, setIsMounted] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [inviteTarget, setInviteTarget] = useState<Friendship | null>(null);
 
   const filteredFriends = useMemo(() => {
     if (!searchQuery.trim()) return friends;
@@ -117,17 +123,38 @@ export default function FriendsScreen() {
     [removeFriendship],
   );
 
+  const handleInviteToRoom = useCallback(
+    (friendship: Friendship) => {
+      setInviteTarget(friendship);
+    },
+    [],
+  );
+
+  const handlePickRoom = useCallback(
+    async (roomId: string) => {
+      if (!inviteTarget) return;
+      const friend = inviteTarget.friend as User;
+      const success = await inviteFriendToRoom(roomId, friend.id);
+      if (success) {
+        Alert.alert("Sent", `Invite sent to ${friend.display_name}`);
+      }
+      setInviteTarget(null);
+    },
+    [inviteTarget, inviteFriendToRoom],
+  );
+
   // Memoized render function for FlatList
   const renderFriendItem: ListRenderItem<Friendship> = useCallback(
     ({ item: friendship }) => (
       <SwipeableFriendCard
         friendship={friendship}
+        onPress={() => handleInviteToRoom(friendship)}
         onRemove={handleRemoveFriend}
         textPrimaryColor={theme.colors.text.primary}
         streak={streakMap.get(friendship.friend_id)}
       />
     ),
-    [handleRemoveFriend, theme.colors.text.primary, streakMap],
+    [handleRemoveFriend, handleInviteToRoom, theme.colors.text.primary, streakMap],
   );
 
   // Key extractor for FlatList
@@ -176,9 +203,10 @@ export default function FriendsScreen() {
           maxToRenderPerBatch={10}
           windowSize={10}
           initialNumToRender={10}
+          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
           getItemLayout={(_, index) => ({
-            length: 76, // Approximate height of friend card
-            offset: 76 * index,
+            length: 76 + 8, // Card height + separator
+            offset: (76 + 8) * index,
             index,
           })}
           ListHeaderComponent={
@@ -360,6 +388,15 @@ export default function FriendsScreen() {
 
       {/* Username Search Modal */}
       <UserSearchModal visible={showSearchModal} onClose={() => setShowSearchModal(false)} />
+
+      {/* Pick Room to Invite Modal */}
+      <PickRoomModal
+        visible={inviteTarget !== null}
+        rooms={myRooms.filter(r => r.creator_id === currentUser?.id)}
+        friendName={inviteTarget ? (inviteTarget.friend as User).display_name : ''}
+        onClose={() => setInviteTarget(null)}
+        onPick={handlePickRoom}
+      />
     </View>
   );
 }

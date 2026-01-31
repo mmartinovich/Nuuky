@@ -122,7 +122,7 @@ export default function RoomsScreen() {
             <Ionicons name="chevron-back" size={28} color={theme.colors.text.primary} />
           </TouchableOpacity>
 
-          <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>Nuuks</Text>
+          <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>Rooms</Text>
 
           <TouchableOpacity
             style={[styles.createButton, { backgroundColor: accent.soft }]}
@@ -166,7 +166,7 @@ export default function RoomsScreen() {
               {otherRooms.length > 0 && (
                 <View style={styles.section}>
                   <View style={styles.sectionHeader}>
-                    <Text style={[styles.sectionTitle, { color: theme.colors.text.tertiary }]}>OTHER ROOMS</Text>
+                    <Text style={[styles.sectionTitle, { color: theme.colors.text.tertiary }]}>OTHER NUUKS</Text>
                   </View>
                   <View style={styles.roomsList}>
                     {otherRooms.map((room) => (
@@ -189,7 +189,7 @@ export default function RoomsScreen() {
             <View style={styles.section}>
               <View style={styles.emptyState}>
                 <View style={[styles.emptyIconContainer, { backgroundColor: accent.soft }]}>
-                  <Ionicons name="home-outline" size={36} color={accent.primary} />
+                  <Ionicons name="people-outline" size={36} color={accent.primary} />
                 </View>
                 <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>No Rooms Yet</Text>
                 <Text style={[styles.emptyMessage, { color: theme.colors.text.tertiary }]}>Create your first room to hang with friends</Text>
