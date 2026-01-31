@@ -430,63 +430,18 @@ export const getAllMoodImages = () => [
   require('../assets/help.png'),
 ];
 
-// Vibe words for each mood
-const vibeWords = {
-  good: [
-    'vibing',
-    'thriving',
-    'glowing',
-    'slaying',
-    'winning',
-    'living',
-    'flourishing',
-    'shining',
-    'beaming',
-    'radiant',
-  ],
-  neutral: [
-    'chilling',
-    'existing',
-    'vibing',
-    'hanging',
-    'floating',
-    'coasting',
-    'present',
-    'here',
-    'around',
-    'just vibing',
-  ],
-  not_great: [
-    'meh',
-    'struggling',
-    'rough',
-    'low',
-    'down',
-    'off',
-    'bleh',
-    'ugh',
-    'not it',
-    'rough day',
-  ],
-  reach_out: [
-    'need u',
-    'here for me',
-    'support',
-    'help',
-    'struggling',
-    'reach out',
-    'need support',
-    'here',
-    'present',
-    'available',
-  ],
+// Status labels for each mood
+const vibeLabels: Record<string, string[]> = {
+  good: ['Vibing', 'On top', 'Lit', 'Golden', 'Thriving'],
+  neutral: ["Chillin'", 'Coasting', 'Floating', "Cruisin'", 'Zen'],
+  not_great: ['Meh...', 'Off today', 'Blah', 'Low-key', 'Drained'],
+  reach_out: ['Help!', 'SOS', 'Not ok', 'Need a hug', 'Struggling'],
 };
 
-// Helper to get vibe text (randomized)
+// Helper to get random vibe text
 export const getVibeText = (mood: 'good' | 'neutral' | 'not_great' | 'reach_out') => {
-  const words = vibeWords[mood] || vibeWords.neutral;
-  const randomIndex = Math.floor(Math.random() * words.length);
-  return words[randomIndex];
+  const options = vibeLabels[mood] || vibeLabels.neutral;
+  return options[Math.floor(Math.random() * options.length)];
 };
 
 // ============================================

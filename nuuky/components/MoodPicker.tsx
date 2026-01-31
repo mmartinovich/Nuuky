@@ -268,9 +268,10 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                         onChangeText={setEditText}
                         placeholder="How are you feeling?"
                         placeholderTextColor={theme.colors.text.tertiary}
-                        maxLength={50}
+                        maxLength={20}
                         returnKeyType="done"
                       />
+                      <Text style={{ color: theme.colors.text.tertiary, fontSize: 11, marginTop: 4, paddingRight: 12, marginBottom: 8, textAlign: 'right' }}>{editText.length}/20</Text>
                     </View>
 
                     <View style={styles.editorButtons}>

@@ -20,6 +20,7 @@ interface CentralOrbProps {
   mood?: "good" | "neutral" | "not_great" | "reach_out";
   customMood?: CustomMood | null;
   showHint?: boolean;
+  statusText?: string;
 }
 
 function CentralOrbComponent({
@@ -30,6 +31,7 @@ function CentralOrbComponent({
   mood = "neutral",
   customMood,
   showHint = false,
+  statusText,
 }: CentralOrbProps) {
   const { theme, isDark } = useTheme();
   const breatheAnim = useRef(new Animated.Value(0)).current;
@@ -107,7 +109,7 @@ function CentralOrbComponent({
 
   useEffect(() => {
     let flareAnimation: Animated.CompositeAnimation | null = null;
-    
+
     if (hasActiveFlare) {
       flareAnimation = Animated.loop(
         Animated.sequence([
@@ -189,50 +191,53 @@ function CentralOrbComponent({
   };
 
   // Memoize all interpolations to prevent recreation on every render
-  const interpolations = useMemo(() => ({
-    // Enhanced outer glow - more prominent
-    outerGlowScale: breatheAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [1.0, 1.3],
+  const interpolations = useMemo(
+    () => ({
+      // Enhanced outer glow - more prominent
+      outerGlowScale: breatheAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [1.0, 1.3],
+      }),
+      outerGlowOpacity: breatheAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0.3, 0.5],
+      }),
+      // Mid glow for depth
+      midGlowOpacity: pulseAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0.2, 0.4],
+      }),
+      // Inner orb scale - more noticeable breathing
+      innerOrbScale: breatheAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [1.0, 1.06],
+      }),
+      // Gentle bounce
+      bounceTranslate: bounceAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, -4],
+      }),
+      // Flare animations
+      flareScale: flareAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [1.0, 1.5],
+      }),
+      flareOpacity: flareAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, 0.8],
+      }),
+      // Hint ring interpolations
+      hintRingScale: hintAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [1.0, 1.3],
+      }),
+      hintRingOpacity: hintAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0.8, 0.3],
+      }),
     }),
-    outerGlowOpacity: breatheAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0.3, 0.5],
-    }),
-    // Mid glow for depth
-    midGlowOpacity: pulseAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0.2, 0.4],
-    }),
-    // Inner orb scale - more noticeable breathing
-    innerOrbScale: breatheAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [1.0, 1.06],
-    }),
-    // Gentle bounce
-    bounceTranslate: bounceAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0, -4],
-    }),
-    // Flare animations
-    flareScale: flareAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [1.0, 1.5],
-    }),
-    flareOpacity: flareAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0, 0.8],
-    }),
-    // Hint ring interpolations
-    hintRingScale: hintAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [1.0, 1.3],
-    }),
-    hintRingOpacity: hintAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0.8, 0.3],
-    }),
-  }), [breatheAnim, pulseAnim, bounceAnim, flareAnim, hintAnim]);
+    [breatheAnim, pulseAnim, bounceAnim, flareAnim, hintAnim]
+  );
 
   const moodImage = getMoodImage(mood);
 
@@ -275,13 +280,19 @@ function CentralOrbComponent({
           pointerEvents="none"
         >
           {/* Outer soft layer */}
-          <View style={[styles.flareCircle, { backgroundColor: 'rgba(239, 68, 68, 0.06)' }]} />
+          <View style={[styles.flareCircle, { backgroundColor: "rgba(239, 68, 68, 0.06)" }]} />
           {/* Mid layer */}
-          <View style={[styles.flareRing, { width: '75%', height: '75%', backgroundColor: 'rgba(239, 68, 68, 0.10)' }]} />
+          <View
+            style={[styles.flareRing, { width: "75%", height: "75%", backgroundColor: "rgba(239, 68, 68, 0.10)" }]}
+          />
           {/* Inner layer */}
-          <View style={[styles.flareRing, { width: '50%', height: '50%', backgroundColor: 'rgba(239, 68, 68, 0.15)' }]} />
+          <View
+            style={[styles.flareRing, { width: "50%", height: "50%", backgroundColor: "rgba(239, 68, 68, 0.15)" }]}
+          />
           {/* Core glow */}
-          <View style={[styles.flareRing, { width: '30%', height: '30%', backgroundColor: 'rgba(239, 68, 68, 0.20)' }]} />
+          <View
+            style={[styles.flareRing, { width: "30%", height: "30%", backgroundColor: "rgba(239, 68, 68, 0.20)" }]}
+          />
         </Animated.View>
       )}
 
@@ -318,6 +329,19 @@ function CentralOrbComponent({
         </BlurView>
       </Animated.View>
 
+      {/* Status badge above orb */}
+      {statusText ? (
+        <View
+          style={[styles.speechBubble, { borderColor: `${moodColor}80`, shadowColor: moodColor }]}
+          pointerEvents="none"
+        >
+          <Text style={styles.innerStatusText} numberOfLines={1}>
+            {statusText}
+          </Text>
+          <View style={styles.speechTail} />
+        </View>
+      ) : null}
+
       {/* Frosted Glass Orb - Enhanced */}
       <TouchableOpacity activeOpacity={0.85} onPress={handlePress}>
         <Animated.View
@@ -339,7 +363,11 @@ function CentralOrbComponent({
             >
               {/* Enhanced white highlight - top-left shimmer */}
               <LinearGradient
-                colors={isDark ? ["rgba(255, 255, 255, 0.4)", "rgba(255, 255, 255, 0.1)", "transparent"] : ["rgba(0, 0, 0, 0.08)", "rgba(0, 0, 0, 0.03)", "transparent"]}
+                colors={
+                  isDark
+                    ? ["rgba(255, 255, 255, 0.4)", "rgba(255, 255, 255, 0.1)", "transparent"]
+                    : ["rgba(0, 0, 0, 0.08)", "rgba(0, 0, 0, 0.03)", "transparent"]
+                }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.highlight}
@@ -368,7 +396,8 @@ export const CentralOrb = memo(CentralOrbComponent, (prevProps, nextProps) => {
     prevProps.mood === nextProps.mood &&
     prevProps.hasActiveFlare === nextProps.hasActiveFlare &&
     prevProps.showHint === nextProps.showHint &&
-    prevProps.customMood?.id === nextProps.customMood?.id
+    prevProps.customMood?.id === nextProps.customMood?.id &&
+    prevProps.statusText === nextProps.statusText
   );
 });
 
@@ -437,12 +466,12 @@ const styles = StyleSheet.create({
   moodImage: {
     width: 150,
     height: 150,
-    resizeMode: 'contain',
+    resizeMode: "contain",
     zIndex: 10,
   },
   customMoodEmoji: {
     fontSize: 80,
-    textAlign: 'center',
+    textAlign: "center",
     zIndex: 10,
   },
   glassBorder: {
@@ -456,17 +485,53 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: ORB_SIZE * 2.5,
     height: ORB_SIZE * 2.5,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   flareRing: {
-    position: 'absolute',
+    position: "absolute",
     borderRadius: 9999,
   },
   flareCircle: {
     width: "100%",
     height: "100%",
     borderRadius: 9999,
+  },
+  speechBubble: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+    backgroundColor: "rgba(15, 25, 45, 0.65)",
+    borderWidth: 1.2,
+    borderColor: "rgba(255,255,255,0.3)",
+    shadowColor: "#000",
+    shadowOpacity: 0.6,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 8,
+    zIndex: 200,
+    marginBottom: -30,
+    alignItems: "center",
+  },
+  speechTail: {
+    position: "absolute",
+    bottom: -6,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 6,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderTopColor: "rgba(15, 25, 45, 0.65)",
+  },
+  innerStatusText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.95)",
+    letterSpacing: 0.3,
+    textAlign: "center",
+    maxWidth: 130,
   },
   hintRing: {
     position: "absolute",
