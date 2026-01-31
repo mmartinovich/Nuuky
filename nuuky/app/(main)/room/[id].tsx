@@ -5,10 +5,10 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRoom } from '../../../hooks/useRoom';
 import { useAudio } from '../../../hooks/useAudio';
+import { useFriends } from '../../../hooks/useFriends';
 import { useTheme } from '../../../hooks/useTheme';
 import { RoomView } from '../../../components/RoomView';
 import { RoomSettingsModal } from '../../../components/RoomSettingsModal';
-import { InviteFriendsModal } from '../../../components/InviteFriendsModal';
 import { AudioConnectionBadge } from '../../../components/AudioConnectionBadge';
 import { useAppStore } from '../../../stores/appStore';
 import { supabase } from '../../../lib/supabase';
@@ -18,6 +18,7 @@ export default function RoomScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const { currentUser, friends, setCurrentRoom, setRoomParticipants } = useAppStore();
+  useFriends(); // Ensure friends are loaded for invite dropdown
   const {
     currentRoom,
     participants,
@@ -32,7 +33,7 @@ export default function RoomScreen() {
     clearLastJoinedRoom,
   } = useRoom();
   const [showSettings, setShowSettings] = useState(false);
-  const [showInviteFriends, setShowInviteFriends] = useState(false);
+  const [settingsOrigin, setSettingsOrigin] = useState<{ x: number; y: number } | undefined>(undefined);
   const [isMuted, setIsMuted] = useState(true);
 
   // Audio integration
@@ -123,7 +124,8 @@ export default function RoomScreen() {
     }
   };
 
-  const handleSettingsPress = () => {
+  const handleSettingsPress = (origin: { x: number; y: number }) => {
+    setSettingsOrigin(origin);
     setShowSettings(true);
   };
 
@@ -148,10 +150,6 @@ export default function RoomScreen() {
     await inviteFriendToRoom(currentRoom.id, friendId);
   };
 
-  const handleOpenInviteFriends = () => {
-    setShowSettings(false);
-    setShowInviteFriends(true);
-  };
 
   const handleRemoveParticipant = async (userId: string) => {
     if (!currentRoom) return;
@@ -226,15 +224,10 @@ export default function RoomScreen() {
         onRename={handleRename}
         onDelete={handleDelete}
         onLeave={handleLeaveRoom}
-        onInviteFriends={handleOpenInviteFriends}
         onRemoveParticipant={handleRemoveParticipant}
-      />
-
-      <InviteFriendsModal
-        visible={showInviteFriends}
+        originPoint={settingsOrigin}
         friends={friendUsers}
         participantIds={participantIds}
-        onClose={() => setShowInviteFriends(false)}
         onInvite={handleInviteFriend}
       />
     </View>

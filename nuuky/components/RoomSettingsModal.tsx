@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,14 +13,25 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  Dimensions,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { getMoodColor, interactionStates } from "../lib/theme";
 import { useTheme } from "../hooks/useTheme";
 import { useInviteLink } from "../hooks/useInviteLink";
-import { RoomParticipant } from "../types";
+import { RoomParticipant, User } from "../types";
 import { isUserTrulyOnline } from "../lib/utils";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  runOnJS,
+  Easing,
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -39,8 +50,11 @@ interface RoomSettingsModalProps {
   onRename: (newName: string) => Promise<void>;
   onDelete: () => Promise<void>;
   onLeave: () => void;
-  onInviteFriends: () => void;
   onRemoveParticipant?: (userId: string, userName: string) => Promise<void>;
+  originPoint?: { x: number; y: number };
+  friends?: User[];
+  participantIds?: string[];
+  onInvite?: (friendId: string) => Promise<void>;
 }
 
 const MAX_VISIBLE_AVATARS = 4;
@@ -57,17 +71,51 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
   onRename,
   onDelete,
   onLeave,
-  onInviteFriends,
   onRemoveParticipant,
+  originPoint,
+  friends,
+  participantIds,
+  onInvite,
 }) => {
   const { theme, accent } = useTheme();
+  const insets = useSafeAreaInsets();
   const { createInviteLink, shareInviteLink, loading: linkLoading } = useInviteLink();
+
+  const offsetX = (originPoint?.x ?? SCREEN_W / 2) - SCREEN_W / 2;
+  const offsetY = (originPoint?.y ?? SCREEN_H / 2) - SCREEN_H / 2;
+  const progress = useSharedValue(0);
+
+  useEffect(() => {
+    if (visible) {
+      progress.value = withTiming(1, { duration: 250, easing: Easing.out(Easing.cubic) });
+    } else {
+      progress.value = 0;
+    }
+  }, [visible]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    const p = progress.value;
+    return {
+      opacity: p,
+      transform: [
+        { translateX: offsetX * (1 - p) },
+        { translateY: offsetY * (1 - p) },
+        { scale: 0.3 + p * 0.7 },
+      ],
+    };
+  });
+
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+  }));
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(roomName);
   const [loading, setLoading] = useState(false);
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
   const [sharingLink, setSharingLink] = useState(false);
   const [membersExpanded, setMembersExpanded] = useState(false);
+  const [inviteExpanded, setInviteExpanded] = useState(false);
+  const [invitingIds, setInvitingIds] = useState<Set<string>>(new Set());
 
   const handleRename = async () => {
     if (!newName.trim()) {
@@ -137,6 +185,30 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
     setMembersExpanded(!membersExpanded);
   };
 
+  const toggleInviteExpanded = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setInviteExpanded(!inviteExpanded);
+  };
+
+  const availableFriends = useMemo(() => {
+    if (!friends || !participantIds) return [];
+    return friends.filter((f) => !participantIds.includes(f.id));
+  }, [friends, participantIds]);
+
+
+  const handleInviteFriend = async (friendId: string) => {
+    setInvitingIds((prev) => new Set(prev).add(friendId));
+    try {
+      await onInvite?.(friendId);
+    } finally {
+      setInvitingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(friendId);
+        return next;
+      });
+    }
+  };
+
   // Sort participants: creator first, then alphabetical
   const sortedParticipants = useMemo(() => {
     if (!participants || participants.length === 0) return [];
@@ -167,12 +239,15 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
     }
   };
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setIsRenaming(false);
     setNewName(roomName);
     setMembersExpanded(false);
-    onClose();
-  };
+    setInviteExpanded(false);
+    progress.value = withTiming(0, { duration: 200, easing: Easing.in(Easing.cubic) }, () => {
+      runOnJS(onClose)();
+    });
+  }, [onClose, roomName]);
 
   // Render avatar for the stack
   const renderStackedAvatar = (participant: RoomParticipant, index: number) => {
@@ -307,28 +382,38 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
   const overflowCount = sortedParticipants.length - MAX_VISIBLE_AVATARS;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <View style={[styles.overlay, { backgroundColor: theme.colors.glass.overlay }]}>
-        <View style={styles.modalContainer}>
-          <LinearGradient colors={theme.gradients.background} style={styles.gradientBackground}>
-            {/* Header */}
-            <View style={[styles.header, { backgroundColor: theme.colors.glass.background, borderBottomColor: theme.colors.glass.border }]}>
-              <View style={styles.headerLeft} />
-              <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>Room Settings</Text>
-              <TouchableOpacity
-                style={[styles.closeButton, { backgroundColor: theme.colors.glass.background }]}
-                onPress={handleClose}
-                activeOpacity={interactionStates.pressed}
-              >
-                <Ionicons name="close" size={24} color={theme.colors.text.primary} />
-              </TouchableOpacity>
-            </View>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose} statusBarTranslucent>
+      <View style={styles.fullScreen}>
+        <Animated.View style={[StyleSheet.absoluteFill, backdropStyle]}>
+          <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFill}>
+            <TouchableOpacity
+              style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.4)" }]}
+              activeOpacity={1}
+              onPress={handleClose}
+            />
+          </BlurView>
+        </Animated.View>
 
-            <ScrollView
-              style={styles.content}
-              contentContainerStyle={styles.contentContainer}
-              showsVerticalScrollIndicator={false}
+        <Animated.View style={[styles.fullScreenContent, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 8 }, animatedStyle]}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={[styles.closeButton, { backgroundColor: theme.colors.glass.background }]}
+              onPress={handleClose}
+              activeOpacity={interactionStates.pressed}
             >
+              <Ionicons name="close" size={22} color={theme.colors.text.primary} />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>Room Settings</Text>
+
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.contentContainer}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
               {/* Room Name Section */}
               <View style={styles.section}>
                 <Text style={[styles.sectionTitleText, { color: theme.colors.text.tertiary }]}>ROOM NAME</Text>
@@ -431,13 +516,12 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
               {/* Actions Section - Grouped Card */}
               <View style={styles.section}>
                 <Text style={[styles.sectionTitleText, { color: theme.colors.text.tertiary }]}>ACTIONS</Text>
-                {/* Invite & Share Actions (Creator Only) */}
+                {/* Invite Friends (Creator Only) - Expandable */}
                 {isCreator && (
                   <View style={[styles.groupedCard, { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border }]}>
-                    {/* Invite Friends */}
                     <TouchableOpacity
                       style={styles.groupedCardRow}
-                      onPress={onInviteFriends}
+                      onPress={toggleInviteExpanded}
                       activeOpacity={0.7}
                     >
                       <View style={[styles.actionIconContainer, { backgroundColor: accent.soft }]}>
@@ -445,13 +529,81 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                       </View>
                       <View style={styles.actionTextContainer}>
                         <Text style={[styles.actionTitle, { color: theme.colors.text.primary }]}>Invite Friends</Text>
-                        <Text style={[styles.actionSubtitle, { color: theme.colors.text.tertiary }]}>Add people to this room</Text>
+                        <Text style={[styles.actionSubtitle, { color: theme.colors.text.tertiary }]}>
+                          {availableFriends.length > 0 ? `${availableFriends.length} available` : "No friends available"}
+                        </Text>
                       </View>
-                      <Ionicons name="chevron-forward" size={18} color={theme.colors.text.tertiary} />
+                      <Ionicons
+                        name={inviteExpanded ? "chevron-up" : "chevron-down"}
+                        size={20}
+                        color={theme.colors.text.tertiary}
+                      />
                     </TouchableOpacity>
 
-                    {/* Share Link */}
-                    <View style={[styles.internalSeparator, { backgroundColor: theme.colors.glass.border }]} />
+                    {inviteExpanded && (
+                      <View style={styles.expandedMembersList}>
+                        <View style={[styles.fullWidthSeparator, { backgroundColor: theme.colors.glass.border }]} />
+                        {availableFriends.length === 0 ? (
+                          <View style={styles.inviteEmptyState}>
+                            <Ionicons name="people-outline" size={32} color={theme.colors.text.tertiary} />
+                            <Text style={[styles.inviteEmptyText, { color: theme.colors.text.tertiary }]}>
+                              All friends are already in this room
+                            </Text>
+                          </View>
+                        ) : (
+                          availableFriends.map((friend, index) => {
+                            const isInviting = invitingIds.has(friend.id);
+                            const isOnline = isUserTrulyOnline(friend.is_online, friend.last_seen_at);
+                            return (
+                              <React.Fragment key={friend.id}>
+                                {index > 0 && <View style={[styles.memberRowSeparator, { backgroundColor: theme.colors.glass.border }]} />}
+                                <View style={styles.expandedMemberRow}>
+                                  <View style={styles.memberInfo}>
+                                    <View style={styles.memberAvatarWrapper}>
+                                      {friend.avatar_url ? (
+                                        <Image
+                                          source={{ uri: friend.avatar_url }}
+                                          style={[styles.memberAvatar, { borderColor: theme.colors.glass.border }]}
+                                        />
+                                      ) : (
+                                        <View style={[styles.memberAvatar, styles.memberAvatarPlaceholder, { backgroundColor: accent.soft, borderColor: theme.colors.glass.border }]}>
+                                          <Ionicons name="person" size={18} color={accent.primary} />
+                                        </View>
+                                      )}
+                                      {isOnline && <View style={[styles.onlineIndicator, { backgroundColor: theme.colors.status.success, borderColor: theme.colors.bg.primary }]} />}
+                                    </View>
+                                    <View style={styles.memberText}>
+                                      <Text style={[styles.memberName, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                                        {friend.display_name}
+                                      </Text>
+                                      <Text style={[styles.memberStatus, { color: theme.colors.text.tertiary }]}>{isOnline ? "Online" : "Offline"}</Text>
+                                    </View>
+                                  </View>
+                                  <TouchableOpacity
+                                    style={[styles.inviteButton, { backgroundColor: accent.primary }]}
+                                    onPress={() => handleInviteFriend(friend.id)}
+                                    disabled={isInviting}
+                                    activeOpacity={0.7}
+                                  >
+                                    {isInviting ? (
+                                      <ActivityIndicator size="small" color="#FFF" />
+                                    ) : (
+                                      <Ionicons name="send" size={14} color="#FFF" />
+                                    )}
+                                  </TouchableOpacity>
+                                </View>
+                              </React.Fragment>
+                            );
+                          })
+                        )}
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {/* Share Link (Creator Only) */}
+                {isCreator && (
+                  <View style={[styles.groupedCard, { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border, marginTop: 12 }]}>
                     <TouchableOpacity
                       style={styles.groupedCardRow}
                       onPress={handleShareLink}
@@ -520,60 +672,44 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                   </View>
                 </View>
               )}
-            </ScrollView>
-          </LinearGradient>
-        </View>
+          </ScrollView>
+        </Animated.View>
       </View>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
+  fullScreen: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
-  modalContainer: {
-    width: "90%",
-    maxWidth: 400,
-    maxHeight: "80%",
-    borderRadius: 24,
-    overflow: "hidden",
-  },
-  gradientBackground: {
-    borderRadius: 24,
-    overflow: "hidden",
+  fullScreenContent: {
+    flex: 1,
+    paddingHorizontal: 24,
   },
   // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-  },
-  headerLeft: {
-    width: 44,
+    marginBottom: 16,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: "600",
+    fontSize: 32,
+    fontWeight: "700",
     letterSpacing: -0.5,
+    marginBottom: 24,
   },
   closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
   },
-  content: {
-    flexGrow: 0,
+  scrollView: {
+    flex: 1,
   },
   contentContainer: {
-    padding: 24,
     paddingBottom: 32,
   },
   section: {
@@ -821,5 +957,22 @@ const styles = StyleSheet.create({
   },
   removeButton: {
     padding: 4,
+  },
+  inviteButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  inviteEmptyState: {
+    alignItems: "center",
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  inviteEmptyText: {
+    fontSize: 13,
+    textAlign: "center",
   },
 });

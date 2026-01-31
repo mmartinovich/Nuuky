@@ -82,7 +82,6 @@ import { FriendActionBubble } from "../../components/FriendActionBubble";
 import { RoomListModal } from "../../components/RoomListModal";
 import { CreateRoomModal } from "../../components/CreateRoomModal";
 import { RoomSettingsModal } from "../../components/RoomSettingsModal";
-import { InviteFriendsModal } from "../../components/InviteFriendsModal";
 import { ElectricBolt } from "../../components/ElectricBolt";
 import { TopHeader } from "../../components/TopHeader";
 import { BottomNavBar } from "../../components/BottomNavBar";
@@ -95,7 +94,7 @@ export default function QuantumOrbitScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme, isDark, accent } = useTheme();
-  const { currentUser, friends, speakingParticipants, activeCustomMood } = useAppStore();
+  const { currentUser, friends, setFriends, speakingParticipants, activeCustomMood } = useAppStore();
   const { currentMood, changeMood } = useMood();
   const { customMoods, createCustomMood, selectCustomMood, deleteCustomMood } = useCustomMood();
   const { sendNudge } = useNudge();
@@ -139,7 +138,6 @@ export default function QuantumOrbitScreen() {
   const [showRoomList, setShowRoomList] = useState(false);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
   const [showRoomSettings, setShowRoomSettings] = useState(false);
-  const [showInviteFriendsFromDefault, setShowInviteFriendsFromDefault] = useState(false);
 
   // Extracted hooks
   const isCurrentUserSpeaking = currentUser?.id ? speakingParticipants.includes(currentUser.id) : false;
@@ -369,6 +367,7 @@ export default function QuantumOrbitScreen() {
         .eq("status", "accepted");
 
       if (error) throw error;
+      if (data) setFriends(data);
       setLoading(false);
     } catch (_error: any) {
       setLoading(false);
@@ -711,22 +710,11 @@ export default function QuantumOrbitScreen() {
           onLeave={() => {
             Alert.alert("Cannot Leave", "Set another room as default before leaving this room.");
           }}
-          onInviteFriends={() => {
-            setShowRoomSettings(false);
-            setShowInviteFriendsFromDefault(true);
-          }}
           onRemoveParticipant={async (userId, userName) => {
             await removeParticipant(defaultRoom.id, userId);
           }}
-        />
-      )}
-
-      {defaultRoom && (
-        <InviteFriendsModal
-          visible={showInviteFriendsFromDefault}
           friends={friendList}
           participantIds={roomParticipants.map((p) => p.user_id)}
-          onClose={() => setShowInviteFriendsFromDefault(false)}
           onInvite={async (friendId) => {
             await inviteFriendToRoom(defaultRoom.id, friendId);
           }}

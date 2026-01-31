@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -16,7 +16,7 @@ interface RoomViewProps {
   currentUser: User;
   isCreator: boolean;
   onLeave?: () => void;
-  onSettingsPress?: () => void;
+  onSettingsPress?: (origin: { x: number; y: number }) => void;
 }
 
 export const RoomView: React.FC<RoomViewProps> = ({
@@ -30,6 +30,7 @@ export const RoomView: React.FC<RoomViewProps> = ({
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const settingsButtonRef = useRef<View>(null);
 
   // Convert RoomParticipants to Users for OrbitView
   const participantUsers: User[] = participants
@@ -74,8 +75,13 @@ export const RoomView: React.FC<RoomViewProps> = ({
               {/* Settings Button */}
               {onSettingsPress ? (
                 <TouchableOpacity
+                  ref={settingsButtonRef}
                   style={[styles.settingsButton, { borderColor: theme.colors.glass.border, backgroundColor: theme.colors.glass.background }]}
-                  onPress={onSettingsPress}
+                  onPress={() => {
+                    settingsButtonRef.current?.measureInWindow((x, y, w, h) => {
+                      onSettingsPress({ x: x + w / 2, y: y + h / 2 });
+                    });
+                  }}
                   activeOpacity={0.8}
                   accessibilityLabel="Room settings"
                   accessibilityRole="button"
