@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { colors, spacing, radius, typography, gradients } from '../../lib/theme';
+import { spacing, radius, typography } from '../../lib/theme';
+import { useTheme } from '../../hooks/useTheme';
 
 interface BaseModalProps {
   visible: boolean;
@@ -39,6 +40,8 @@ export const BaseModal: React.FC<BaseModalProps> = ({
   contentStyle,
   blurIntensity = 60, // Updated: 80 → 60 for less heavy blur
 }) => {
+  const { theme } = useTheme();
+
   return (
     <Modal
       visible={visible}
@@ -59,17 +62,17 @@ export const BaseModal: React.FC<BaseModalProps> = ({
             style={[styles.modalContainer, { maxHeight }]}
             onStartShouldSetResponder={() => true}
           >
-            <BlurView intensity={30} style={styles.modal}>
+            <BlurView intensity={30} style={[styles.modal, { borderColor: theme.colors.glass.border }]}>
               {/* Header */}
               {(title || subtitle) && (
-                <View style={styles.header}>
+                <View style={[styles.header, { borderBottomColor: theme.colors.glass.border }]}>
                   {title && (
-                    <Text style={styles.title} accessibilityRole="header">
+                    <Text style={[styles.title, { color: theme.colors.text.primary }]} accessibilityRole="header">
                       {title}
                     </Text>
                   )}
                   {subtitle && (
-                    <Text style={styles.subtitle}>{subtitle}</Text>
+                    <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>{subtitle}</Text>
                   )}
                 </View>
               )}
@@ -86,7 +89,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
 
               {/* Footer */}
               {(footer || showCloseButton) && (
-                <View style={styles.footer}>
+                <View style={[styles.footer, { borderTopColor: theme.colors.glass.border }]}>
                   {footer}
                   {showCloseButton && !footer && (
                     <TouchableOpacity
@@ -95,7 +98,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
                       accessibilityLabel={closeButtonText}
                       accessibilityRole="button"
                     >
-                      <Text style={styles.closeText}>{closeButtonText}</Text>
+                      <Text style={[styles.closeText, { color: theme.colors.text.tertiary }]}>{closeButtonText}</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -130,22 +133,18 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.glass.border,
   },
   header: {
     padding: spacing.screenPadding, // Updated: spacing.lg → screenPadding (24px)
     borderBottomWidth: 1,
-    borderBottomColor: colors.glass.border,
   },
   title: {
     fontSize: typography.size['2xl'],
     fontWeight: typography.weight.bold as any,
-    color: colors.text.primary,
     marginBottom: spacing.sm,
   },
   subtitle: {
     fontSize: typography.size.sm,
-    color: colors.text.secondary,
   },
   content: {
     maxHeight: 400,
@@ -156,7 +155,6 @@ const styles = StyleSheet.create({
   footer: {
     padding: spacing.screenPadding, // Updated: spacing.lg → screenPadding (24px)
     borderTopWidth: 1,
-    borderTopColor: colors.glass.border,
   },
   closeButton: {
     alignItems: 'center',
@@ -164,7 +162,6 @@ const styles = StyleSheet.create({
   },
   closeText: {
     fontSize: typography.size.base,
-    color: colors.text.tertiary,
     fontWeight: typography.weight.medium as any,
   },
 });

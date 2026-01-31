@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, Platfor
 import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { User } from '../types';
-import { colors, typography } from '../lib/theme';
+import { typography } from '../lib/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

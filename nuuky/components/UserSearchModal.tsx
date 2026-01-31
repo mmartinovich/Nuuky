@@ -13,7 +13,8 @@ import {
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { colors, spacing, radius, typography, gradients } from "../lib/theme";
+import { spacing, radius, typography } from "../lib/theme";
+import { useTheme } from "../hooks/useTheme";
 import { UserSearchResult } from "../types";
 import { useUserSearch } from "../hooks/useUserSearch";
 import { useFriends } from "../hooks/useFriends";
@@ -26,6 +27,7 @@ interface UserSearchModalProps {
 }
 
 export const UserSearchModal: React.FC<UserSearchModalProps> = ({ visible, onClose, onUserSelect }) => {
+  const { theme } = useTheme();
   const [query, setQuery] = useState("");
   const [addingFriend, setAddingFriend] = useState<string | null>(null);
   const { loading, results, searchUsers, clearResults } = useUserSearch();
@@ -88,34 +90,34 @@ export const UserSearchModal: React.FC<UserSearchModalProps> = ({ visible, onClo
       <View style={styles.overlay}>
         <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
 
-        <View style={styles.modalContainer}>
+        <View style={[styles.modalContainer, { borderColor: theme.colors.glass.border }]}>
           <BlurView intensity={80} tint="dark" style={styles.modal}>
             {/* Header */}
-            <View style={styles.header}>
-              <Text style={styles.title}>Find Users</Text>
+            <View style={[styles.header, { borderBottomColor: theme.colors.glass.border }]}>
+              <Text style={[styles.title, { color: theme.colors.text.primary }]}>Find Users</Text>
               <TouchableOpacity style={styles.closeButton} onPress={onClose} activeOpacity={0.8}>
-                <Ionicons name="close" size={24} color={colors.text.primary} />
+                <Ionicons name="close" size={24} color={theme.colors.text.primary} />
               </TouchableOpacity>
             </View>
 
             {/* Search Input */}
-            <View style={styles.searchContainer}>
-              <View style={styles.searchInputWrapper}>
-                <Ionicons name="search" size={20} color={colors.text.tertiary} />
+            <View style={[styles.searchContainer, { borderBottomColor: theme.colors.glass.border }]}>
+              <View style={[styles.searchInputWrapper, { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border }]}>
+                <Ionicons name="search" size={20} color={theme.colors.text.tertiary} />
                 <TextInput
-                  style={styles.searchInput}
+                  style={[styles.searchInput, { color: theme.colors.text.primary }]}
                   value={query}
                   onChangeText={handleSearch}
                   placeholder="Search by username..."
-                  placeholderTextColor={colors.text.tertiary}
+                  placeholderTextColor={theme.colors.text.tertiary}
                   autoCapitalize="none"
                   autoCorrect={false}
                   autoFocus
                 />
-                {loading && <ActivityIndicator size="small" color={colors.text.tertiary} />}
+                {loading && <ActivityIndicator size="small" color={theme.colors.text.tertiary} />}
                 {query.length > 0 && !loading && (
                   <TouchableOpacity onPress={() => handleSearch("")}>
-                    <Ionicons name="close-circle" size={20} color={colors.text.tertiary} />
+                    <Ionicons name="close-circle" size={20} color={theme.colors.text.tertiary} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -125,15 +127,15 @@ export const UserSearchModal: React.FC<UserSearchModalProps> = ({ visible, onClo
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
               {query.length < 2 ? (
                 <View style={styles.hintState}>
-                  <Ionicons name="at" size={48} color={colors.text.tertiary} />
-                  <Text style={styles.hintTitle}>Search by Username</Text>
-                  <Text style={styles.hintMessage}>Enter at least 2 characters to search for users</Text>
+                  <Ionicons name="at" size={48} color={theme.colors.text.tertiary} />
+                  <Text style={[styles.hintTitle, { color: theme.colors.text.primary }]}>Search by Username</Text>
+                  <Text style={[styles.hintMessage, { color: theme.colors.text.tertiary }]}>Enter at least 2 characters to search for users</Text>
                 </View>
               ) : results.length === 0 && !loading ? (
                 <View style={styles.emptyState}>
-                  <Ionicons name="person-outline" size={48} color={colors.text.tertiary} />
-                  <Text style={styles.emptyTitle}>No Users Found</Text>
-                  <Text style={styles.emptyMessage}>
+                  <Ionicons name="person-outline" size={48} color={theme.colors.text.tertiary} />
+                  <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>No Users Found</Text>
+                  <Text style={[styles.emptyMessage, { color: theme.colors.text.tertiary }]}>
                     No one with that username exists. Check the spelling and try again.
                   </Text>
                 </View>
@@ -168,9 +170,11 @@ interface UserResultItemProps {
 }
 
 const UserResultItem: React.FC<UserResultItemProps> = ({ user, isFriend, isAdding, onAddFriend, onSelect }) => {
+  const { theme } = useTheme();
+
   return (
     <TouchableOpacity
-      style={styles.userItem}
+      style={[styles.userItem, { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border }]}
       onPress={onSelect}
       activeOpacity={onSelect ? 0.8 : 1}
       disabled={!onSelect}
@@ -181,41 +185,41 @@ const UserResultItem: React.FC<UserResultItemProps> = ({ user, isFriend, isAddin
           {user.avatar_url ? (
             <Image source={{ uri: user.avatar_url }} style={styles.avatar} />
           ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]}>
-              <Text style={styles.avatarText}>{user.display_name.charAt(0).toUpperCase()}</Text>
+            <View style={[styles.avatar, styles.avatarPlaceholder, { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border }]}>
+              <Text style={[styles.avatarText, { color: theme.colors.text.primary }]}>{user.display_name.charAt(0).toUpperCase()}</Text>
             </View>
           )}
 
           {/* Online indicator */}
           {isUserTrulyOnline(user.is_online, user.last_seen_at) && (
-            <View style={styles.onlineIndicator}>
-              <View style={styles.onlineDot} />
+            <View style={[styles.onlineIndicator, { backgroundColor: theme.colors.bg.primary }]}>
+              <View style={[styles.onlineDot, { backgroundColor: theme.colors.mood.good.base }]} />
             </View>
           )}
         </View>
 
         {/* Name and Username */}
         <View style={styles.userTextContainer}>
-          <Text style={styles.userName}>{user.display_name}</Text>
-          <Text style={styles.userUsername}>@{user.username}</Text>
+          <Text style={[styles.userName, { color: theme.colors.text.primary }]}>{user.display_name}</Text>
+          <Text style={[styles.userUsername, { color: theme.colors.text.tertiary }]}>@{user.username}</Text>
         </View>
       </View>
 
       {/* Action Button */}
       {isFriend ? (
         <View style={styles.friendBadge}>
-          <Ionicons name="checkmark-circle" size={16} color={colors.mood.good.base} />
-          <Text style={styles.friendBadgeText}>Friends</Text>
+          <Ionicons name="checkmark-circle" size={16} color={theme.colors.mood.good.base} />
+          <Text style={[styles.friendBadgeText, { color: theme.colors.mood.good.base }]}>Friends</Text>
         </View>
       ) : (
         <TouchableOpacity style={styles.addButton} onPress={onAddFriend} disabled={isAdding} activeOpacity={0.8}>
-          <LinearGradient colors={gradients.neonCyan} style={styles.addGradient}>
+          <LinearGradient colors={theme.gradients.neonCyan} style={styles.addGradient}>
             {isAdding ? (
-              <ActivityIndicator size="small" color={colors.text.primary} />
+              <ActivityIndicator size="small" color={theme.colors.text.primary} />
             ) : (
               <>
-                <Ionicons name="person-add" size={16} color={colors.text.primary} />
-                <Text style={styles.addButtonText}>Add</Text>
+                <Ionicons name="person-add" size={16} color={theme.colors.text.primary} />
+                <Text style={[styles.addButtonText, { color: theme.colors.text.primary }]}>Add</Text>
               </>
             )}
           </LinearGradient>
@@ -239,7 +243,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: colors.glass.border,
   },
   modal: {
     flex: 1,
@@ -251,12 +254,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.glass.border,
   },
   title: {
     fontSize: typography.size.xl,
     fontWeight: typography.weight.bold as any,
-    color: colors.text.primary,
   },
   closeButton: {
     width: 32,
@@ -269,22 +270,18 @@ const styles = StyleSheet.create({
   searchContainer: {
     padding: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.glass.border,
   },
   searchInputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.glass.background,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.glass.border,
     paddingHorizontal: spacing.sm,
     gap: spacing.sm,
   },
   searchInput: {
     flex: 1,
     fontSize: typography.size.md,
-    color: colors.text.primary,
     paddingVertical: spacing.sm,
   },
   content: {
@@ -299,10 +296,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     padding: spacing.md,
-    backgroundColor: colors.glass.background,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.glass.border,
   },
   userInfo: {
     flexDirection: "row",
@@ -319,16 +314,13 @@ const styles = StyleSheet.create({
     borderRadius: 22,
   },
   avatarPlaceholder: {
-    backgroundColor: colors.glass.background,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: colors.glass.border,
   },
   avatarText: {
     fontSize: typography.size.md,
     fontWeight: typography.weight.bold as any,
-    color: colors.text.primary,
   },
   onlineIndicator: {
     position: "absolute",
@@ -337,7 +329,6 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: colors.bg.primary,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -345,7 +336,6 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: colors.mood.good.base,
   },
   userTextContainer: {
     flex: 1,
@@ -353,11 +343,9 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: typography.size.md,
     fontWeight: typography.weight.semibold as any,
-    color: colors.text.primary,
   },
   userUsername: {
     fontSize: typography.size.sm,
-    color: colors.text.tertiary,
   },
   addButton: {
     borderRadius: radius.md,
@@ -373,7 +361,6 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: typography.size.sm,
     fontWeight: typography.weight.semibold as any,
-    color: colors.text.primary,
   },
   friendBadge: {
     flexDirection: "row",
@@ -387,7 +374,6 @@ const styles = StyleSheet.create({
   friendBadgeText: {
     fontSize: typography.size.sm,
     fontWeight: typography.weight.medium as any,
-    color: colors.mood.good.base,
   },
   hintState: {
     alignItems: "center",
@@ -398,13 +384,11 @@ const styles = StyleSheet.create({
   hintTitle: {
     fontSize: typography.size.lg,
     fontWeight: typography.weight.bold as any,
-    color: colors.text.primary,
     marginTop: spacing.md,
     marginBottom: spacing.xs,
   },
   hintMessage: {
     fontSize: typography.size.sm,
-    color: colors.text.tertiary,
     textAlign: "center",
   },
   emptyState: {
@@ -416,13 +400,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: typography.size.lg,
     fontWeight: typography.weight.bold as any,
-    color: colors.text.primary,
     marginTop: spacing.md,
     marginBottom: spacing.xs,
   },
   emptyMessage: {
     fontSize: typography.size.sm,
-    color: colors.text.tertiary,
     textAlign: "center",
   },
 });

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal, Image, ScrollView } fr
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { PresetMood } from '../types';
-import { colors, getMoodImage, getMoodColor, radius } from '../lib/theme';
+import { getMoodImage, getMoodColor, radius } from '../lib/theme';
 import { useTheme } from '../hooks/useTheme';
 
 // Moved outside component to prevent recreation on each render
@@ -78,11 +78,13 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                 {/* Header - Friends page style */}
                 <View style={styles.header}>
                   <View style={styles.headerLeft} />
-                  <Text style={styles.headerTitle}>How are you?</Text>
+                  <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>How are you?</Text>
                   <TouchableOpacity
                     style={[styles.closeButton, { backgroundColor: accent.soft }]}
                     onPress={onClose}
                     activeOpacity={0.7}
+                    accessibilityLabel="Close mood picker"
+                    accessibilityRole="button"
                   >
                     <Ionicons name="close" size={24} color={accent.primary} />
                   </TouchableOpacity>
@@ -120,7 +122,7 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
 
                         {/* Text */}
                         <View style={styles.moodText}>
-                          <Text style={styles.moodLabel}>{label}</Text>
+                          <Text style={[styles.moodLabel, { color: theme.colors.text.primary }]}>{label}</Text>
                           <Text style={styles.moodDescription}>
                             {description}
                           </Text>
@@ -188,7 +190,6 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     letterSpacing: -0.5,
-    color: colors.text.primary,
   },
   closeButton: {
     width: 44,
@@ -234,7 +235,6 @@ const styles = StyleSheet.create({
   moodLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.text.primary,
     marginBottom: 2,
   },
   moodDescription: {

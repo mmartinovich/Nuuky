@@ -6,7 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { OrbitView } from './OrbitView';
-import { colors, spacing, radius, typography, gradients, getMoodColor } from '../lib/theme';
+import { spacing, radius, typography, getMoodColor } from '../lib/theme';
+import { useTheme } from '../hooks/useTheme';
 import { RoomParticipant, User } from '../types';
 
 interface RoomViewProps {
@@ -28,6 +29,7 @@ export const RoomView: React.FC<RoomViewProps> = ({
 }) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
 
   // Convert RoomParticipants to Users for OrbitView
   const participantUsers: User[] = participants
@@ -41,28 +43,30 @@ export const RoomView: React.FC<RoomViewProps> = ({
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <LinearGradient colors={gradients.background} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={theme.gradients.background} style={StyleSheet.absoluteFill} />
 
       <OrbitView
         participants={participantUsers}
         currentUser={currentUser}
         onParticipantPress={handleParticipantPress}
         headerContent={
-          <BlurView intensity={30} style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+          <BlurView intensity={30} style={[styles.header, { paddingTop: insets.top + spacing.sm, borderBottomColor: theme.colors.glass.border }]}>
             <View style={styles.headerContent}>
               {/* Back Button */}
               <TouchableOpacity
-                style={styles.backButton}
+                style={[styles.backButton, { borderColor: theme.colors.glass.border }]}
                 onPress={() => router.back()}
                 activeOpacity={0.8}
+                accessibilityLabel="Go back"
+                accessibilityRole="button"
               >
-                <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
+                <Ionicons name="chevron-back" size={24} color={theme.colors.text.primary} />
               </TouchableOpacity>
 
               {/* Room Info */}
               <View style={styles.headerInfo}>
-                <Text style={styles.roomName}>{roomName || 'Room'}</Text>
-                <Text style={styles.participantCount}>
+                <Text style={[styles.roomName, { color: theme.colors.text.primary }]}>{roomName || 'Room'}</Text>
+                <Text style={[styles.participantCount, { color: theme.colors.text.secondary }]}>
                   {participants.length} {participants.length === 1 ? 'person' : 'people'} here
                 </Text>
               </View>
@@ -70,11 +74,13 @@ export const RoomView: React.FC<RoomViewProps> = ({
               {/* Settings Button */}
               {onSettingsPress ? (
                 <TouchableOpacity
-                  style={styles.settingsButton}
+                  style={[styles.settingsButton, { borderColor: theme.colors.glass.border }]}
                   onPress={onSettingsPress}
                   activeOpacity={0.8}
+                  accessibilityLabel="Room settings"
+                  accessibilityRole="button"
                 >
-                  <Ionicons name="settings-outline" size={24} color={colors.text.primary} />
+                  <Ionicons name="settings-outline" size={24} color={theme.colors.text.primary} />
                 </TouchableOpacity>
               ) : (
                 <View style={styles.settingsButton} />
@@ -93,7 +99,6 @@ const styles = StyleSheet.create({
   },
   header: {
     borderBottomWidth: 1,
-    borderBottomColor: colors.glass.border,
   },
   headerContent: {
     flexDirection: 'row',
@@ -103,14 +108,13 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
-    borderColor: colors.glass.border,
   },
   headerInfo: {
     flex: 1,
@@ -119,22 +123,19 @@ const styles = StyleSheet.create({
   roomName: {
     fontSize: typography.size.xl,
     fontWeight: typography.weight.bold as any,
-    color: colors.text.primary,
     marginBottom: spacing.xs / 2,
   },
   participantCount: {
     fontSize: typography.size.sm,
-    color: colors.text.secondary,
     fontWeight: typography.weight.medium as any,
   },
   settingsButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
-    borderColor: colors.glass.border,
   },
 });

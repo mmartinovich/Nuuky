@@ -280,6 +280,8 @@ export default function OnboardingScreen() {
                 disabled={loading}
                 activeOpacity={0.8}
                 style={styles.avatarWrapper}
+                accessibilityLabel="Choose profile photo"
+                accessibilityRole="button"
               >
                 <View style={styles.avatarContainer}>
                   {avatarUri ? (
@@ -293,7 +295,7 @@ export default function OnboardingScreen() {
                   )}
                 </View>
 
-                <View style={[styles.cameraBadge, { backgroundColor: "#007AFF" }]}>
+                <View style={[styles.cameraBadge, { backgroundColor: "#007AFF" }]} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
                   <Ionicons name="camera" size={16} color="#fff" />
                 </View>
               </TouchableOpacity>
@@ -416,6 +418,9 @@ export default function OnboardingScreen() {
                               onPress={() => setShowCountryPicker(false)}
                               style={pickerStyles.closeButton}
                               activeOpacity={0.7}
+                              accessibilityLabel="Close country picker"
+                              accessibilityRole="button"
+                              hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
                             >
                               <Ionicons name="close" size={22} color="rgba(255,255,255,0.6)" />
                             </TouchableOpacity>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { colors, typography, spacing, radius } from '../lib/theme';
+import { typography, spacing, radius } from '../lib/theme';
+import { useTheme } from '../hooks/useTheme';
 
 const POPULAR_EMOJIS = [
   '😊', '😎', '🥳', '😴', '🤔', '😤', '🥺', '❤️',
@@ -18,13 +19,14 @@ export const EmojiInput: React.FC<EmojiInputProps> = ({
   value,
   onChangeEmoji,
 }) => {
+  const { theme } = useTheme();
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Pick an Emoji</Text>
+      <Text style={[styles.label, { color: theme.colors.text.secondary }]}>Pick an Emoji</Text>
 
       {/* Selected emoji display */}
       <View style={styles.selectedWrapper}>
-        <Text style={styles.selectedEmoji}>{value || '+'}</Text>
+        <Text style={[styles.selectedEmoji, { color: theme.colors.text.primary }]}>{value || '+'}</Text>
       </View>
 
       {/* Emoji grid */}
@@ -58,7 +60,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: typography.size.sm,
     fontWeight: typography.weight.medium,
-    color: colors.text.secondary,
+    // color set inline via theme
     marginBottom: spacing.sm,
   },
   selectedWrapper: {
@@ -68,7 +70,7 @@ const styles = StyleSheet.create({
   },
   selectedEmoji: {
     fontSize: 56,
-    color: colors.text.primary,
+    // color set inline via theme
   },
   emojiGrid: {
     flexDirection: 'row',

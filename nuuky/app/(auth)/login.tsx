@@ -18,13 +18,15 @@ import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-si
 import { AntDesign, Feather } from "@expo/vector-icons";
 import { supabase } from "../../lib/supabase";
 import { useAppStore } from "../../stores/appStore";
-import { colors, gradients, typography, spacing, radius, interactionStates } from "../../lib/theme";
+import { typography, spacing, radius, interactionStates } from "../../lib/theme";
+import { useTheme } from "../../hooks/useTheme";
 import Constants from "expo-constants";
 
 export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { setCurrentUser } = useAppStore();
+  const { theme } = useTheme();
 
   // Subtle pulse animation for the orb
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
@@ -233,13 +235,13 @@ export default function LoginScreen() {
 
 
   return (
-    <LinearGradient colors={gradients.background} style={styles.gradient}>
+    <LinearGradient colors={theme.gradients.background} style={styles.gradient}>
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <View style={styles.content}>
           {/* Title - Centered */}
           <View style={styles.header}>
             <Image source={require("../../assets/wordmark.png")} style={styles.wordmark} resizeMode="contain" />
-            <Text style={styles.subtitle}>Feel connected without{"\n"}the pressure of communicating</Text>
+            <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>Feel connected without{"\n"}the pressure of communicating</Text>
           </View>
         </View>
 
@@ -250,17 +252,17 @@ export default function LoginScreen() {
             activeOpacity={interactionStates.pressed}
             onPress={() => router.push("/(auth)/email")}
             disabled={loading}
-            style={styles.emailButton}
+            style={[styles.emailButton, { borderColor: theme.colors.glass.border, backgroundColor: theme.colors.glass.background }]}
           >
-            <Feather name="mail" size={20} color={colors.text.primary} />
-            <Text style={styles.emailButtonText}>Continue with Email</Text>
+            <Feather name="mail" size={20} color={theme.colors.text.primary} />
+            <Text style={[styles.emailButtonText, { color: theme.colors.text.primary }]}>Continue with Email</Text>
           </TouchableOpacity>
 
           {/* Divider */}
           <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
+            <View style={[styles.dividerLine, { backgroundColor: theme.colors.glass.border }]} />
+            <Text style={[styles.dividerText, { color: theme.colors.text.tertiary }]}>or</Text>
+            <View style={[styles.dividerLine, { backgroundColor: theme.colors.glass.border }]} />
           </View>
 
           <View style={styles.authButtons}>
@@ -293,7 +295,7 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.privacyText}>By continuing, you agree to our terms and privacy policy</Text>
+          <Text style={[styles.privacyText, { color: theme.colors.text.tertiary }]}>By continuing, you agree to our terms and privacy policy</Text>
         </View>
 
         {/* Subtle grain texture overlay */}
@@ -326,13 +328,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.size["5xl"],
     fontWeight: typography.weight.bold as any,
-    color: colors.text.primary,
     marginBottom: spacing.sm,
     letterSpacing: -1,
   },
   subtitle: {
     fontSize: typography.size.base,
-    color: colors.text.secondary,
     textAlign: "center",
     lineHeight: 24,
   },
@@ -347,14 +347,12 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.glass.border,
-    backgroundColor: colors.glass.background,
+    // borderColor and backgroundColor set inline via theme
     gap: spacing.sm,
   },
   emailButtonText: {
     fontSize: typography.size.base,
     fontWeight: "600" as const,
-    color: colors.text.primary,
     letterSpacing: 0.2,
   },
   divider: {
@@ -365,11 +363,9 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: colors.glass.border,
   },
   dividerText: {
     paddingHorizontal: spacing.md,
-    color: colors.text.tertiary,
     fontSize: typography.size.sm,
   },
   authButtons: {
@@ -430,7 +426,6 @@ const styles = StyleSheet.create({
   },
   privacyText: {
     fontSize: typography.size.xs,
-    color: colors.text.tertiary,
     textAlign: "center",
     marginTop: spacing.md,
   },

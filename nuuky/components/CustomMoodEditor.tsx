@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { EmojiInput } from './EmojiInput';
-import { colors, gradients, typography, spacing, radius, CUSTOM_MOOD_COLORS, getCustomMoodColor } from '../lib/theme';
+import { typography, spacing, radius, CUSTOM_MOOD_COLORS, getCustomMoodColor } from '../lib/theme';
+import { useTheme } from '../hooks/useTheme';
 
 interface CustomMoodEditorProps {
   visible: boolean;
@@ -30,6 +31,7 @@ export const CustomMoodEditor: React.FC<CustomMoodEditorProps> = ({
   initialText = '',
   initialColor = CUSTOM_MOOD_COLORS[0],
 }) => {
+  const { theme } = useTheme();
   const [emoji, setEmoji] = useState(initialEmoji);
   const [text, setText] = useState(initialText);
   const TEAL_COLOR = '#14B8A6'; // Teal-500
@@ -79,7 +81,7 @@ export const CustomMoodEditor: React.FC<CustomMoodEditorProps> = ({
           onPress={handleClose}
         />
         <View style={styles.container}>
-          <LinearGradient colors={gradients.card} style={styles.modal}>
+          <LinearGradient colors={theme.gradients.card} style={[styles.modal, { borderColor: theme.colors.ui.border }]}>
             <ScrollView
               showsVerticalScrollIndicator={false}
               bounces={false}
@@ -87,8 +89,8 @@ export const CustomMoodEditor: React.FC<CustomMoodEditorProps> = ({
             >
                 {/* Header */}
                 <View style={styles.header}>
-                  <Text style={styles.title}>Create Custom Mood</Text>
-                  <Text style={styles.subtitle}>
+                  <Text style={[styles.title, { color: theme.colors.text.primary }]}>Create Custom Mood</Text>
+                  <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
                     Make it yours!
                   </Text>
                 </View>
@@ -102,17 +104,17 @@ export const CustomMoodEditor: React.FC<CustomMoodEditorProps> = ({
 
                 {/* Text Input */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Status Message</Text>
+                  <Text style={[styles.label, { color: theme.colors.text.secondary }]}>Status Message</Text>
                   <TextInput
-                    style={styles.textInput}
+                    style={[styles.textInput, { borderColor: theme.colors.ui.border, color: theme.colors.text.primary }]}
                     value={text}
                     onChangeText={setText}
                     placeholder="How are you feeling?"
-                    placeholderTextColor={colors.text.tertiary}
+                    placeholderTextColor={theme.colors.text.tertiary}
                     maxLength={50}
                     returnKeyType="done"
                   />
-                  <Text style={styles.charCount}>{text.length}/50</Text>
+                  <Text style={[styles.charCount, { color: theme.colors.text.tertiary }]}>{text.length}/50</Text>
                 </View>
 
                 {/* Buttons */}
@@ -124,14 +126,14 @@ export const CustomMoodEditor: React.FC<CustomMoodEditorProps> = ({
                   >
                     <LinearGradient
                       colors={['rgba(59, 130, 246, 0.3)', 'rgba(236, 72, 153, 0.3)']}
-                      style={styles.saveButtonGradient}
+                      style={[styles.saveButtonGradient, { borderColor: theme.colors.text.accent }]}
                     >
-                      <Text style={styles.saveButtonText}>Save & Use</Text>
+                      <Text style={[styles.saveButtonText, { color: theme.colors.text.primary }]}>Save & Use</Text>
                     </LinearGradient>
                   </TouchableOpacity>
 
                   <TouchableOpacity onPress={handleClose} style={styles.cancelButton}>
-                    <Text style={styles.cancelText}>Cancel</Text>
+                    <Text style={[styles.cancelText, { color: theme.colors.text.tertiary }]}>Cancel</Text>
                   </TouchableOpacity>
                 </View>
             </ScrollView>
@@ -166,7 +168,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.ui.border,
     backgroundColor: 'rgba(20, 20, 40, 0.95)',
   },
   header: {
@@ -176,13 +177,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.size['2xl'],
     fontWeight: typography.weight.bold,
-    color: colors.text.primary,
     marginBottom: spacing.xs,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: typography.size.sm,
-    color: colors.text.secondary,
   },
   inputGroup: {
     marginBottom: spacing.md,
@@ -190,23 +189,19 @@ const styles = StyleSheet.create({
   label: {
     fontSize: typography.size.sm,
     fontWeight: typography.weight.medium,
-    color: colors.text.secondary,
     marginBottom: spacing.xs,
   },
   textInput: {
     borderWidth: 1,
-    borderColor: colors.ui.border,
     borderRadius: radius.md,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     fontSize: typography.size.base,
-    color: colors.text.primary,
     minHeight: 48,
   },
   charCount: {
     fontSize: typography.size.xs,
-    color: colors.text.tertiary,
     marginTop: spacing.xs,
     textAlign: 'right',
   },
@@ -222,13 +217,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.text.accent,
     borderRadius: radius.lg,
   },
   saveButtonText: {
     fontSize: typography.size.base,
     fontWeight: typography.weight.bold,
-    color: colors.text.primary,
   },
   cancelButton: {
     alignItems: 'center',
@@ -236,7 +229,6 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     fontSize: typography.size.base,
-    color: colors.text.tertiary,
     fontWeight: typography.weight.medium,
   },
 });

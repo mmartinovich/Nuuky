@@ -1,7 +1,8 @@
 import React, { memo } from 'react';
 import { View, Text, Image, StyleSheet, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, spacing, typography, gradients } from '../../lib/theme';
+import { spacing, typography } from '../../lib/theme';
+import { useTheme } from '../../hooks/useTheme';
 
 type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
@@ -55,6 +56,7 @@ export const Avatar: React.FC<AvatarProps> = memo(({
   isOnline = false,
   style,
 }) => {
+  const { theme } = useTheme();
   const dimension = SIZE_MAP[size];
   const fontSize = FONT_SIZE_MAP[size];
   const indicatorSize = INDICATOR_SIZE_MAP[size];
@@ -80,13 +82,13 @@ export const Avatar: React.FC<AvatarProps> = memo(({
         />
       ) : (
         <LinearGradient
-          colors={gradients.button as [string, string]}
+          colors={theme.gradients.button as [string, string]}
           style={[
             styles.fallback,
             { width: dimension, height: dimension, borderRadius: dimension / 2 },
           ]}
         >
-          <Text style={[styles.initials, { fontSize }]}>{initials}</Text>
+          <Text style={[styles.initials, { fontSize, color: theme.colors.text.primary }]}>{initials}</Text>
         </LinearGradient>
       )}
 
@@ -98,8 +100,9 @@ export const Avatar: React.FC<AvatarProps> = memo(({
               width: indicatorSize,
               height: indicatorSize,
               borderRadius: indicatorSize / 2,
-              backgroundColor: isOnline ? colors.mood.good.base : colors.text.tertiary,
+              backgroundColor: isOnline ? theme.colors.mood.good.base : theme.colors.text.tertiary,
               borderWidth: indicatorSize > 10 ? 2 : 1.5,
+              borderColor: theme.colors.bg.primary,
             },
           ]}
           accessibilityLabel={isOnline ? 'Online' : 'Offline'}
@@ -123,14 +126,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   initials: {
-    color: colors.text.primary,
     fontWeight: typography.weight.bold as any,
   },
   indicator: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    borderColor: colors.bg.primary,
   },
 });
 

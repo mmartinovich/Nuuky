@@ -15,7 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../hooks/useTheme';
-import { colors, radius } from '../lib/theme';
+import { radius } from '../lib/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -100,7 +100,7 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
                   <Ionicons name="home" size={22} color={accent.primary} />
                 </View>
                 <View style={styles.headerText}>
-                  <Text style={styles.title}>Create Room</Text>
+                  <Text style={[styles.title, { color: theme.colors.text.primary }]}>Create Room</Text>
                   <Text style={styles.subtitle}>Start a space for friends</Text>
                 </View>
               </View>
@@ -110,7 +110,7 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
                 <Text style={styles.sectionLabel}>ROOM NAME</Text>
                 <View style={styles.inputCard}>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { color: theme.colors.text.primary }]}
                     placeholder="Enter a name..."
                     placeholderTextColor="rgba(255, 255, 255, 0.3)"
                     value={roomName}
@@ -206,7 +206,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     letterSpacing: -0.3,
-    color: colors.text.primary,
     marginBottom: 2,
   },
   subtitle: {
@@ -236,7 +235,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 16,
     fontWeight: '500',
-    color: colors.text.primary,
   },
   // Buttons
   buttons: {

@@ -4,7 +4,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { RoomInvite } from '../types';
-import { colors, gradients, spacing, radius, typography, getMoodColor } from '../lib/theme';
+import { spacing, radius, typography, getMoodColor } from '../lib/theme';
+import { useTheme } from '../hooks/useTheme';
 
 interface InviteCardProps {
   invite: RoomInvite;
@@ -13,6 +14,7 @@ interface InviteCardProps {
 }
 
 export const InviteCard: React.FC<InviteCardProps> = ({ invite, onAccept, onDecline }) => {
+  const { theme } = useTheme();
   const [timeRemaining, setTimeRemaining] = useState('');
   const [isExpired, setIsExpired] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -71,9 +73,9 @@ export const InviteCard: React.FC<InviteCardProps> = ({ invite, onAccept, onDecl
   const senderMoodColors = sender ? getMoodColor(sender.mood || 'neutral') : null;
 
   return (
-    <BlurView intensity={20} tint="dark" style={styles.card}>
+    <BlurView intensity={20} tint="dark" style={[styles.card, { borderColor: theme.colors.glass.border }]}>
       <LinearGradient
-        colors={isExpired ? gradients.card : gradients.glass}
+        colors={isExpired ? theme.gradients.card : theme.gradients.glass}
         style={styles.gradient}
       >
         <View style={styles.content}>
@@ -85,27 +87,28 @@ export const InviteCard: React.FC<InviteCardProps> = ({ invite, onAccept, onDecl
                   source={{ uri: sender.avatar_url }}
                   style={[
                     styles.avatar,
+                    { borderColor: theme.colors.glass.border, backgroundColor: theme.colors.bg.secondary },
                     senderMoodColors && { borderColor: senderMoodColors.base }
                   ]}
                 />
               ) : sender ? (
                 <LinearGradient
-                  colors={senderMoodColors?.gradient || gradients.neonCyan}
-                  style={styles.avatar}
+                  colors={senderMoodColors?.gradient || theme.gradients.neonCyan}
+                  style={[styles.avatar, { borderColor: theme.colors.glass.border, backgroundColor: theme.colors.bg.secondary }]}
                 >
-                  <Text style={styles.avatarText}>
+                  <Text style={[styles.avatarText, { color: theme.colors.text.primary }]}>
                     {sender.display_name.charAt(0).toUpperCase()}
                   </Text>
                 </LinearGradient>
               ) : (
-                <View style={styles.avatar} />
+                <View style={[styles.avatar, { borderColor: theme.colors.glass.border, backgroundColor: theme.colors.bg.secondary }]} />
               )}
 
               <View style={styles.textContainer}>
-                <Text style={styles.roomName} numberOfLines={1}>
+                <Text style={[styles.roomName, { color: theme.colors.text.primary }]} numberOfLines={1}>
                   {room?.name || 'Room'}
                 </Text>
-                <Text style={styles.senderName} numberOfLines={1}>
+                <Text style={[styles.senderName, { color: theme.colors.text.secondary }]} numberOfLines={1}>
                   from {sender?.display_name || 'Unknown'}
                 </Text>
               </View>
@@ -113,13 +116,13 @@ export const InviteCard: React.FC<InviteCardProps> = ({ invite, onAccept, onDecl
 
             {/* Time remaining badge */}
             {!isExpired ? (
-              <View style={styles.timeBadge}>
-                <Ionicons name="time-outline" size={12} color={colors.text.secondary} />
-                <Text style={styles.timeText}>{timeRemaining}</Text>
+              <View style={[styles.timeBadge, { borderColor: theme.colors.glass.border }]}>
+                <Ionicons name="time-outline" size={12} color={theme.colors.text.secondary} />
+                <Text style={[styles.timeText, { color: theme.colors.text.secondary }]}>{timeRemaining}</Text>
               </View>
             ) : (
               <View style={[styles.timeBadge, styles.expiredBadge]}>
-                <Text style={styles.expiredText}>Expired</Text>
+                <Text style={[styles.expiredText, { color: theme.colors.mood.reachOut.base }]}>Expired</Text>
               </View>
             )}
           </View>
@@ -128,33 +131,33 @@ export const InviteCard: React.FC<InviteCardProps> = ({ invite, onAccept, onDecl
           {!isExpired && (
             <View style={styles.actions}>
               <TouchableOpacity
-                style={[styles.button, styles.declineButton]}
+                style={[styles.button, styles.declineButton, { borderColor: theme.colors.glass.border }]}
                 onPress={handleDecline}
                 disabled={loading}
                 activeOpacity={0.8}
               >
                 {loading ? (
-                  <ActivityIndicator size="small" color={colors.text.secondary} />
+                  <ActivityIndicator size="small" color={theme.colors.text.secondary} />
                 ) : (
                   <>
-                    <Ionicons name="close" size={16} color={colors.text.secondary} />
-                    <Text style={styles.declineText}>Decline</Text>
+                    <Ionicons name="close" size={16} color={theme.colors.text.secondary} />
+                    <Text style={[styles.declineText, { color: theme.colors.text.secondary }]}>Decline</Text>
                   </>
                 )}
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.button, styles.acceptButton]}
+                style={[styles.button, styles.acceptButton, { backgroundColor: theme.colors.mood.good.soft, borderColor: theme.colors.mood.good.base }]}
                 onPress={handleAccept}
                 disabled={loading}
                 activeOpacity={0.8}
               >
                 {loading ? (
-                  <ActivityIndicator size="small" color={colors.text.primary} />
+                  <ActivityIndicator size="small" color={theme.colors.text.primary} />
                 ) : (
                   <>
-                    <Ionicons name="checkmark" size={16} color={colors.text.primary} />
-                    <Text style={styles.acceptText}>Accept</Text>
+                    <Ionicons name="checkmark" size={16} color={theme.colors.text.primary} />
+                    <Text style={[styles.acceptText, { color: theme.colors.text.primary }]}>Accept</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -172,7 +175,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.glass.border,
   },
   gradient: {
     padding: spacing.md,
@@ -197,15 +199,12 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: colors.glass.border,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.bg.secondary,
   },
   avatarText: {
     fontSize: typography.size.md,
     fontWeight: typography.weight.bold as any,
-    color: colors.text.primary,
   },
   textContainer: {
     flex: 1,
@@ -214,11 +213,9 @@ const styles = StyleSheet.create({
   roomName: {
     fontSize: typography.size.md,
     fontWeight: typography.weight.semibold as any,
-    color: colors.text.primary,
   },
   senderName: {
     fontSize: typography.size.sm,
-    color: colors.text.secondary,
   },
   timeBadge: {
     flexDirection: 'row',
@@ -229,11 +226,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
-    borderColor: colors.glass.border,
   },
   timeText: {
     fontSize: typography.size.xs,
-    color: colors.text.secondary,
     fontWeight: typography.weight.medium as any,
   },
   expiredBadge: {
@@ -242,7 +237,6 @@ const styles = StyleSheet.create({
   },
   expiredText: {
     fontSize: typography.size.xs,
-    color: colors.mood.reachOut.base,
     fontWeight: typography.weight.medium as any,
   },
   actions: {
@@ -262,20 +256,14 @@ const styles = StyleSheet.create({
   },
   declineButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderColor: colors.glass.border,
   },
   declineText: {
     fontSize: typography.size.sm,
     fontWeight: typography.weight.medium as any,
-    color: colors.text.secondary,
   },
-  acceptButton: {
-    backgroundColor: colors.mood.good.soft,
-    borderColor: colors.mood.good.base,
-  },
+  acceptButton: {},
   acceptText: {
     fontSize: typography.size.sm,
     fontWeight: typography.weight.semibold as any,
-    color: colors.text.primary,
   },
 });

@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, gradients, typography, spacing, radius } from '../lib/theme';
+import { typography, spacing, radius } from '../lib/theme';
+import { useTheme } from '../hooks/useTheme';
 
 interface FlareButtonProps {
   onPress: () => void;
@@ -14,6 +15,7 @@ export const FlareButton: React.FC<FlareButtonProps> = ({
   loading = false,
   hasActiveFlare = false,
 }) => {
+  const { theme } = useTheme();
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
 
   React.useEffect(() => {
@@ -51,10 +53,12 @@ export const FlareButton: React.FC<FlareButtonProps> = ({
       activeOpacity={0.8}
       onPress={onPress}
       disabled={loading}
+      accessibilityLabel={hasActiveFlare ? "Flare is active" : "Send a flare"}
+      accessibilityRole="button"
     >
       <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
         <LinearGradient
-          colors={hasActiveFlare ? ['#ef4444', '#dc2626'] : gradients.button}
+          colors={hasActiveFlare ? ['#ef4444', '#dc2626'] : theme.gradients.button}
           style={[
             styles.button,
             hasActiveFlare && styles.activeButton,
@@ -64,10 +68,10 @@ export const FlareButton: React.FC<FlareButtonProps> = ({
           <View style={styles.content}>
             <Text style={styles.emoji}>{hasActiveFlare ? '🚨' : '🔥'}</Text>
             <View>
-              <Text style={styles.title}>
+              <Text style={[styles.title, { color: theme.colors.text.primary }]}>
                 {hasActiveFlare ? 'Flare Active' : 'Send Flare'}
               </Text>
-              <Text style={styles.subtitle}>
+              <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
                 {hasActiveFlare ? 'Help is on the way' : 'Need support?'}
               </Text>
             </View>
@@ -83,7 +87,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.ui.border,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   activeButton: {
     borderColor: '#ef4444',
@@ -103,11 +107,9 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.size.lg,
     fontWeight: typography.weight.bold,
-    color: colors.text.primary,
     marginBottom: spacing.xs / 2,
   },
   subtitle: {
     fontSize: typography.size.sm,
-    color: colors.text.secondary,
   },
 });

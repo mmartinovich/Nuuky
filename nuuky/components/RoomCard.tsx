@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Room, User } from '../types';
-import { colors, gradients, spacing, radius, typography, getMoodColor, interactionStates } from '../lib/theme';
+import { spacing, radius, typography, getMoodColor, interactionStates } from '../lib/theme';
 import { useTheme } from '../hooks/useTheme';
 import { isUserTrulyOnline } from '../lib/utils';
 
