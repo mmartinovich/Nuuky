@@ -248,7 +248,7 @@ export const useFlare = () => {
                 // Play strong haptic feedback
                 await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-                Alert.alert("Flare Sent! 🚨", "Your friends have been notified. The  active for 30 minutes.");
+                Alert.alert("Flare Sent! 🚨", "Your friends have been notified. The  active for 5 minutes.");
 
                 await loadActiveFlares();
                 resolve(true);

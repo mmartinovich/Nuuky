@@ -9,9 +9,10 @@ import Reanimated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { User, Friendship } from '../types';
+import { User, Friendship, Streak } from '../types';
 import { getMoodColor } from '../lib/theme';
 import { isUserTrulyOnline } from '../lib/utils';
+import { BoltIcon, BoltTier } from './StreakBadge';
 
 const ACTION_WIDTH = 74; // Per-action width, iOS standard
 const TAILWIND_RED = '#EF4444';
@@ -20,6 +21,7 @@ interface SwipeableFriendCardProps {
   friendship: Friendship;
   onRemove: (friendship: Friendship) => void;
   textPrimaryColor: string;
+  streak?: Streak;
 }
 
 function RightAction({
@@ -72,6 +74,7 @@ export const SwipeableFriendCard: React.FC<SwipeableFriendCardProps> = ({
   friendship,
   onRemove,
   textPrimaryColor,
+  streak,
 }) => {
   const swipeableRef = useRef<any>(null);
   const pendingAction = useRef<'remove' | null>(null);
@@ -179,6 +182,27 @@ export const SwipeableFriendCard: React.FC<SwipeableFriendCardProps> = ({
             <Text style={styles.friendStatus}>{isOnline ? "Online" : "Offline"}</Text>
           </View>
         </View>
+
+        {streak && streak.state !== 'broken' && streak.consecutive_days >= 1 && (() => {
+          const days = streak.consecutive_days;
+          const tier: BoltTier = days >= 15 ? 'fire' : days >= 7 ? 'gold' : 'teal';
+          const borderColors = {
+            teal: 'rgba(0, 220, 240, 0.5)',
+            gold: 'rgba(255, 184, 0, 0.6)',
+            fire: 'rgba(224, 27, 27, 0.7)',
+          };
+          const textColors = {
+            teal: '#00f0ff',
+            gold: '#FFB800',
+            fire: '#FF6B35',
+          };
+          return (
+            <View style={[styles.streakInline, { borderColor: borderColors[tier] }]}>
+              <BoltIcon size={14} tier={tier} />
+              <Text style={[styles.streakCount, { color: textColors[tier] }]}>{days}</Text>
+            </View>
+          );
+        })()}
       </View>
     </ReanimatedSwipeable>
   );
@@ -262,5 +286,20 @@ const styles = StyleSheet.create({
   friendStatus: {
     fontSize: 13,
     color: "rgba(255,255,255,0.5)",
+  },
+  streakInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(15, 25, 45, 0.9)',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+  },
+  streakCount: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
 });

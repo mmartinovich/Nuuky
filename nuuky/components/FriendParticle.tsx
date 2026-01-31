@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
   },
   onlineIndicator: {
     position: 'absolute',
-    top: -2,
+    bottom: -2,
     right: -2,
     width: 12,
     height: 12,
@@ -516,6 +516,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.8,
     shadowRadius: 4,
     elevation: 8,
+    zIndex: 200,
   },
   nameLabel: {
     marginTop: 8,

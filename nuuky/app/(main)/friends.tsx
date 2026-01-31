@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   StatusBar,
   ListRenderItem,
+  TextInput,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFriends } from "../../hooks/useFriends";
 import { useContactSync } from "../../hooks/useContactSync";
 import { useInvite } from "../../hooks/useInvite";
+import { useStreaks } from "../../hooks/useStreaks";
 import { useAppStore } from "../../stores/appStore";
 import { useTheme } from "../../hooks/useTheme";
 import { typography, spacing, radius, getMoodColor, interactionStates } from "../../lib/theme";
@@ -45,10 +47,30 @@ export default function FriendsScreen() {
 
   const { sending, shareInvite } = useInvite();
 
+  const { streaks } = useStreaks();
+  const streakMap = useMemo(() => {
+    const map = new Map<string, typeof streaks[0]>();
+    for (const s of streaks) {
+      map.set(s.friend_id, s);
+    }
+    return map;
+  }, [streaks]);
+
   const [refreshing, setRefreshing] = useState(false);
   const [addedContacts, setAddedContacts] = useState<Set<string>>(new Set());
   const [isMounted, setIsMounted] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredFriends = useMemo(() => {
+    if (!searchQuery.trim()) return friends;
+    const q = searchQuery.toLowerCase().trim();
+    return friends.filter((f) => {
+      const friend = f.friend as User;
+      return friend.display_name?.toLowerCase().includes(q) ||
+        friend.username?.toLowerCase().includes(q);
+    });
+  }, [friends, searchQuery]);
   const hasEverHadFriends = useRef(friends.length > 0);
 
   useEffect(() => {
@@ -102,9 +124,10 @@ export default function FriendsScreen() {
         friendship={friendship}
         onRemove={handleRemoveFriend}
         textPrimaryColor={theme.colors.text.primary}
+        streak={streakMap.get(friendship.friend_id)}
       />
     ),
-    [handleRemoveFriend, theme.colors.text.primary],
+    [handleRemoveFriend, theme.colors.text.primary, streakMap],
   );
 
   // Key extractor for FlatList
@@ -145,7 +168,7 @@ export default function FriendsScreen() {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.colors.text.secondary} />
           }
-          data={initialLoading ? [] : friends}
+          data={initialLoading ? [] : filteredFriends}
           keyExtractor={keyExtractor}
           renderItem={renderFriendItem}
           // Optimize FlatList performance
@@ -293,11 +316,30 @@ export default function FriendsScreen() {
                     );
                   })()}
 
-                {/* Friends List Header */}
-                <View style={styles.section}>
+                {/* Friends Search & List Header */}
+                <View style={[styles.section, { marginBottom: 8 }]}>
                   <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitleText}>MY FRIENDS</Text>
                   </View>
+                  {friends.length > 0 && (
+                    <View style={[styles.searchBar, { borderColor: theme.colors.border?.subtle || "rgba(255,255,255,0.08)" }]}>
+                      <Ionicons name="search" size={18} color="rgba(255,255,255,0.4)" />
+                      <TextInput
+                        style={[styles.searchInput, { color: theme.colors.text.primary }]}
+                        placeholder="Search friends..."
+                        placeholderTextColor="rgba(255,255,255,0.3)"
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        autoCorrect={false}
+                        autoCapitalize="none"
+                      />
+                      {searchQuery.length > 0 && (
+                        <TouchableOpacity onPress={() => setSearchQuery("")} activeOpacity={0.7}>
+                          <Ionicons name="close-circle" size={18} color="rgba(255,255,255,0.4)" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
                 </View>
               </>
             )
@@ -511,6 +553,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#FFFFFF",
+  },
+  // Search Bar
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "500",
+    padding: 0,
   },
   // Empty State
   emptyState: {

@@ -7,9 +7,9 @@ interface StreakBadgeProps {
   streak: Streak;
 }
 
-type BoltTier = 'teal' | 'gold' | 'fire';
+export type BoltTier = 'teal' | 'gold' | 'fire';
 
-function BoltIcon({ size = 11, tier = 'teal' }: { size?: number; tier?: BoltTier }) {
+export function BoltIcon({ size = 11, tier = 'teal' }: { size?: number; tier?: BoltTier }) {
   const gradId = `bolt-fill-${tier}`;
   const colors = {
     teal: { top: '#00f0ff', bottom: '#00b8d4', stroke: '#0097a7' },

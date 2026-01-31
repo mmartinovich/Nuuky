@@ -59,7 +59,8 @@ export const useRoom = () => {
               id,
               display_name,
               avatar_url,
-              mood
+              mood,
+              default_room_id
             )
           )
         `)
@@ -111,7 +112,8 @@ export const useRoom = () => {
               avatar_url,
               mood,
               is_online,
-              last_seen_at
+              last_seen_at,
+              default_room_id
             )
           )
         `)
@@ -140,7 +142,9 @@ export const useRoom = () => {
             display_name,
             avatar_url,
             mood,
-            is_online
+            is_online,
+            last_seen_at,
+            default_room_id
           )
         `)
         .eq('room_id', currentRoom.id);
