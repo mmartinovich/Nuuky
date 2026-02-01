@@ -128,15 +128,6 @@ export interface Nudge {
   created_at: string;
 }
 
-// Block types
-export interface Block {
-  id: string;
-  blocker_id: string;
-  blocked_id: string;
-  block_type: "mute" | "soft" | "hard";
-  created_at: string;
-}
-
 // Anchor types
 export interface Anchor {
   id: string;

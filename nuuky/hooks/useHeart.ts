@@ -25,6 +25,22 @@ export const useHeart = () => {
         return false;
       }
 
+      // Insert into hearts table for rate limiting
+      const { error: heartError } = await supabase
+        .from('hearts')
+        .insert({
+          sender_id: currentUser.id,
+          receiver_id: friendId,
+        });
+
+      if (heartError) {
+        if (heartError.message?.includes('Heart limit exceeded')) {
+          Alert.alert('Limit Reached', 'You can only send 10 hearts per friend per day.');
+          return false;
+        }
+        throw heartError;
+      }
+
       // Send push notification via Edge Function
       try {
         await supabase.functions.invoke('send-heart-notification', {

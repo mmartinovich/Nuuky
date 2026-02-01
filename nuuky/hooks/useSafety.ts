@@ -2,13 +2,12 @@ import { useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../stores/appStore';
-import { Block, Anchor } from '../types';
+import { Anchor } from '../types';
 
 type Visibility = 'full' | 'limited' | 'minimal' | 'hidden';
 
 export const useSafety = () => {
   const { currentUser, setCurrentUser } = useAppStore();
-  const [blocks, setBlocks] = useState<Block[]>([]);
   const [anchors, setAnchors] = useState<Anchor[]>([]);
   const [isInGhostMode, setIsInGhostMode] = useState(false);
   const [isOnBreak, setIsOnBreak] = useState(false);
@@ -16,28 +15,11 @@ export const useSafety = () => {
 
   useEffect(() => {
     if (currentUser) {
-      loadBlocks();
       loadAnchors();
       checkGhostMode();
       checkBreakMode();
     }
   }, [currentUser?.id]); // Use id to avoid re-running on mood change
-
-  const loadBlocks = async () => {
-    if (!currentUser) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('blocks')
-        .select('*')
-        .eq('blocker_id', currentUser.id);
-
-      if (error) throw error;
-      setBlocks(data || []);
-    } catch (error: any) {
-      console.error('Error loading blocks:', error);
-    }
-  };
 
   const loadAnchors = async () => {
     if (!currentUser) return;
@@ -224,95 +206,6 @@ export const useSafety = () => {
     }
   };
 
-  const blockUser = async (
-    userId: string,
-    blockType: 'mute' | 'soft' | 'hard'
-  ): Promise<boolean> => {
-    if (!currentUser) {
-      Alert.alert('Error', 'You must be logged in');
-      return false;
-    }
-
-    setLoading(true);
-    try {
-      // Check if already blocked
-      const { data: existing } = await supabase
-        .from('blocks')
-        .select('*')
-        .eq('blocker_id', currentUser.id)
-        .eq('blocked_id', userId)
-        .maybeSingle();
-
-      if (existing) {
-        // Update existing block
-        const { error } = await supabase
-          .from('blocks')
-          .update({ block_type: blockType })
-          .eq('id', existing.id);
-
-        if (error) throw error;
-      } else {
-        // Create new block
-        const { error } = await supabase
-          .from('blocks')
-          .insert({
-            blocker_id: currentUser.id,
-            blocked_id: userId,
-            block_type: blockType,
-          });
-
-        if (error) throw error;
-      }
-
-      // For hard blocks, also delete the friendship
-      if (blockType === 'hard') {
-        const { error: deleteError } = await supabase
-          .from('friendships')
-          .delete()
-          .or(`and(user_id.eq.${currentUser.id},friend_id.eq.${userId}),and(user_id.eq.${userId},friend_id.eq.${currentUser.id})`);
-
-        if (deleteError) {
-          console.error('Error deleting friendship on hard block:', deleteError);
-        }
-      }
-
-      await loadBlocks();
-      Alert.alert('User Blocked', 'This user has been blocked');
-      return true;
-    } catch (error: any) {
-      console.error('Error blocking user:', error);
-      Alert.alert('Error', 'Failed to block user');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const unblockUser = async (userId: string): Promise<boolean> => {
-    if (!currentUser) return false;
-
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from('blocks')
-        .delete()
-        .eq('blocker_id', currentUser.id)
-        .eq('blocked_id', userId);
-
-      if (error) throw error;
-
-      await loadBlocks();
-      Alert.alert('User Unblocked', 'This user has been unblocked');
-      return true;
-    } catch (error: any) {
-      console.error('Error unblocking user:', error);
-      Alert.alert('Error', 'Failed to unblock user');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const reportUser = async (
     userId: string,
     reportType: string,
@@ -448,7 +341,6 @@ export const useSafety = () => {
   };
 
   return {
-    blocks,
     anchors,
     isInGhostMode,
     isOnBreak,
@@ -457,8 +349,6 @@ export const useSafety = () => {
     disableGhostMode,
     takeBreak,
     endBreak,
-    blockUser,
-    unblockUser,
     reportUser,
     addAnchor,
     removeAnchor,

@@ -142,7 +142,7 @@ export default function PrivacyPolicyScreen() {
           <Bullet theme={theme}>Provide and maintain the Nuuky service</Bullet>
           <Bullet theme={theme}>Connect you with your friends and display your presence</Bullet>
           <Bullet theme={theme}>Send push notifications for nudges, flares, and friend activity</Bullet>
-          <Bullet theme={theme}>Enable safety features like Ghost Mode, blocks, and safety anchors</Bullet>
+          <Bullet theme={theme}>Enable safety features like Ghost Mode and safety anchors</Bullet>
           <Bullet theme={theme}>Improve and personalize your experience</Bullet>
           <Bullet theme={theme}>Detect and prevent abuse or violations of our terms</Bullet>
         </Section>
@@ -165,7 +165,6 @@ export default function PrivacyPolicyScreen() {
           </Paragraph>
           <Bullet theme={theme}>Ghost Mode lets you become invisible to all friends temporarily</Bullet>
           <Bullet theme={theme}>Take a Break pauses all presence and notifications</Bullet>
-          <Bullet theme={theme}>You can block users at any time — blocks are silent</Bullet>
           <Bullet theme={theme}>Safety Anchors are trusted contacts notified if you're inactive for extended periods</Bullet>
         </Section>
 

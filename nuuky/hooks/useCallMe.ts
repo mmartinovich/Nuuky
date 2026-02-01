@@ -44,6 +44,22 @@ export const useCallMe = () => {
         return false;
       }
 
+      // Insert into call_me_requests table for rate limiting
+      const { error: callMeError } = await supabase
+        .from('call_me_requests')
+        .insert({
+          sender_id: currentUser.id,
+          receiver_id: friendId,
+        });
+
+      if (callMeError) {
+        if (callMeError.message?.includes('Call-me limit exceeded')) {
+          Alert.alert('Limit Reached', 'You can only send 3 call-me requests per friend per day.');
+          return false;
+        }
+        throw callMeError;
+      }
+
       // Send push notification via Edge Function
       const { data, error } = await supabase.functions.invoke('send-call-me-notification', {
         body: {
