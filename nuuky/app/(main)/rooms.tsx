@@ -199,8 +199,8 @@ export default function RoomsScreen() {
                   activeOpacity={interactionStates?.pressed || 0.7}
                 >
                   <View style={[styles.emptyButtonGradient, { backgroundColor: accent.primary }]}>
-                    <Ionicons name="add" size={20} color="#FFFFFF" />
-                    <Text style={styles.emptyButtonText}>Create Room</Text>
+                    <Ionicons name="add" size={20} color={accent.textOnPrimary} />
+                    <Text style={[styles.emptyButtonText, { color: accent.textOnPrimary }]}>Create Room</Text>
                   </View>
                 </TouchableOpacity>
               </View>

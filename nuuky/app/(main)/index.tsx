@@ -540,7 +540,7 @@ export default function QuantumOrbitScreen() {
   }
 
   const userMoodColors = activeCustomMood
-    ? getCustomMoodColor(activeCustomMood.color)
+    ? { base: accent.primary, glow: accent.glow, soft: accent.soft, gradient: accent.gradient }
     : getMoodColor(currentUser?.mood || "neutral");
 
   return (

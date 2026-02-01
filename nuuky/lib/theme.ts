@@ -13,6 +13,7 @@ export interface AccentColors {
   soft: string;
   glow: string;
   gradient: readonly [string, string];
+  textOnPrimary: string;
 }
 
 // ============================================
@@ -403,6 +404,7 @@ export const getAccentFromMood = (mood?: PresetMood): AccentColors => {
     soft: moodColors.soft,
     glow: moodColors.glow,
     gradient: moodColors.gradient,
+    textOnPrimary: '#FFFFFF',
   };
 };
 
@@ -450,7 +452,7 @@ export const getVibeText = (mood: 'good' | 'neutral' | 'not_great' | 'reach_out'
 
 // Custom mood color palette
 // Neutral color for custom moods — works in both light/dark, avoids clashing with preset mood colors
-export const CUSTOM_MOOD_NEUTRAL_COLOR = '#94A3B8'; // Slate-400
+export const CUSTOM_MOOD_NEUTRAL_COLOR = '#FACC15'; // Yellow accent
 
 // Legacy export kept for compatibility
 export const CUSTOM_MOOD_COLORS = [CUSTOM_MOOD_NEUTRAL_COLOR];

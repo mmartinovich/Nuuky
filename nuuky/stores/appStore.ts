@@ -200,7 +200,7 @@ export const useAppStore = create<AppState>()(
 
   updateUserMood: (mood) => set((state) => ({
     currentUser: state.currentUser
-      ? { ...state.currentUser, mood }
+      ? { ...state.currentUser, mood, custom_mood_id: undefined, custom_mood: undefined }
       : null
   })),
 

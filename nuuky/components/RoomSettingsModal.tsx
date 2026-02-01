@@ -462,7 +462,7 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                         disabled={loading}
                         activeOpacity={0.7}
                       >
-                        <Text style={[styles.saveButtonText, { color: theme.colors.text.primary }]}>{loading ? "Saving..." : "Save"}</Text>
+                        <Text style={[styles.saveButtonText, { color: accent.textOnPrimary }]}>{loading ? "Saving..." : "Save"}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -634,11 +634,11 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                                       activeOpacity={0.7}
                                     >
                                       {isInviting ? (
-                                        <ActivityIndicator size="small" color="#FFF" />
+                                        <ActivityIndicator size="small" color={accent.textOnPrimary} />
                                       ) : (
                                         <>
-                                          <Ionicons name="send" size={12} color="#FFF" />
-                                          <Text style={styles.inviteButtonText}>Invite</Text>
+                                          <Ionicons name="send" size={12} color={accent.textOnPrimary} />
+                                          <Text style={[styles.inviteButtonText, { color: accent.textOnPrimary }]}>Invite</Text>
                                         </>
                                       )}
                                     </TouchableOpacity>

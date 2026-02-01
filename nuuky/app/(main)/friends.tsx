@@ -11,7 +11,11 @@ import {
   ListRenderItem,
   TextInput,
   Alert,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from "react-native";
+import { Image as CachedImage } from 'expo-image';
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -25,9 +29,15 @@ import { useAppStore } from "../../stores/appStore";
 import { useTheme } from "../../hooks/useTheme";
 import { typography, spacing, radius, getMoodColor, interactionStates } from "../../lib/theme";
 import { User, MatchedContact, Friendship } from "../../types";
-import { UserSearchModal } from "../../components/UserSearchModal";
+import { useUserSearch } from "../../hooks/useUserSearch";
 import { SwipeableFriendCard } from "../../components/SwipeableFriendCard";
 import { PickRoomModal } from "../../components/PickRoomModal";
+import { isUserTrulyOnline } from "../../lib/utils";
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export default function FriendsScreen() {
   const router = useRouter();
@@ -61,10 +71,16 @@ export default function FriendsScreen() {
     return map;
   }, [streaks]);
 
+  const { loading: userSearchLoading, results: userSearchResults, searchUsers, clearResults: clearUserSearchResults } = useUserSearch();
+  const userSearchDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
   const [refreshing, setRefreshing] = useState(false);
   const [addedContacts, setAddedContacts] = useState<Set<string>>(new Set());
   const [isMounted, setIsMounted] = useState(false);
-  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [usernameSearchExpanded, setUsernameSearchExpanded] = useState(false);
+  const [usernameQuery, setUsernameQuery] = useState("");
+  const [addingFriendId, setAddingFriendId] = useState<string | null>(null);
+  const [searchPending, setSearchPending] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [inviteTarget, setInviteTarget] = useState<Friendship | null>(null);
 
@@ -88,6 +104,54 @@ export default function FriendsScreen() {
   useEffect(() => {
     const timer = setTimeout(() => setIsMounted(true), 100);
     return () => clearTimeout(timer);
+  }, []);
+
+  const toggleUsernameSearch = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setUsernameSearchExpanded(!usernameSearchExpanded);
+    if (usernameSearchExpanded) {
+      setUsernameQuery("");
+      clearUserSearchResults();
+    }
+  };
+
+  const handleUsernameSearch = useCallback(
+    (text: string) => {
+      setUsernameQuery(text);
+      if (userSearchDebounceRef.current) clearTimeout(userSearchDebounceRef.current);
+      if (text.trim().length < 2) {
+        clearUserSearchResults();
+        setSearchPending(false);
+        return;
+      }
+      setSearchPending(true);
+      userSearchDebounceRef.current = setTimeout(() => {
+        setSearchPending(false);
+        searchUsers(text);
+      }, 300);
+    },
+    [searchUsers, clearUserSearchResults],
+  );
+
+  const handleAddFriendFromSearch = async (userId: string) => {
+    setAddingFriendId(userId);
+    try {
+      await addFriendHook(userId);
+    } finally {
+      setAddingFriendId(null);
+    }
+  };
+
+  const isFriend = useCallback(
+    (userId: string) => friends.some((f) => f.friend_id === userId),
+    [friends],
+  );
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (userSearchDebounceRef.current) clearTimeout(userSearchDebounceRef.current);
+    };
   }, []);
 
   const handleSyncContacts = async () => {
@@ -231,21 +295,127 @@ export default function FriendsScreen() {
 
                 {/* Action Buttons */}
                 <View style={styles.actionsSection}>
-                  {/* Search by Username Button */}
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => setShowSearchModal(true)}
-                    style={[styles.actionCard, { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border }]}
-                  >
-                    <View style={[styles.actionIconContainer, { backgroundColor: accent.soft }]}>
-                      <Ionicons name="at" size={20} color={accent.primary} />
-                    </View>
-                    <View style={styles.actionTextContainer}>
-                      <Text style={[styles.actionTitle, { color: theme.colors.text.primary }]}>Search by Username</Text>
-                      <Text style={[styles.actionSubtitle, { color: theme.colors.text.tertiary }]}>Find anyone on Nūūky</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={theme.colors.text.tertiary} />
-                  </TouchableOpacity>
+                  {/* Search by Username - Expandable */}
+                  <View style={[styles.expandableCard, { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border }]}>
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={toggleUsernameSearch}
+                      style={styles.actionCardRow}
+                    >
+                      <View style={[styles.actionIconContainer, { backgroundColor: accent.soft }]}>
+                        <Ionicons name="at" size={20} color={accent.primary} />
+                      </View>
+                      <View style={styles.actionTextContainer}>
+                        <Text style={[styles.actionTitle, { color: theme.colors.text.primary }]}>Search by Username</Text>
+                        <Text style={[styles.actionSubtitle, { color: theme.colors.text.tertiary }]}>Find anyone on Nūūky</Text>
+                      </View>
+                      <Ionicons
+                        name={usernameSearchExpanded ? "chevron-up" : "chevron-down"}
+                        size={20}
+                        color={theme.colors.text.tertiary}
+                      />
+                    </TouchableOpacity>
+
+                    {usernameSearchExpanded && (
+                      <View style={styles.expandedSearchList}>
+                        <View style={[styles.expandedSeparator, { backgroundColor: theme.colors.glass.border }]} />
+                        {/* Search Input */}
+                        <View style={[styles.inlineSearchContainer, { borderBottomColor: theme.colors.glass.border }]}>
+                          <Ionicons name="search" size={16} color={theme.colors.text.tertiary} />
+                          <TextInput
+                            style={[styles.inlineSearchInput, { color: theme.colors.text.primary }]}
+                            value={usernameQuery}
+                            onChangeText={handleUsernameSearch}
+                            placeholder="Search by username..."
+                            placeholderTextColor={theme.colors.text.tertiary}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            autoFocus
+                          />
+                          {(userSearchLoading || usernameQuery.length > 0) && (
+                            <View style={styles.searchTrailingIcon}>
+                              {userSearchLoading ? (
+                                <ActivityIndicator size="small" color={theme.colors.text.tertiary} />
+                              ) : (
+                                <TouchableOpacity onPress={() => handleUsernameSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                  <Ionicons name="close-circle" size={16} color={theme.colors.text.tertiary} />
+                                </TouchableOpacity>
+                              )}
+                            </View>
+                          )}
+                        </View>
+
+                        {/* Results */}
+                        {usernameQuery.length < 2 ? null : searchPending || userSearchLoading || userSearchResults.length > 0 ? (
+                          userSearchResults.map((user, index) => {
+                            const alreadyFriend = isFriend(user.id);
+                            const isAdding = addingFriendId === user.id;
+                            const isOnline = isUserTrulyOnline(user.is_online, user.last_seen_at);
+                            return (
+                              <React.Fragment key={user.id}>
+                                {index > 0 && <View style={[styles.inlineRowSeparator, { backgroundColor: theme.colors.glass.border }]} />}
+                                <View style={styles.inlineResultRow}>
+                                  <View style={styles.inlineResultInfo}>
+                                    <View style={styles.inlineAvatarWrapper}>
+                                      {user.avatar_url ? (
+                                        <CachedImage
+                                          source={{ uri: user.avatar_url }}
+                                          style={[styles.inlineAvatar, { borderColor: theme.colors.glass.border }]}
+                                          cachePolicy="memory-disk"
+                                          contentFit="cover"
+                                          transition={200}
+                                        />
+                                      ) : (
+                                        <View style={[styles.inlineAvatar, styles.inlineAvatarPlaceholder, { backgroundColor: accent.soft, borderColor: theme.colors.glass.border }]}>
+                                          <Text style={[styles.inlineAvatarText, { color: accent.primary }]}>
+                                            {user.display_name.charAt(0).toUpperCase()}
+                                          </Text>
+                                        </View>
+                                      )}
+                                      {isOnline && <View style={[styles.inlineOnlineDot, { backgroundColor: theme.colors.status?.success || '#22c55e', borderColor: theme.colors.bg.primary }]} />}
+                                    </View>
+                                    <View style={styles.inlineResultText}>
+                                      <Text style={[styles.inlineResultName, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                                        {user.display_name}
+                                      </Text>
+                                      <Text style={[styles.inlineResultUsername, { color: theme.colors.text.tertiary }]}>@{user.username}</Text>
+                                    </View>
+                                  </View>
+
+                                  {alreadyFriend ? (
+                                    <View style={[styles.inlineFriendBadge, { backgroundColor: 'rgba(34,197,94,0.1)' }]}>
+                                      <Ionicons name="checkmark-circle" size={14} color="#22c55e" />
+                                      <Text style={[styles.inlineFriendText, { color: '#22c55e' }]}>Friends</Text>
+                                    </View>
+                                  ) : (
+                                    <TouchableOpacity
+                                      style={[styles.inlineAddButton, { backgroundColor: accent.primary }]}
+                                      onPress={() => handleAddFriendFromSearch(user.id)}
+                                      disabled={isAdding}
+                                      activeOpacity={0.7}
+                                    >
+                                      {isAdding ? (
+                                        <ActivityIndicator size="small" color={accent.textOnPrimary} />
+                                      ) : (
+                                        <>
+                                          <Ionicons name="person-add" size={12} color={accent.textOnPrimary} />
+                                          <Text style={[styles.inlineAddButtonText, { color: accent.textOnPrimary }]}>Add</Text>
+                                        </>
+                                      )}
+                                    </TouchableOpacity>
+                                  )}
+                                </View>
+                              </React.Fragment>
+                            );
+                          })
+                        ) : (
+                          <View style={styles.inlineEmptyState}>
+                            <Text style={[styles.inlineEmptyText, { color: theme.colors.text.tertiary }]}>No users found</Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
+                  </View>
 
                   {/* Find Friends from Contacts Button */}
                   <TouchableOpacity
@@ -334,7 +504,7 @@ export default function FriendsScreen() {
                                   style={[styles.addContactButton, { backgroundColor: accent.primary }]}
                                   activeOpacity={0.7}
                                 >
-                                  <Text style={styles.addButtonText}>Add</Text>
+                                  <Text style={[styles.addButtonText, { color: accent.textOnPrimary }]}>Add</Text>
                                 </TouchableOpacity>
                               </View>
                             );
@@ -385,9 +555,6 @@ export default function FriendsScreen() {
           }
         />
       </LinearGradient>
-
-      {/* Username Search Modal */}
-      <UserSearchModal visible={showSearchModal} onClose={() => setShowSearchModal(false)} />
 
       {/* Pick Room to Invite Modal */}
       <PickRoomModal
@@ -622,5 +789,132 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: "center",
     lineHeight: 20,
+  },
+  // Expandable search card
+  expandableCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  actionCardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    gap: 12,
+  },
+  expandedSearchList: {
+    maxHeight: 320,
+    overflow: "hidden",
+  },
+  expandedSeparator: {
+    height: 1,
+  },
+  inlineSearchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 8,
+    borderBottomWidth: 1,
+  },
+  inlineSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    padding: 0,
+  },
+  searchTrailingIcon: {
+    width: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  inlineEmptyState: {
+    alignItems: "center",
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+  },
+  inlineEmptyText: {
+    fontSize: 13,
+    textAlign: "center",
+  },
+  inlineResultRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  inlineRowSeparator: {
+    height: 1,
+    marginLeft: 60,
+  },
+  inlineResultInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    gap: 12,
+  },
+  inlineAvatarWrapper: {
+    width: 40,
+    height: 40,
+    position: "relative",
+  },
+  inlineAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+  },
+  inlineAvatarPlaceholder: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  inlineAvatarText: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  inlineOnlineDot: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+  },
+  inlineResultText: {
+    flex: 1,
+  },
+  inlineResultName: {
+    fontSize: 15,
+    fontWeight: "600",
+    marginBottom: 1,
+  },
+  inlineResultUsername: {
+    fontSize: 12,
+  },
+  inlineFriendBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+  },
+  inlineFriendText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  inlineAddButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+  },
+  inlineAddButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
   },
 });

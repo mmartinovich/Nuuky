@@ -115,11 +115,11 @@ const RoomItem: React.FC<RoomItemProps> = ({ room, onPick, isInviting, accent })
         activeOpacity={0.8}
       >
         {isInviting ? (
-          <ActivityIndicator size="small" color="#FFFFFF" />
+          <ActivityIndicator size="small" color={accent.textOnPrimary} />
         ) : (
           <>
-            <Ionicons name="send" size={16} color="#FFFFFF" />
-            <Text style={styles.inviteButtonText}>Invite</Text>
+            <Ionicons name="send" size={16} color={accent.textOnPrimary} />
+            <Text style={[styles.inviteButtonText, { color: accent.textOnPrimary }]}>Invite</Text>
           </>
         )}
       </TouchableOpacity>

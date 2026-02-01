@@ -138,11 +138,11 @@ const FriendItem: React.FC<FriendItemProps> = ({ friend, onInvite, isInviting, a
         activeOpacity={0.8}
       >
         {isInviting ? (
-          <ActivityIndicator size="small" color={theme.colors.text.primary} />
+          <ActivityIndicator size="small" color={accent.textOnPrimary} />
         ) : (
           <>
-            <Ionicons name="send" size={16} color={theme.colors.text.primary} />
-            <Text style={styles.inviteButtonText}>Invite</Text>
+            <Ionicons name="send" size={16} color={accent.textOnPrimary} />
+            <Text style={[styles.inviteButtonText, { color: accent.textOnPrimary }]}>Invite</Text>
           </>
         )}
       </TouchableOpacity>

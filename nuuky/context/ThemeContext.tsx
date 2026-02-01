@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { useColorScheme } from 'react-native';
 import { useAppStore } from '../stores/appStore';
-import { getTheme, ThemeMode, ResolvedTheme, AccentColors, getAccentFromMood } from '../lib/theme';
+import { getTheme, ThemeMode, ResolvedTheme, AccentColors, getAccentFromMood, getCustomMoodColor } from '../lib/theme';
 
 interface ThemeContextType {
   theme: ReturnType<typeof getTheme>;
@@ -31,10 +31,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const isDark = resolvedTheme === 'dark';
 
-  // Compute accent colors based on user's current mood
+  // Compute accent colors based on user's current mood (including custom moods)
   const accent = useMemo(() => {
+    if (currentUser?.custom_mood_id) {
+      return {
+        primary: '#FACC15',
+        soft: 'rgba(250, 204, 21, 0.15)',
+        glow: 'rgba(250, 204, 21, 0.4)',
+        gradient: ['#FACC15', '#EAB308'] as const,
+        textOnPrimary: '#1A1A1A',
+      };
+    }
     return getAccentFromMood(currentUser?.mood);
-  }, [currentUser?.mood]);
+  }, [currentUser?.mood, currentUser?.custom_mood_id, currentUser?.custom_mood?.color]);
 
   const value = useMemo(
     () => ({
