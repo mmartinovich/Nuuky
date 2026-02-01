@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { Animated, Dimensions, Easing } from "react-native";
 import Svg, { Defs, RadialGradient, Stop, Rect } from "react-native-svg";
 import { useTheme } from "../hooks/useTheme";
+import { useLowPowerMode } from "../stores/appStore";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -11,9 +12,16 @@ const DURATION = 14000;
 
 export default function AnimatedGlow() {
   const { isDark } = useTheme();
+  const lowPowerMode = useLowPowerMode();
   const translateX = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Skip animation in low power mode
+    if (lowPowerMode) {
+      translateX.setValue(0);
+      return;
+    }
+
     const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(translateX, {
@@ -38,9 +46,9 @@ export default function AnimatedGlow() {
     );
     animation.start();
     return () => animation.stop();
-  }, [translateX]);
+  }, [translateX, lowPowerMode]);
 
-  if (!isDark) {
+  if (!isDark || lowPowerMode) {
     return null;
   }
 

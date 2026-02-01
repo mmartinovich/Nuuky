@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { shallow } from 'zustand/shallow';
+import { useShallow } from 'zustand/react/shallow';
 import { encryptedStorage } from '../lib/secureStorage';
 import { User, Friendship, Room, RoomParticipant, RoomInvite, AudioConnectionStatus, CustomMood, PresetMood, AppNotification } from '../types';
 import { ThemeMode } from '../lib/theme';
@@ -100,15 +100,15 @@ interface AppState {
 
 // Memoized selectors for performance - prevents re-renders on unrelated state changes
 export const useCurrentUser = () => useAppStore((state) => state.currentUser);
-export const useFriendsStore = () => useAppStore((state) => state.friends);
-export const useActiveRooms = () => useAppStore((state) => state.activeRooms);
-export const useMyRooms = () => useAppStore((state) => state.myRooms);
+export const useFriendsStore = () => useAppStore(useShallow((state) => state.friends));
+export const useActiveRooms = () => useAppStore(useShallow((state) => state.activeRooms));
+export const useMyRooms = () => useAppStore(useShallow((state) => state.myRooms));
 export const useCurrentRoom = () => useAppStore((state) => state.currentRoom);
-export const useRoomParticipants = () => useAppStore((state) => state.roomParticipants);
-export const useRoomInvites = () => useAppStore((state) => state.roomInvites);
-export const useSpeakingParticipants = () => useAppStore((state) => state.speakingParticipants, shallow);
+export const useRoomParticipants = () => useAppStore(useShallow((state) => state.roomParticipants));
+export const useRoomInvites = () => useAppStore(useShallow((state) => state.roomInvites));
+export const useSpeakingParticipants = () => useAppStore(useShallow((state) => state.speakingParticipants));
 export const useActiveCustomMood = () => useAppStore((state) => state.activeCustomMood);
-export const useNotificationsStore = () => useAppStore((state) => state.notifications);
+export const useNotificationsStore = () => useAppStore(useShallow((state) => state.notifications));
 export const useUnreadNotificationCount = () => useAppStore((state) => state.unreadNotificationCount);
 export const useThemeMode = () => useAppStore((state) => state.themeMode);
 export const useDefaultRoomId = () => useAppStore((state) => state.defaultRoomId);

@@ -95,7 +95,7 @@ function ElectricBoltComponent({
 
   // Jitter: regenerate path periodically
   useEffect(() => {
-    const interval = state === 'active' ? 120 : 450;
+    const interval = state === 'active' ? 350 : 600;
     const id = setInterval(() => {
       setPathD(generateBoltPath(fromX, fromY, toX, toY));
     }, interval);

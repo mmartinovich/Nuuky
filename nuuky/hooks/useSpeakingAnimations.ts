@@ -69,12 +69,12 @@ export function useSpeakingAnimations({ isCurrentUserSpeaking, isMuted }: UseSpe
               toValue: 1,
               duration: 1200,
               easing: Easing.out(Easing.ease),
-              useNativeDriver: false,
+              useNativeDriver: true,
             }),
             RNAnimated.timing(ringAnim, {
               toValue: 0,
               duration: 0,
-              useNativeDriver: false,
+              useNativeDriver: true,
             }),
           ])
         );

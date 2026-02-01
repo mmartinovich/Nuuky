@@ -38,7 +38,7 @@ export const SwipeableFriendCard: React.FC<SwipeableFriendCardProps> = ({
   const pendingAction = useRef<'remove' | null>(null);
   const friend = friendship.friend as User;
   const moodColors = getMoodColor(friend.mood);
-  const isOnline = isUserTrulyOnline(isOnline, friend.last_seen_at);
+  const isOnline = isUserTrulyOnline(friend.is_online, friend.last_seen_at);
 
   const performRemoveAction = useCallback(async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);

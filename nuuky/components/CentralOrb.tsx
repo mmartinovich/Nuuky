@@ -7,6 +7,7 @@ import * as Haptics from "expo-haptics";
 import { getMoodImage } from "../lib/theme";
 import { CustomMood } from "../types";
 import { useTheme } from "../hooks/useTheme";
+import { useLowPowerMode } from "../stores/appStore";
 
 const { width, height } = Dimensions.get("window");
 const ORB_SIZE = 180;
@@ -35,6 +36,7 @@ function CentralOrbComponent({
   statusText,
 }: CentralOrbProps) {
   const { theme, isDark } = useTheme();
+  const lowPowerMode = useLowPowerMode();
   const breatheAnim = useRef(new Animated.Value(0)).current;
   const flareAnim = useRef(new Animated.Value(0)).current;
   const bounceAnim = useRef(new Animated.Value(0)).current;
@@ -46,7 +48,7 @@ function CentralOrbComponent({
   const hintOpacity = useRef(new Animated.Value(showHint ? 1 : 0)).current;
 
   useEffect(() => {
-    // Refined breathing animation - slower, more elegant (4s cycle)
+    // In low power mode, only run the essential breathe animation
     const breatheAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(breatheAnim, {
@@ -64,6 +66,16 @@ function CentralOrbComponent({
       ])
     );
     breatheAnimation.start();
+
+    if (lowPowerMode) {
+      // Reset secondary anims to static values
+      bounceAnim.setValue(0);
+      pulseAnim.setValue(0.5);
+      ambientAnim.setValue(0.5);
+      ringAnim1.setValue(0);
+      ringAnim2.setValue(0);
+      return () => { breatheAnimation.stop(); };
+    }
 
     // Gentle bounce animation
     const bounceAnimation = Animated.loop(
@@ -169,7 +181,7 @@ function CentralOrbComponent({
       ring1Animation.stop();
       ring2Animation.stop();
     };
-  }, []);
+  }, [lowPowerMode]);
 
   useEffect(() => {
     let flareAnimation: Animated.CompositeAnimation | null = null;

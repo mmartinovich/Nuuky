@@ -14,13 +14,20 @@ export const useSafety = () => {
   const [isOnBreak, setIsOnBreak] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Derive ghost/break mode from store instead of redundant network queries
   useEffect(() => {
     if (currentUser) {
       loadAnchors();
-      checkGhostMode();
-      checkBreakMode();
+      // Derive from currentUser in store instead of querying DB
+      const now = new Date();
+      setIsInGhostMode(
+        !!currentUser.ghost_mode_until && new Date(currentUser.ghost_mode_until) > now
+      );
+      setIsOnBreak(
+        !!currentUser.take_break_until && new Date(currentUser.take_break_until) > now
+      );
     }
-  }, [currentUser?.id]); // Use id to avoid re-running on mood change
+  }, [currentUser?.id, currentUser?.ghost_mode_until, currentUser?.take_break_until]);
 
   const loadAnchors = async () => {
     if (!currentUser) return;

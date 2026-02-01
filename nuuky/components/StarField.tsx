@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useRef, memo } from 'react';
 import { View, StyleSheet, Dimensions, Animated, Easing } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
+import { useLowPowerMode } from '../stores/appStore';
 
 const { width, height } = Dimensions.get('window');
-const STAR_COUNT = 50;
+const STAR_COUNT_NORMAL = 25;
+const STAR_COUNT_LOW_POWER = 0;
 
 interface Star {
   id: number;
@@ -17,10 +19,13 @@ interface Star {
 
 export function StarField() {
   const { isDark } = useTheme();
+  const lowPowerMode = useLowPowerMode();
+
+  const starCount = lowPowerMode ? STAR_COUNT_LOW_POWER : STAR_COUNT_NORMAL;
 
   // Generate random stars
   const stars = useMemo(() => {
-    return Array.from({ length: STAR_COUNT }, (_, i) => ({
+    return Array.from({ length: starCount }, (_, i) => ({
       id: i,
       x: Math.random() * width,
       y: Math.random() * height,
@@ -29,7 +34,7 @@ export function StarField() {
       duration: Math.random() * 4000 + 3000,
       delay: Math.random() * 2000,
     })) as Star[];
-  }, []);
+  }, [starCount]);
 
   return (
     <View style={styles.container} pointerEvents="none">

@@ -48,14 +48,11 @@ import { useAppStore, useCurrentUser, useFriendsStore, useSpeakingParticipants, 
 import { User } from "../../types";
 import { MoodPicker } from "../../components/MoodPicker";
 
-// Module-level subscription tracking to prevent duplicates
-let activePresenceSubscription: { cleanup: () => void; userId: string } | null = null;
-let presenceSubscriptionCounter = 0;
-
 // Throttle mechanism for presence updates
 let lastPresenceRefresh = 0;
-const PRESENCE_REFRESH_THROTTLE_MS = 3000;
+const PRESENCE_REFRESH_THROTTLE_MS = 10000; // 10 seconds - reduced from 3s for battery
 
+import { subscriptionManager } from "../../lib/subscriptionManager";
 import { useMood } from "../../hooks/useMood";
 import { useCustomMood } from "../../hooks/useCustomMood";
 import { useNudge } from "../../hooks/useNudge";
@@ -403,17 +400,7 @@ export default function QuantumOrbitScreen() {
   const setupRealtimeSubscription = () => {
     if (!currentUser) return () => {};
 
-    if (activePresenceSubscription && activePresenceSubscription.userId === currentUser.id) {
-      return activePresenceSubscription.cleanup;
-    }
-
-    if (activePresenceSubscription) {
-      activePresenceSubscription.cleanup();
-      activePresenceSubscription = null;
-    }
-
-    const subscriptionId = ++presenceSubscriptionCounter;
-    const channelName = `presence-changes-${subscriptionId}`;
+    const subscriptionId = `presence-changes-${currentUser.id}`;
 
     const throttledLoadFriends = () => {
       const now = Date.now();
@@ -422,17 +409,19 @@ export default function QuantumOrbitScreen() {
       loadFriends(true);
     };
 
-    const channel = supabase
-      .channel(channelName)
-      .on("postgres_changes", { event: "*", schema: "public", table: "users" }, throttledLoadFriends)
-      .subscribe();
+    // Use subscriptionManager for automatic pause/resume on app background
+    const cleanup = subscriptionManager.register(subscriptionId, () => {
+      return supabase
+        .channel(subscriptionId)
+        .on("postgres_changes", {
+          event: "UPDATE",
+          schema: "public",
+          table: "friendships",
+          filter: `user_id=eq.${currentUser.id}`,
+        }, throttledLoadFriends)
+        .subscribe();
+    });
 
-    const cleanup = () => {
-      supabase.removeChannel(channel);
-      activePresenceSubscription = null;
-    };
-
-    activePresenceSubscription = { cleanup, userId: currentUser.id };
     return cleanup;
   };
 

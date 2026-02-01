@@ -74,17 +74,24 @@ export const usePresence = () => {
     // Set up heartbeat interval
     heartbeatIntervalRef.current = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
 
-    // Track app state changes
+    // Track app state changes - pause/resume heartbeat
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       if (!isMountedRef.current) return;
-      
+
       if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
-        // App came to foreground - mark as online
+        // App came to foreground - mark as online and restart heartbeat
         updatePresence(true);
         lastActivityRef.current = Date.now();
+        if (!heartbeatIntervalRef.current) {
+          heartbeatIntervalRef.current = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
+        }
       } else if (nextAppState.match(/inactive|background/)) {
-        // App went to background - mark as offline
+        // App went to background - mark as offline and stop heartbeat
         updatePresence(false);
+        if (heartbeatIntervalRef.current) {
+          clearInterval(heartbeatIntervalRef.current);
+          heartbeatIntervalRef.current = null;
+        }
       }
       appStateRef.current = nextAppState;
     });

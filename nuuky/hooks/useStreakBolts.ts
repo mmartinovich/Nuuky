@@ -86,13 +86,8 @@ export function useStreakBolts({
       boltPositionsRef.current = computePositions();
     });
 
-    const id = setInterval(() => {
-      boltPositionsRef.current = computePositions();
-    }, 500);
-
     return () => {
       orbitAngle.removeListener(listenerId);
-      clearInterval(id);
     };
   }, [activeBolts, orbitBaseAngles, orbitRadii, isSpinning]);
 

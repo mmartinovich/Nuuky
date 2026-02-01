@@ -38,10 +38,13 @@ function sameUTCDay(a: Date, b: Date): boolean {
   );
 }
 
+const STREAK_REFRESH_THROTTLE_MS = 5000;
+
 export const useStreaks = () => {
   const { currentUser } = useAppStore();
   const [streaks, setStreaks] = useState<Streak[]>([]);
   const isMountedRef = useRef(true);
+  const lastStreakRefreshRef = useRef(0);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -93,7 +96,13 @@ export const useStreaks = () => {
             table: 'streaks',
             filter: `user1_id=eq.${currentUser.id}`,
           },
-          () => { loadStreaks(); }
+          () => {
+            const now = Date.now();
+            if (now - lastStreakRefreshRef.current >= STREAK_REFRESH_THROTTLE_MS) {
+              lastStreakRefreshRef.current = now;
+              loadStreaks();
+            }
+          }
         )
         .subscribe();
     });
@@ -109,7 +118,13 @@ export const useStreaks = () => {
             table: 'streaks',
             filter: `user2_id=eq.${currentUser.id}`,
           },
-          () => { loadStreaks(); }
+          () => {
+            const now = Date.now();
+            if (now - lastStreakRefreshRef.current >= STREAK_REFRESH_THROTTLE_MS) {
+              lastStreakRefreshRef.current = now;
+              loadStreaks();
+            }
+          }
         )
         .subscribe();
     });

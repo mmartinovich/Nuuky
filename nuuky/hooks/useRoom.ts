@@ -183,6 +183,7 @@ export const useRoom = () => {
     };
 
     // Use subscription manager for automatic pause/resume on app background
+    // Filter to only rooms where the current user is a participant
     const cleanupRooms = subscriptionManager.register(roomsSubscriptionId, () => {
       return supabase
         .channel(roomsSubscriptionId)
@@ -192,12 +193,14 @@ export const useRoom = () => {
             event: '*',
             schema: 'public',
             table: 'rooms',
+            filter: `creator_id=eq.${currentUser.id}`,
           },
           throttledRefresh
         )
         .subscribe();
     });
 
+    // Filter to only participant changes for the current user
     const cleanupParticipants = subscriptionManager.register(participantsSubscriptionId, () => {
       return supabase
         .channel(participantsSubscriptionId)
@@ -207,6 +210,7 @@ export const useRoom = () => {
             event: '*',
             schema: 'public',
             table: 'room_participants',
+            filter: `user_id=eq.${currentUser.id}`,
           },
           () => {
             throttledParticipantsRefresh();

@@ -7,6 +7,8 @@ import { useAppStore } from "../stores/appStore";
 import { subscriptionManager } from "../lib/subscriptionManager";
 import { Flare } from "../types";
 
+const FLARE_REFRESH_THROTTLE_MS = 5000;
+
 export const useFlare = () => {
   const { currentUser, friends } = useAppStore();
   const [loading, setLoading] = useState(false);
@@ -14,6 +16,7 @@ export const useFlare = () => {
   const [myActiveFlare, setMyActiveFlare] = useState<Flare | null>(null);
   const [lastFlareSentAt, setLastFlareSentAt] = useState<Date | null>(null);
   const isMountedRef = useRef(true);
+  const lastFlareRefreshRef = useRef(0);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -96,22 +99,22 @@ export const useFlare = () => {
         setActiveFlares(friendFlares);
       }
 
-      // Check if user has an active flare
-      const { data: myFlare } = await supabase
-        .from("flares")
-        .select("*")
-        .eq("user_id", user.id)
-        .gte("expires_at", new Date().toISOString())
-        .maybeSingle();
-
-      // Get most recent flare for cooldown check
-      const { data: lastFlare } = await supabase
-        .from("flares")
-        .select("created_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      // Fetch user's own flare data in parallel
+      const [{ data: myFlare }, { data: lastFlare }] = await Promise.all([
+        supabase
+          .from("flares")
+          .select("*")
+          .eq("user_id", user.id)
+          .gte("expires_at", new Date().toISOString())
+          .maybeSingle(),
+        supabase
+          .from("flares")
+          .select("created_at")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
 
       if (isMountedRef.current) {
         setMyActiveFlare(myFlare);
@@ -139,7 +142,12 @@ export const useFlare = () => {
             table: "flares",
           },
           (payload) => {
-            loadActiveFlares();
+            // Throttle flare refreshes
+            const now = Date.now();
+            if (now - lastFlareRefreshRef.current >= FLARE_REFRESH_THROTTLE_MS) {
+              lastFlareRefreshRef.current = now;
+              loadActiveFlares();
+            }
 
             // Play strong haptic if a friend sent a flare
             const user = useAppStore.getState().currentUser;

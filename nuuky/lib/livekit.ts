@@ -134,6 +134,9 @@ export const requestLiveKitToken = async (
 // Connect to LiveKit room
 export const connectToAudioRoom = async (roomId: string): Promise<boolean> => {
   try {
+    // Lazily initialize WebRTC globals on first connection
+    initializeLiveKit();
+
     eventCallbacks?.onConnectionStatusChange('connecting');
 
     // Configure audio to use speaker output for louder playback
@@ -203,8 +206,7 @@ export const disconnectFromAudioRoom = async (): Promise<void> => {
 
   if (currentRoom) {
     await currentRoom.disconnect();
-    // OPTIMIZATION: Don't null the room - reuse it on reconnect
-    // currentRoom = null;
+    currentRoom = null;
   }
 
   await AudioSession.stopAudioSession();

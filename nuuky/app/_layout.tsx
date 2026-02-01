@@ -105,7 +105,8 @@ function ThemedAppShell() {
 }
 
 export default function RootLayout() {
-  const { currentUser, setCurrentUser } = useAppStore();
+  const currentUser = useAppStore((s) => s.currentUser);
+  const setCurrentUser = useAppStore((s) => s.setCurrentUser);
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
   const [fontsLoaded] = useFonts({
@@ -489,8 +490,8 @@ export default function RootLayout() {
         // Start network monitoring
         startNetworkMonitor();
 
-        // Initialize LiveKit WebRTC globals (synchronous, shouldn't block)
-        initializeLiveKit();
+        // LiveKit WebRTC globals are now lazily initialized on first audio room join
+        // (see connectToAudioRoom in lib/livekit.ts)
 
         // Preload mood images at app startup (only once)
         try {
