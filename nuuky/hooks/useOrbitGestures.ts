@@ -1,6 +1,8 @@
 import { useRef, useState, useEffect } from "react";
 import { Animated as RNAnimated, PanResponder, Easing, Dimensions } from "react-native";
 
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
 export function useOrbitGestures() {
   const orbitAngle = useRef(new RNAnimated.Value(0)).current;
   const orbitAngleValueRef = useRef(0);
@@ -11,10 +13,6 @@ export function useOrbitGestures() {
   const decayListenerRef = useRef<string | null>(null);
   const isSpinningRef = useRef(false);
   const [isSpinning, setIsSpinning] = useState(false);
-  const boltPositionsRef = useRef<Array<{ x: number; y: number }>>([]);
-  const [boltTick, setBoltTick] = useState(0);
-  const computeBoltPositionsRef = useRef<(() => void) | null>(null);
-
   // Cleanup animation listeners on unmount
   useEffect(() => {
     return () => {
@@ -52,15 +50,13 @@ export function useOrbitGestures() {
         setIsSpinning(true);
         const touchX = event.nativeEvent.pageX;
         const touchY = event.nativeEvent.pageY;
-        const { width, height } = Dimensions.get("window");
-        lastAngleRef.current = Math.atan2(touchY - height / 2, touchX - width / 2);
+        lastAngleRef.current = Math.atan2(touchY - SCREEN_HEIGHT / 2, touchX - SCREEN_WIDTH / 2);
       },
       onPanResponderMove: (event) => {
         if (lastAngleRef.current === null) return;
         const touchX = event.nativeEvent.pageX;
         const touchY = event.nativeEvent.pageY;
-        const { width, height } = Dimensions.get("window");
-        const currentAngle = Math.atan2(touchY - height / 2, touchX - width / 2);
+        const currentAngle = Math.atan2(touchY - SCREEN_HEIGHT / 2, touchX - SCREEN_WIDTH / 2);
         let deltaAngle = currentAngle - lastAngleRef.current;
         if (deltaAngle > Math.PI) deltaAngle -= 2 * Math.PI;
         else if (deltaAngle < -Math.PI) deltaAngle += 2 * Math.PI;
@@ -98,16 +94,12 @@ export function useOrbitGestures() {
             decayListenerRef.current = null;
             orbitVelocity.current = 0;
             decayAnimationRef.current = null;
-            computeBoltPositionsRef.current?.();
             isSpinningRef.current = false;
             setIsSpinning(false);
-            setBoltTick((t) => t + 1);
           });
         } else {
-          computeBoltPositionsRef.current?.();
           isSpinningRef.current = false;
           setIsSpinning(false);
-          setBoltTick((t) => t + 1);
         }
         lastAngleRef.current = null;
       },
@@ -119,9 +111,5 @@ export function useOrbitGestures() {
     orbitAngle,
     orbitAngleValueRef,
     isSpinning,
-    boltPositionsRef,
-    boltTick,
-    setBoltTick,
-    computeBoltPositionsRef,
   };
 }

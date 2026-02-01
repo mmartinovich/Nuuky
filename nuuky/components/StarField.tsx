@@ -112,10 +112,5 @@ const styles = StyleSheet.create({
     position: 'absolute',
     backgroundColor: '#ffffff',
     borderRadius: 9999,
-    shadowColor: '#ffffff',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 1,
-    elevation: 1,
   },
 });

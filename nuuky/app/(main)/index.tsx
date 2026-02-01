@@ -70,7 +70,6 @@ import { useAudio } from "../../hooks/useAudio";
 import { useNotifications } from "../../hooks/useNotifications";
 import { useOrbitGestures } from "../../hooks/useOrbitGestures";
 import { useSpeakingAnimations } from "../../hooks/useSpeakingAnimations";
-import { useStreakBolts } from "../../hooks/useStreakBolts";
 import { getMoodColor, getVibeText, getCustomMoodColor } from "../../lib/theme";
 import { CentralOrb } from "../../components/CentralOrb";
 import { FriendParticle } from "../../components/FriendParticle";
@@ -79,7 +78,6 @@ import { FriendActionBubble } from "../../components/FriendActionBubble";
 import { RoomListModal } from "../../components/RoomListModal";
 import { CreateRoomModal } from "../../components/CreateRoomModal";
 import { RoomSettingsModal } from "../../components/RoomSettingsModal";
-import { ElectricBolt } from "../../components/ElectricBolt";
 import { TopHeader } from "../../components/TopHeader";
 import { BottomNavBar } from "../../components/BottomNavBar";
 
@@ -139,7 +137,7 @@ export default function QuantumOrbitScreen() {
   const [showRoomList, setShowRoomList] = useState(false);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
   const [showRoomSettings, setShowRoomSettings] = useState(false);
-  const [boltsReady, setBoltsReady] = useState(false);
+
 
   // Extracted hooks
   const isCurrentUserSpeaking = currentUser?.id ? speakingParticipants.includes(currentUser.id) : false;
@@ -149,10 +147,6 @@ export default function QuantumOrbitScreen() {
     orbitAngle,
     orbitAngleValueRef,
     isSpinning,
-    boltPositionsRef,
-    boltTick,
-    setBoltTick,
-    computeBoltPositionsRef,
   } = useOrbitGestures();
 
   const { buttonScaleAnim, buttonGlowAnim, ringAnims } = useSpeakingAnimations({
@@ -194,17 +188,6 @@ export default function QuantumOrbitScreen() {
   }, [defaultRoomId, participantUsers, friendList]);
 
   const orbitIds = useMemo(() => orbitUsers.map((f) => f.id).join(","), [orbitUsers]);
-
-  // Delay bolt visibility until avatars have had a frame to mount
-  useEffect(() => {
-    if (orbitUsers.length > 0 && !boltsReady) {
-      const timer = setTimeout(() => setBoltsReady(true), 300);
-      return () => clearTimeout(timer);
-    }
-    if (orbitUsers.length === 0) {
-      setBoltsReady(false);
-    }
-  }, [orbitUsers.length, boltsReady]);
 
   // Organic layout algorithm
   const calculateFriendPositions = (count: number) => {
@@ -290,19 +273,17 @@ export default function QuantumOrbitScreen() {
     });
   }, [orbitPositions]);
 
-  const { activeBolts, streakMap } = useStreakBolts({
-    streaks,
-    orbitUsers,
-    orbitBaseAngles,
-    orbitRadii,
-    orbitAngleValueRef,
-    orbitAngle,
-    boltTick,
-    setBoltTick,
-    isSpinning,
-    boltPositionsRef,
-    computeBoltPositionsRef,
-  });
+  const streakMap = useMemo(() => {
+    const map = new Map<string, (typeof streaks)[0]>();
+    for (const s of streaks) {
+      map.set(s.friend_id, s);
+    }
+    return map;
+  }, [streaks]);
+
+  const activeFlareUserIds = useMemo(() => {
+    return new Set(activeFlares.map((f: any) => f.user_id));
+  }, [activeFlares]);
 
   const handleStreakInteraction = useCallback(() => {
     if (selectedFriend) {
@@ -541,24 +522,6 @@ export default function QuantumOrbitScreen() {
       <StarField />
       <View style={[styles.grain, { backgroundColor: theme.colors.grain }]} pointerEvents="none" />
 
-      {/* Electric Bolt Layer */}
-      {activeBolts.length > 0 && !isSpinning && boltsReady && boltPositionsRef.current.length === activeBolts.length && (
-        <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          {activeBolts.map(({ streak: s }, i) => (
-            <ElectricBolt
-              key={s.friend_id}
-              fromX={CENTER_X}
-              fromY={CENTER_Y}
-              toX={boltPositionsRef.current[i]?.x ?? CENTER_X}
-              toY={boltPositionsRef.current[i]?.y ?? CENTER_Y}
-              state={s.state}
-              consecutiveDays={s.consecutive_days}
-              boltIndex={i}
-            />
-          ))}
-        </View>
-      )}
-
       {/* Gesture handler for drag-to-spin */}
       <View style={StyleSheet.absoluteFill} {...panResponder.panHandlers} pointerEvents="auto" />
 
@@ -586,7 +549,7 @@ export default function QuantumOrbitScreen() {
             index={index}
             total={orbitUsers.length}
             onPress={() => handleFriendPress(user, index)}
-            hasActiveFlare={activeFlares.some((f: any) => f.user_id === user.id)}
+            hasActiveFlare={activeFlareUserIds.has(user.id)}
             position={orbitPositions[index] || { x: CENTER_X, y: CENTER_Y }}
             baseAngle={orbitBaseAngles[index] || 0}
             radius={orbitRadii[index] || 150}
