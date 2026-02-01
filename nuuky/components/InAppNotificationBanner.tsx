@@ -4,11 +4,11 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   Animated,
   PanResponder,
   Dimensions,
 } from 'react-native';
+import { Image as CachedImage } from 'expo-image';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -183,12 +183,15 @@ export const InAppNotificationBanner: React.FC<Props> = ({ notification, onDismi
             {/* App icon or Avatar */}
             <View style={styles.iconContainer}>
               {notification.avatarUrl ? (
-                <Image
+                <CachedImage
                   source={{ uri: notification.avatarUrl }}
                   style={[
                     styles.avatar,
                     { borderColor: theme.colors.glass.border },
                   ]}
+                  cachePolicy="memory-disk"
+                  contentFit="cover"
+                  transition={200}
                 />
               ) : (
                 <View

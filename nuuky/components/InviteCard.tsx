@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Image as CachedImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
@@ -83,13 +84,16 @@ export const InviteCard: React.FC<InviteCardProps> = ({ invite, onAccept, onDecl
           <View style={styles.header}>
             <View style={styles.senderRow}>
               {sender?.avatar_url ? (
-                <Image
+                <CachedImage
                   source={{ uri: sender.avatar_url }}
                   style={[
                     styles.avatar,
                     { borderColor: theme.colors.glass.border, backgroundColor: theme.colors.bg.secondary },
                     senderMoodColors && { borderColor: senderMoodColors.base }
                   ]}
+                  cachePolicy="memory-disk"
+                  contentFit="cover"
+                  transition={200}
                 />
               ) : sender ? (
                 <LinearGradient

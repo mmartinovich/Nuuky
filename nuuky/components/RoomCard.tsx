@@ -1,5 +1,6 @@
 import React, { memo, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { Image as CachedImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Room, User } from '../types';
@@ -121,13 +122,16 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, isCreator =
                 ]}
               >
                 {user.avatar_url ? (
-                  <Image
+                  <CachedImage
                     source={{ uri: user.avatar_url }}
                     style={[
                       styles.avatar,
                       dynamicStyles.avatar,
                       { borderColor: isOnline ? moodColors.base : theme.colors.ui.borderLight }
                     ]}
+                    cachePolicy="memory-disk"
+                    contentFit="cover"
+                    transition={200}
                   />
                 ) : (
                   <View style={[styles.avatar, styles.avatarPlaceholder, { backgroundColor: accent.soft, borderColor: accent.primary + '4D' }]}>
@@ -160,9 +164,12 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, isCreator =
                 ]}
               >
                 {user.avatar_url ? (
-                  <Image
+                  <CachedImage
                     source={{ uri: user.avatar_url }}
                     style={[styles.avatarSmall, dynamicStyles.avatarSmall]}
+                    cachePolicy="memory-disk"
+                    contentFit="cover"
+                    transition={200}
                   />
                 ) : (
                   <View style={[styles.avatarSmall, styles.avatarPlaceholder, { backgroundColor: accent.soft, borderColor: accent.primary + '4D' }]}>

@@ -8,13 +8,13 @@ import {
   TextInput,
   ScrollView,
   Alert,
-  Image,
   ActivityIndicator,
   LayoutAnimation,
   Platform,
   UIManager,
   Dimensions,
 } from "react-native";
+import { Image as CachedImage } from 'expo-image';
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { getMoodColor, interactionStates } from "../lib/theme";
@@ -116,6 +116,8 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
   const [membersExpanded, setMembersExpanded] = useState(false);
   const [inviteExpanded, setInviteExpanded] = useState(false);
   const [invitingIds, setInvitingIds] = useState<Set<string>>(new Set());
+  const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
+  const [inviteSearch, setInviteSearch] = useState("");
 
   const handleRename = async () => {
     if (!newName.trim()) {
@@ -188,6 +190,7 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
   const toggleInviteExpanded = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setInviteExpanded(!inviteExpanded);
+    if (inviteExpanded) setInviteSearch("");
   };
 
   const availableFriends = useMemo(() => {
@@ -195,11 +198,17 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
     return friends.filter((f) => !participantIds.includes(f.id));
   }, [friends, participantIds]);
 
+  const filteredFriends = useMemo(() => {
+    if (!inviteSearch.trim()) return availableFriends;
+    const q = inviteSearch.trim().toLowerCase();
+    return availableFriends.filter((f) => f.display_name.toLowerCase().includes(q));
+  }, [availableFriends, inviteSearch]);
 
   const handleInviteFriend = async (friendId: string) => {
     setInvitingIds((prev) => new Set(prev).add(friendId));
     try {
       await onInvite?.(friendId);
+      setInvitedIds((prev) => new Set(prev).add(friendId));
     } finally {
       setInvitingIds((prev) => {
         const next = new Set(prev);
@@ -244,6 +253,8 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
     setNewName(roomName);
     setMembersExpanded(false);
     setInviteExpanded(false);
+    setInviteSearch("");
+    setInvitedIds(new Set());
     progress.value = withTiming(0, { duration: 200, easing: Easing.in(Easing.cubic) }, () => {
       runOnJS(onClose)();
     });
@@ -266,7 +277,7 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
         ]}
       >
         {user.avatar_url ? (
-          <Image
+          <CachedImage
             source={{ uri: user.avatar_url }}
             style={[
               styles.stackedAvatar,
@@ -275,6 +286,9 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                 backgroundColor: theme.colors.bg.secondary,
               },
             ]}
+            cachePolicy="memory-disk"
+            contentFit="cover"
+            transition={200}
           />
         ) : (
           <View
@@ -315,7 +329,7 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
             {/* Avatar with mood border */}
             <View style={styles.memberAvatarWrapper}>
               {user.avatar_url ? (
-                <Image
+                <CachedImage
                   source={{ uri: user.avatar_url }}
                   style={[
                     styles.memberAvatar,
@@ -323,6 +337,9 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                       borderColor: isOnline ? moodColors.base : theme.colors.glass.border,
                     },
                   ]}
+                  cachePolicy="memory-disk"
+                  contentFit="cover"
+                  transition={200}
                 />
               ) : (
                 <View
@@ -541,7 +558,7 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                     </TouchableOpacity>
 
                     {inviteExpanded && (
-                      <View style={styles.expandedMembersList}>
+                      <View style={styles.expandedInviteList}>
                         <View style={[styles.fullWidthSeparator, { backgroundColor: theme.colors.glass.border }]} />
                         {availableFriends.length === 0 ? (
                           <View style={styles.inviteEmptyState}>
@@ -551,7 +568,29 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                             </Text>
                           </View>
                         ) : (
-                          availableFriends.map((friend, index) => {
+                          <>
+                          <View style={[styles.inviteSearchContainer, { borderBottomColor: theme.colors.glass.border }]}>
+                            <Ionicons name="search" size={16} color={theme.colors.text.tertiary} />
+                            <TextInput
+                              style={[styles.inviteSearchInput, { color: theme.colors.text.primary }]}
+                              value={inviteSearch}
+                              onChangeText={setInviteSearch}
+                              placeholder="Search friends..."
+                              placeholderTextColor={theme.colors.text.tertiary}
+                              autoCorrect={false}
+                            />
+                            {inviteSearch.length > 0 && (
+                              <TouchableOpacity onPress={() => setInviteSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                <Ionicons name="close-circle" size={16} color={theme.colors.text.tertiary} />
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                          <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={filteredFriends.length > 4}>
+                          {filteredFriends.length === 0 ? (
+                            <View style={styles.inviteEmptyState}>
+                              <Text style={[styles.inviteEmptyText, { color: theme.colors.text.tertiary }]}>No matches</Text>
+                            </View>
+                          ) : filteredFriends.map((friend, index) => {
                             const isInviting = invitingIds.has(friend.id);
                             const isOnline = isUserTrulyOnline(friend.is_online, friend.last_seen_at);
                             return (
@@ -561,9 +600,12 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                                   <View style={styles.memberInfo}>
                                     <View style={styles.memberAvatarWrapper}>
                                       {friend.avatar_url ? (
-                                        <Image
+                                        <CachedImage
                                           source={{ uri: friend.avatar_url }}
                                           style={[styles.memberAvatar, { borderColor: theme.colors.glass.border }]}
+                                          cachePolicy="memory-disk"
+                                          contentFit="cover"
+                                          transition={200}
                                         />
                                       ) : (
                                         <View style={[styles.memberAvatar, styles.memberAvatarPlaceholder, { backgroundColor: accent.soft, borderColor: theme.colors.glass.border }]}>
@@ -579,22 +621,34 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                                       <Text style={[styles.memberStatus, { color: theme.colors.text.tertiary }]}>{isOnline ? "Online" : "Offline"}</Text>
                                     </View>
                                   </View>
-                                  <TouchableOpacity
-                                    style={[styles.inviteButton, { backgroundColor: accent.primary }]}
-                                    onPress={() => handleInviteFriend(friend.id)}
-                                    disabled={isInviting}
-                                    activeOpacity={0.7}
-                                  >
-                                    {isInviting ? (
-                                      <ActivityIndicator size="small" color="#FFF" />
-                                    ) : (
-                                      <Ionicons name="send" size={14} color="#FFF" />
-                                    )}
-                                  </TouchableOpacity>
+                                  {invitedIds.has(friend.id) ? (
+                                    <View style={[styles.invitedBadge, { backgroundColor: `${theme.colors.status.success}20` }]}>
+                                      <Ionicons name="checkmark" size={14} color={theme.colors.status.success} />
+                                      <Text style={[styles.invitedText, { color: theme.colors.status.success }]}>Invited</Text>
+                                    </View>
+                                  ) : (
+                                    <TouchableOpacity
+                                      style={[styles.inviteButton, { backgroundColor: accent.primary }]}
+                                      onPress={() => handleInviteFriend(friend.id)}
+                                      disabled={isInviting}
+                                      activeOpacity={0.7}
+                                    >
+                                      {isInviting ? (
+                                        <ActivityIndicator size="small" color="#FFF" />
+                                      ) : (
+                                        <>
+                                          <Ionicons name="send" size={12} color="#FFF" />
+                                          <Text style={styles.inviteButtonText}>Invite</Text>
+                                        </>
+                                      )}
+                                    </TouchableOpacity>
+                                  )}
                                 </View>
                               </React.Fragment>
                             );
-                          })
+                          })}
+                          </ScrollView>
+                          </>
                         )}
                       </View>
                     )}
@@ -626,26 +680,28 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                   </View>
                 )}
 
-                {/* Leave Room - Separate Card */}
-                <View style={[styles.groupedCard, styles.leaveCard, { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border }]}>
-                  <TouchableOpacity
-                    style={styles.groupedCardRow}
-                    onPress={() => {
-                      onLeave();
-                      onClose();
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.actionIconContainer, styles.leaveIconContainer, { backgroundColor: `${theme.colors.status.error}20` }]}>
-                      <Ionicons name="exit-outline" size={18} color={theme.colors.status.error} />
-                    </View>
-                    <View style={styles.actionTextContainer}>
-                      <Text style={[styles.actionTitle, styles.leaveText, { color: theme.colors.status.error }]}>Leave Room</Text>
-                      <Text style={[styles.actionSubtitle, { color: theme.colors.text.tertiary }]}>Exit this room</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={18} color={theme.colors.text.tertiary} />
-                  </TouchableOpacity>
-                </View>
+                {/* Leave Room - Only for non-creators */}
+                {!isCreator && (
+                  <View style={[styles.groupedCard, styles.leaveCard, { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border }]}>
+                    <TouchableOpacity
+                      style={styles.groupedCardRow}
+                      onPress={() => {
+                        onLeave();
+                        onClose();
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.actionIconContainer, styles.leaveIconContainer, { backgroundColor: `${theme.colors.status.error}20` }]}>
+                        <Ionicons name="exit-outline" size={18} color={theme.colors.status.error} />
+                      </View>
+                      <View style={styles.actionTextContainer}>
+                        <Text style={[styles.actionTitle, styles.leaveText, { color: theme.colors.status.error }]}>Leave Room</Text>
+                        <Text style={[styles.actionSubtitle, { color: theme.colors.text.tertiary }]}>Exit this room</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={theme.colors.text.tertiary} />
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
 
               {/* Danger Zone (Creator Only) */}
@@ -958,12 +1014,47 @@ const styles = StyleSheet.create({
   removeButton: {
     padding: 4,
   },
-  inviteButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    justifyContent: "center",
+  expandedInviteList: {
+    maxHeight: 320,
+    overflow: "hidden",
+  },
+  inviteSearchContainer: {
+    flexDirection: "row",
     alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 8,
+    borderBottomWidth: 1,
+  },
+  inviteSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    padding: 0,
+  },
+  inviteButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+  },
+  inviteButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#FFF",
+  },
+  invitedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+  },
+  invitedText: {
+    fontSize: 13,
+    fontWeight: "600",
   },
   inviteEmptyState: {
     alignItems: "center",

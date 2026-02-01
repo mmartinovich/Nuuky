@@ -4,9 +4,9 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   Animated,
 } from 'react-native';
+import { Image as CachedImage } from 'expo-image';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Reanimated, {
   SharedValue,
@@ -181,9 +181,12 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
                 {/* Avatar or Icon */}
                 <View style={styles.iconContainer}>
                   {avatarUrl ? (
-                    <Image
+                    <CachedImage
                       source={{ uri: avatarUrl }}
                       style={[styles.avatar, { borderColor: theme.colors.glass.border }]}
+                      cachePolicy="memory-disk"
+                      contentFit="cover"
+                      transition={200}
                     />
                   ) : (
                     <View

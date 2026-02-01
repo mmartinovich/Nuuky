@@ -6,10 +6,10 @@ import {
   Modal,
   TouchableOpacity,
   ScrollView,
-  Image,
   ActivityIndicator,
   TextInput,
 } from "react-native";
+import { Image as CachedImage } from 'expo-image';
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -183,7 +183,7 @@ const UserResultItem: React.FC<UserResultItemProps> = ({ user, isFriend, isAddin
         {/* Avatar */}
         <View style={styles.avatarContainer}>
           {user.avatar_url ? (
-            <Image source={{ uri: user.avatar_url }} style={styles.avatar} />
+            <CachedImage source={{ uri: user.avatar_url }} style={styles.avatar} cachePolicy="memory-disk" contentFit="cover" transition={200} />
           ) : (
             <View style={[styles.avatar, styles.avatarPlaceholder, { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border }]}>
               <Text style={[styles.avatarText, { color: theme.colors.text.primary }]}>{user.display_name.charAt(0).toUpperCase()}</Text>

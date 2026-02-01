@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
-import { View, Text, Image, StyleSheet, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { spacing, typography } from '../../lib/theme';
 import { useTheme } from '../../hooks/useTheme';
@@ -79,6 +80,9 @@ export const Avatar: React.FC<AvatarProps> = memo(({
             styles.image,
             { width: dimension, height: dimension, borderRadius: dimension / 2 },
           ]}
+          cachePolicy="memory-disk"
+          contentFit="cover"
+          transition={200}
         />
       ) : (
         <LinearGradient
@@ -119,7 +123,6 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   image: {
-    resizeMode: 'cover',
   },
   fallback: {
     alignItems: 'center',

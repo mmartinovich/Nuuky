@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useMemo, memo } from 'react';
-import { View, StyleSheet, Dimensions, TouchableOpacity, Animated, Easing, Text, Image } from 'react-native';
+import { View, StyleSheet, Dimensions, TouchableOpacity, Animated, Easing, Text } from 'react-native';
+import { Image as CachedImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { User, Streak } from '../types';
@@ -369,10 +370,12 @@ function FriendParticleComponent({
           {/* Avatar circle - on top */}
           <View style={styles.avatarContainer}>
             {friend.avatar_url ? (
-              <Image
+              <CachedImage
                 source={{ uri: friend.avatar_url }}
                 style={styles.avatar}
-                resizeMode="cover"
+                cachePolicy="memory-disk"
+                contentFit="cover"
+                transition={200}
               />
             ) : (
               <View style={[styles.avatarPlaceholder, { backgroundColor: `${moodColors.base}30` }]}>

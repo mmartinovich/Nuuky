@@ -11,10 +11,10 @@ import {
   Platform,
   StatusBar,
   Animated,
-  Image,
   KeyboardAvoidingView,
   Keyboard,
 } from "react-native";
+import { Image as CachedImage } from 'expo-image';
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
@@ -407,18 +407,22 @@ export default function ProfileScreen() {
           >
             <View style={styles.avatarContainer}>
               {previewUri ? (
-                <Image
+                <CachedImage
                   key={`preview-${previewUri}`}
                   source={{ uri: previewUri }}
                   style={styles.avatar}
-                  resizeMode="cover"
+                  cachePolicy="memory-disk"
+                  contentFit="cover"
+                  transition={200}
                 />
               ) : currentUser?.avatar_url ? (
-                <Image
+                <CachedImage
                   key={`avatar-${imageKey}`}
-                  source={{ uri: currentUser.avatar_url, cache: "reload" }}
+                  source={{ uri: currentUser.avatar_url }}
                   style={styles.avatar}
-                  resizeMode="cover"
+                  cachePolicy="memory-disk"
+                  contentFit="cover"
+                  transition={200}
                 />
               ) : (
                 <LinearGradient colors={["#5856D6", "#AF52DE"]} style={styles.avatarGradient}>

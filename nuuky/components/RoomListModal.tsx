@@ -6,8 +6,8 @@ import {
   Modal,
   TouchableOpacity,
   ScrollView,
-  Image,
 } from 'react-native';
+import { Image as CachedImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { spacing, radius, typography } from '../lib/theme';
@@ -115,7 +115,7 @@ const RoomCard: React.FC<{ room: Room; onJoin: () => void }> = ({ room, onJoin }
                 return (
                   <View key={participant.id} style={[styles.avatarWrapper, { marginLeft: index > 0 ? -8 : 0 }]}>
                     {user.avatar_url ? (
-                      <Image source={{ uri: user.avatar_url }} style={[styles.avatar, { borderColor: theme.colors.bg.primary }]} />
+                      <CachedImage source={{ uri: user.avatar_url }} style={[styles.avatar, { borderColor: theme.colors.bg.primary }]} cachePolicy="memory-disk" contentFit="cover" transition={200} />
                     ) : (
                       <View style={[styles.avatar, styles.avatarPlaceholder, { borderColor: theme.colors.bg.primary, backgroundColor: theme.colors.glass.background }]}>
                         <Text style={[styles.avatarText, { color: theme.colors.text.primary }]}>

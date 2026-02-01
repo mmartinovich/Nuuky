@@ -1,5 +1,6 @@
 import React, { useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, Alert, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { Image as CachedImage } from 'expo-image';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Reanimated, {
   SharedValue,
@@ -112,7 +113,7 @@ export const SwipeableFriendCard: React.FC<SwipeableFriendCardProps> = ({
         <View style={styles.friendInfo}>
           <View style={styles.friendAvatarWrapper}>
             {friend.avatar_url ? (
-              <Image
+              <CachedImage
                 source={{ uri: friend.avatar_url }}
                 style={[
                   styles.friendAvatar,
@@ -120,6 +121,9 @@ export const SwipeableFriendCard: React.FC<SwipeableFriendCardProps> = ({
                     borderColor: isOnline ? moodColors.base : theme.colors.ui.borderLight,
                   },
                 ]}
+                cachePolicy="memory-disk"
+                contentFit="cover"
+                transition={200}
               />
             ) : (
               <View

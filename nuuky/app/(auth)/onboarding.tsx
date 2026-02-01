@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -15,6 +14,7 @@ import {
   ActivityIndicator,
   Keyboard,
 } from "react-native";
+import { Image as CachedImage } from 'expo-image';
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -285,7 +285,7 @@ export default function OnboardingScreen() {
               >
                 <View style={styles.avatarContainer}>
                   {avatarUri ? (
-                    <Image source={{ uri: avatarUri }} style={styles.avatar} resizeMode="cover" />
+                    <CachedImage source={{ uri: avatarUri }} style={styles.avatar} cachePolicy="memory-disk" contentFit="cover" transition={200} />
                   ) : (
                     <LinearGradient colors={["#5856D6", "#AF52DE"]} style={styles.avatarGradient}>
                       <Text style={styles.avatarInitial}>

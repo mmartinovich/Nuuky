@@ -6,9 +6,9 @@ import {
   Modal,
   TouchableOpacity,
   ScrollView,
-  Image,
   ActivityIndicator,
 } from 'react-native';
+import { Image as CachedImage } from 'expo-image';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, typography } from '../lib/theme';
@@ -111,7 +111,7 @@ const FriendItem: React.FC<FriendItemProps> = ({ friend, onInvite, isInviting, a
         {/* Avatar */}
         <View style={styles.avatarContainer}>
           {friend.avatar_url ? (
-            <Image source={{ uri: friend.avatar_url }} style={styles.avatar} />
+            <CachedImage source={{ uri: friend.avatar_url }} style={styles.avatar} cachePolicy="memory-disk" contentFit="cover" transition={200} />
           ) : (
             <View style={[styles.avatar, styles.avatarPlaceholder]}>
               <Text style={styles.avatarText}>{friend.display_name.charAt(0).toUpperCase()}</Text>
