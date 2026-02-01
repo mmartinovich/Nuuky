@@ -1,86 +1,116 @@
 import { renderHook, act } from '@testing-library/react-native';
+import { Alert } from 'react-native';
+
+const mockInitialize = jest.fn();
+const mockSetCallbacks = jest.fn();
+const mockConnect = jest.fn().mockResolvedValue(true);
+const mockDisconnect = jest.fn().mockResolvedValue(undefined);
+const mockSetMic = jest.fn();
+const mockIsConnected = jest.fn().mockReturnValue(false);
+const mockIsMicEnabled = jest.fn().mockReturnValue(false);
+const mockGetCurrentRoom = jest.fn().mockReturnValue(null);
+
+jest.mock('../../lib/livekit', () => ({
+  initializeLiveKit: () => mockInitialize(),
+  setAudioEventCallbacks: (cb: any) => mockSetCallbacks(cb),
+  connectToAudioRoom: (...args: any[]) => mockConnect(...args),
+  disconnectFromAudioRoom: () => mockDisconnect(),
+  setLocalMicrophoneEnabled: (v: any) => mockSetMic(v),
+  isConnected: () => mockIsConnected(),
+  isMicrophoneEnabled: () => mockIsMicEnabled(),
+  getCurrentRoom: () => mockGetCurrentRoom(),
+}));
+
+jest.mock('../../lib/logger', () => ({ logger: { error: jest.fn(), warn: jest.fn() } }));
+
 import { useAudio } from '../../hooks/useAudio';
 import { useAppStore } from '../../stores/appStore';
 
-// Mock the LiveKit module
-jest.mock('../../lib/livekit', () => ({
-  connectToAudioRoom: jest.fn().mockResolvedValue(true),
-  disconnectFromAudioRoom: jest.fn().mockResolvedValue(undefined),
-  setLocalMicrophoneEnabled: jest.fn().mockResolvedValue(undefined),
-  isConnected: jest.fn().mockReturnValue(false),
-  isMicrophoneEnabled: jest.fn().mockReturnValue(false),
-  setAudioEventCallbacks: jest.fn(),
-}));
+const mockUser = { id: 'u1', display_name: 'Test' };
 
-// Mock permissions
-jest.mock('expo-device', () => ({
-  isDevice: true,
-}));
-
-jest.mock('react-native/Libraries/PermissionsAndroid/PermissionsAndroid', () => ({
-  PERMISSIONS: {
-    RECORD_AUDIO: 'android.permission.RECORD_AUDIO',
-  },
-  request: jest.fn().mockResolvedValue('granted'),
-}));
+beforeEach(() => {
+  jest.clearAllMocks();
+  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  useAppStore.setState({
+    currentUser: mockUser as any,
+    audioConnectionStatus: 'disconnected',
+    speakingParticipants: [],
+  });
+});
 
 describe('useAudio', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-
-    // Reset store
-    useAppStore.setState({
-      audioConnectionStatus: 'disconnected',
-      audioError: null,
-      speakingParticipants: [],
-      currentUser: {
-        id: 'user123',
-        email: 'test@example.com',
-        display_name: 'Test User',
-        mood: 'neutral',
-      },
-      isAuthenticated: true,
-    });
-  });
-
-  test('initializes with disconnected state', () => {
-    const { result } = renderHook(() => useAudio('room123'));
-
-    expect(result.current.connectionStatus).toBe('disconnected');
+  test('returns initial disconnected state', () => {
+    const { result } = renderHook(() => useAudio('room1'));
     expect(result.current.isConnected).toBe(false);
     expect(result.current.isConnecting).toBe(false);
     expect(result.current.isMicrophoneEnabled).toBe(false);
   });
 
-  test('connection status updates from store', () => {
-    const { result } = renderHook(() => useAudio('room123'));
-
-    act(() => {
-      useAppStore.getState().setAudioConnectionStatus('connecting');
-    });
-
-    expect(result.current.connectionStatus).toBe('connecting');
-    expect(result.current.isConnecting).toBe(true);
+  test('initializes LiveKit on mount', () => {
+    renderHook(() => useAudio('room1'));
+    expect(mockInitialize).toHaveBeenCalled();
   });
 
-  test('speaking participants update from store', () => {
-    const { result } = renderHook(() => useAudio('room123'));
-
-    act(() => {
-      useAppStore.getState().addSpeakingParticipant('user456');
-    });
-
-    expect(result.current.speakingParticipants).toContain('user456');
+  test('sets event callbacks on mount', () => {
+    renderHook(() => useAudio('room1'));
+    expect(mockSetCallbacks).toHaveBeenCalledWith(expect.objectContaining({
+      onConnectionStatusChange: expect.any(Function),
+      onParticipantSpeaking: expect.any(Function),
+      onError: expect.any(Function),
+      onAllMuted: expect.any(Function),
+    }));
   });
 
-  test('isParticipantSpeaking returns correct value', () => {
-    const { result } = renderHook(() => useAudio('room123'));
+  test('connect calls connectToAudioRoom', async () => {
+    mockIsConnected.mockReturnValue(false);
+    const { result } = renderHook(() => useAudio('room1'));
+    let ok = false;
+    await act(async () => { ok = await result.current.connect(); });
+    expect(mockConnect).toHaveBeenCalledWith('room1');
+    expect(ok).toBe(true);
+  });
 
-    act(() => {
-      useAppStore.getState().addSpeakingParticipant('user456');
-    });
+  test('connect returns false without roomId', async () => {
+    const { result } = renderHook(() => useAudio(null));
+    let ok = true;
+    await act(async () => { ok = await result.current.connect(); });
+    expect(ok).toBe(false);
+  });
 
-    expect(result.current.isParticipantSpeaking('user456')).toBe(true);
-    expect(result.current.isParticipantSpeaking('user789')).toBe(false);
+  test('connect enables mic when already connected', async () => {
+    mockIsConnected.mockReturnValue(true);
+    const { result } = renderHook(() => useAudio('room1'));
+    await act(async () => { await result.current.connect(); });
+    expect(mockSetMic).toHaveBeenCalledWith(true);
+    expect(mockConnect).not.toHaveBeenCalled();
+  });
+
+  test('disconnect calls disconnectFromAudioRoom', async () => {
+    const { result } = renderHook(() => useAudio('room1'));
+    await act(async () => { await result.current.disconnect(); });
+    expect(mockDisconnect).toHaveBeenCalled();
+  });
+
+  test('mute disables mic when connected', async () => {
+    mockIsConnected.mockReturnValue(true);
+    const { result } = renderHook(() => useAudio('room1'));
+    await act(async () => { await result.current.mute(); });
+    expect(mockSetMic).toHaveBeenCalledWith(false);
+  });
+
+  test('isParticipantSpeaking checks store', () => {
+    useAppStore.setState({ speakingParticipants: ['u2'] });
+    const { result } = renderHook(() => useAudio('room1'));
+    expect(result.current.isParticipantSpeaking('u2')).toBe(true);
+    expect(result.current.isParticipantSpeaking('u3')).toBe(false);
+  });
+
+  test('connect returns false when connection fails', async () => {
+    mockIsConnected.mockReturnValue(false);
+    mockConnect.mockResolvedValueOnce(false);
+    const { result } = renderHook(() => useAudio('room1'));
+    let ok = true;
+    await act(async () => { ok = await result.current.connect(); });
+    expect(ok).toBe(false);
   });
 });

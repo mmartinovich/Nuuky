@@ -9,7 +9,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-} from 'react';
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { spacing, radius, typography } from '../lib/theme';
