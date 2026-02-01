@@ -75,6 +75,7 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, isCreator =
       style={[
         styles.card,
         dynamicStyles.card,
+        { borderWidth: 1, borderColor: theme.colors.glass.border },
         isDefault && [styles.cardSelected, { backgroundColor: accent.soft, borderColor: accent.primary + '40' }],
       ]}
     >
