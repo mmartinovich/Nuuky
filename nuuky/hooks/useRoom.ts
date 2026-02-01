@@ -774,6 +774,7 @@ export const useRoom = () => {
         .eq('room_id', roomId)
         .eq('receiver_id', friendId)
         .eq('status', 'pending')
+        .gt('expires_at', new Date().toISOString())
         .maybeSingle();
 
       if (existingInvite) {

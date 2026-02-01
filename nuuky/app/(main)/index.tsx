@@ -178,11 +178,14 @@ export default function QuantumOrbitScreen() {
   }, [roomParticipants, currentUser?.id]);
 
   // If we know a default room exists (persisted ID), wait for participant data
-  // instead of briefly showing friendList then switching
+  // instead of briefly showing friendList then switching.
+  // If the user is the only participant, fall back to friendList so the orbit isn't empty.
   const orbitUsers = useMemo(() => {
     if (defaultRoomId) {
       // We expect room participants — only show them once loaded
-      return participantUsers;
+      // But if user is the only one in the room, participantUsers is empty
+      // (current user is filtered out), so fall back to friendList
+      return participantUsers.length > 0 ? participantUsers : friendList;
     }
     return friendList;
   }, [defaultRoomId, participantUsers, friendList]);
@@ -294,7 +297,9 @@ export default function QuantumOrbitScreen() {
   // Join default room when it's set
   useEffect(() => {
     if (defaultRoom && currentUser) {
-      joinRoomFn(defaultRoom.id);
+      joinRoomFn(defaultRoom.id).catch((err: any) => {
+        console.error('Failed to auto-join default room:', err);
+      });
     }
   }, [defaultRoom?.id, currentUser?.id]);
 
@@ -495,9 +500,16 @@ export default function QuantumOrbitScreen() {
     }
   }, [defaultRoom, isMuted, audioUnmute, audioMute]);
 
+  // Safety timeout: never stay on black screen for more than 5 seconds
+  const [safetyTimeout, setSafetyTimeout] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setSafetyTimeout(true), 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Keep splash screen visible until orbit data has settled
   const orbitSettled = orbitUsers.length > 0 || (!loading && friendList.length === 0);
-  const isDataReady = !!currentUser && !firstTimeLoading && orbitSettled;
+  const isDataReady = !!currentUser && !firstTimeLoading && (orbitSettled || safetyTimeout);
 
   useEffect(() => {
     if (isDataReady) {
