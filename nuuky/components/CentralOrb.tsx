@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useMemo, memo } from "react";
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Animated, Easing, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
+import Svg, { Defs, RadialGradient, Stop, Circle } from "react-native-svg";
 import * as Haptics from "expo-haptics";
 import { getMoodImage } from "../lib/theme";
 import { CustomMood } from "../types";
@@ -38,6 +39,9 @@ function CentralOrbComponent({
   const flareAnim = useRef(new Animated.Value(0)).current;
   const bounceAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(0)).current;
+  const ambientAnim = useRef(new Animated.Value(0)).current;
+  const ringAnim1 = useRef(new Animated.Value(0)).current;
+  const ringAnim2 = useRef(new Animated.Value(0.6)).current;
   const hintAnim = useRef(new Animated.Value(0)).current;
   const hintOpacity = useRef(new Animated.Value(showHint ? 1 : 0)).current;
 
@@ -99,11 +103,71 @@ function CentralOrbComponent({
     );
     pulseAnimation.start();
 
+    // Ambient glow - slower, async cycle (6s)
+    const ambientAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(ambientAnim, {
+          toValue: 1,
+          duration: 3000,
+          easing: Easing.bezier(0.3, 0, 0.7, 1),
+          useNativeDriver: true,
+        }),
+        Animated.timing(ambientAnim, {
+          toValue: 0,
+          duration: 3000,
+          easing: Easing.bezier(0.3, 0, 0.7, 1),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    ambientAnimation.start();
+
+    // Ring 1 - 8s cycle
+    const ring1Animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(ringAnim1, {
+          toValue: 1,
+          duration: 4000,
+          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          useNativeDriver: true,
+        }),
+        Animated.timing(ringAnim1, {
+          toValue: 0,
+          duration: 4000,
+          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    ring1Animation.start();
+
+    // Ring 2 - 6s cycle (different speed)
+    const ring2Animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(ringAnim2, {
+          toValue: 1,
+          duration: 3000,
+          easing: Easing.bezier(0.3, 0, 0.6, 1),
+          useNativeDriver: true,
+        }),
+        Animated.timing(ringAnim2, {
+          toValue: 0,
+          duration: 3000,
+          easing: Easing.bezier(0.3, 0, 0.6, 1),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    ring2Animation.start();
+
     // Cleanup on unmount
     return () => {
       breatheAnimation.stop();
       bounceAnimation.stop();
       pulseAnimation.stop();
+      ambientAnimation.stop();
+      ring1Animation.stop();
+      ring2Animation.stop();
     };
   }, []);
 
@@ -200,12 +264,39 @@ function CentralOrbComponent({
       }),
       outerGlowOpacity: breatheAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: [0.3, 0.5],
+        outputRange: [0.5, 0.8],
+      }),
+      // Ambient deep glow - large, slow, async
+      ambientScale: ambientAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [1.0, 1.15],
+      }),
+      ambientOpacity: ambientAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0.25, 0.45],
+      }),
+      // Hard ring 1 - 8s cycle
+      hardRingScale: ringAnim1.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0.05, 1.1],
+      }),
+      hardRingOpacity: ringAnim1.interpolate({
+        inputRange: [0, 0.15, 0.5, 0.85, 1],
+        outputRange: [0.006, 0.25, 0.01, 0.25, 0.006],
+      }),
+      // Hard ring 2 - 6s cycle, starts offset
+      hardRing2Scale: ringAnim2.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0.05, 1.15],
+      }),
+      hardRing2Opacity: ringAnim2.interpolate({
+        inputRange: [0, 0.15, 0.5, 0.85, 1],
+        outputRange: [0.006, 0.25, 0.01, 0.25, 0.006],
       }),
       // Mid glow for depth
       midGlowOpacity: pulseAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: [0.2, 0.4],
+        outputRange: [0.4, 0.7],
       }),
       // Inner orb scale - more noticeable breathing
       innerOrbScale: breatheAnim.interpolate({
@@ -236,7 +327,7 @@ function CentralOrbComponent({
         outputRange: [0.8, 0.3],
       }),
     }),
-    [breatheAnim, pulseAnim, bounceAnim, flareAnim, hintAnim]
+    [breatheAnim, pulseAnim, bounceAnim, flareAnim, hintAnim, ambientAnim, ringAnim1, ringAnim2]
   );
 
   const moodImage = getMoodImage(mood);
@@ -296,37 +387,131 @@ function CentralOrbComponent({
         </Animated.View>
       )}
 
-      {/* Outer Glow - Enhanced mood-colored glow */}
+      {/* Ambient Deep Glow - wide, subtle layer for depth */}
       <Animated.View
         style={[
           styles.glowLayer,
-          styles.outerGlow,
           {
+            width: ORB_SIZE * 2.8,
+            height: ORB_SIZE * 2.8,
+            transform: [{ scale: interpolations.ambientScale }],
+            opacity: interpolations.ambientOpacity,
+          },
+        ]}
+        pointerEvents="none"
+      >
+        <Svg width="100%" height="100%" viewBox={`0 0 ${ORB_SIZE * 2.8} ${ORB_SIZE * 2.8}`}>
+          <Defs>
+            <RadialGradient id="ambientGlow" cx="50%" cy="50%" rx="50%" ry="50%">
+              <Stop offset="0%" stopColor={moodColor} stopOpacity="0.35" />
+              <Stop offset="20%" stopColor={glowColor} stopOpacity="0.25" />
+              <Stop offset="45%" stopColor={moodColor} stopOpacity="0.12" />
+              <Stop offset="70%" stopColor={glowColor} stopOpacity="0.05" />
+              <Stop offset="100%" stopColor={glowColor} stopOpacity="0" />
+            </RadialGradient>
+          </Defs>
+          <Circle cx={ORB_SIZE * 1.4} cy={ORB_SIZE * 1.4} r={ORB_SIZE * 1.4} fill="url(#ambientGlow)" />
+        </Svg>
+      </Animated.View>
+
+      {/* Hard Ring - crisp accent ring */}
+      <Animated.View
+        style={[
+          styles.glowLayer,
+          {
+            width: ORB_SIZE * 2.2,
+            height: ORB_SIZE * 2.2,
+            transform: [{ scale: interpolations.hardRingScale }],
+            opacity: interpolations.hardRingOpacity,
+          },
+        ]}
+        pointerEvents="none"
+      >
+        <View
+          style={{
+            width: '100%',
+            height: '100%',
+            borderRadius: 9999,
+            borderWidth: 1.5,
+            borderColor: glowColor,
+          }}
+        />
+      </Animated.View>
+
+      {/* Hard Ring 2 - second crisp ring on breathe cycle */}
+      <Animated.View
+        style={[
+          styles.glowLayer,
+          {
+            width: ORB_SIZE * 2.2,
+            height: ORB_SIZE * 2.2,
+            transform: [{ scale: interpolations.hardRing2Scale }],
+            opacity: interpolations.hardRing2Opacity,
+          },
+        ]}
+        pointerEvents="none"
+      >
+        <View
+          style={{
+            width: '100%',
+            height: '100%',
+            borderRadius: 9999,
+            borderWidth: 1,
+            borderColor: moodColor,
+          }}
+        />
+      </Animated.View>
+
+      {/* Outer Glow - SVG radial gradient for soft fading edge */}
+      <Animated.View
+        style={[
+          styles.glowLayer,
+          {
+            width: ORB_SIZE * 2,
+            height: ORB_SIZE * 2,
             transform: [{ scale: interpolations.outerGlowScale }],
             opacity: interpolations.outerGlowOpacity,
           },
         ]}
         pointerEvents="none"
       >
-        <BlurView intensity={60} tint="dark" style={styles.blurCircle}>
-          <LinearGradient colors={[`${glowColor}80`, `${moodColor}60`, "transparent"]} style={styles.glowCircle} />
-        </BlurView>
+        <Svg width="100%" height="100%" viewBox={`0 0 ${ORB_SIZE * 2} ${ORB_SIZE * 2}`}>
+          <Defs>
+            <RadialGradient id="outerGlow" cx="50%" cy="50%" rx="50%" ry="50%">
+              <Stop offset="0%" stopColor={glowColor} stopOpacity="0.9" />
+              <Stop offset="25%" stopColor={moodColor} stopOpacity="0.6" />
+              <Stop offset="50%" stopColor={moodColor} stopOpacity="0.3" />
+              <Stop offset="75%" stopColor={glowColor} stopOpacity="0.1" />
+              <Stop offset="100%" stopColor={glowColor} stopOpacity="0" />
+            </RadialGradient>
+          </Defs>
+          <Circle cx={ORB_SIZE} cy={ORB_SIZE} r={ORB_SIZE} fill="url(#outerGlow)" />
+        </Svg>
       </Animated.View>
 
-      {/* Mid Glow - Pulsing layer for depth */}
+      {/* Mid Glow - SVG radial gradient for depth */}
       <Animated.View
         style={[
           styles.glowLayer,
-          styles.midGlow,
           {
+            width: ORB_SIZE * 1.4,
+            height: ORB_SIZE * 1.4,
             opacity: interpolations.midGlowOpacity,
           },
         ]}
         pointerEvents="none"
       >
-        <BlurView intensity={45} tint="dark" style={styles.blurCircle}>
-          <LinearGradient colors={[`${moodColor}50`, `${glowColor}30`, "transparent"]} style={styles.glowCircle} />
-        </BlurView>
+        <Svg width="100%" height="100%" viewBox={`0 0 ${ORB_SIZE * 1.4} ${ORB_SIZE * 1.4}`}>
+          <Defs>
+            <RadialGradient id="midGlow" cx="50%" cy="50%" rx="50%" ry="50%">
+              <Stop offset="0%" stopColor={moodColor} stopOpacity="0.7" />
+              <Stop offset="35%" stopColor={glowColor} stopOpacity="0.4" />
+              <Stop offset="70%" stopColor={moodColor} stopOpacity="0.12" />
+              <Stop offset="100%" stopColor={moodColor} stopOpacity="0" />
+            </RadialGradient>
+          </Defs>
+          <Circle cx={ORB_SIZE * 0.7} cy={ORB_SIZE * 0.7} r={ORB_SIZE * 0.7} fill="url(#midGlow)" />
+        </Svg>
       </Animated.View>
 
       {/* Status badge above orb */}
@@ -412,25 +597,8 @@ const styles = StyleSheet.create({
   glowLayer: {
     position: "absolute",
     borderRadius: 9999,
-  },
-  outerGlow: {
-    width: ORB_SIZE * 1.6,
-    height: ORB_SIZE * 1.6,
-  },
-  midGlow: {
-    width: ORB_SIZE * 1.2,
-    height: ORB_SIZE * 1.2,
-  },
-  blurCircle: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 9999,
-    overflow: "hidden",
-  },
-  glowCircle: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 9999,
+    alignItems: "center",
+    justifyContent: "center",
   },
   innerOrb: {
     width: ORB_SIZE,
