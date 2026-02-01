@@ -132,7 +132,7 @@ export const requestLiveKitToken = async (
 };
 
 // Connect to LiveKit room
-export const connectToAudioRoom = async (roomId: string): Promise<boolean> => {
+export const connectToAudioRoom = async (roomId: string, enableMic: boolean = true): Promise<boolean> => {
   try {
     // Lazily initialize WebRTC globals on first connection
     initializeLiveKit();
@@ -185,8 +185,8 @@ export const connectToAudioRoom = async (roomId: string): Promise<boolean> => {
 
     eventCallbacks?.onConnectionStatusChange('connected');
 
-    // Enable microphone (unmuted state)
-    await currentRoom.localParticipant.setMicrophoneEnabled(true);
+    // Enable microphone only if requested
+    await currentRoom.localParticipant.setMicrophoneEnabled(enableMic);
 
     // Start silence timer
     resetSilenceTimer();

@@ -125,7 +125,7 @@ export default function QuantumOrbitScreen() {
     disconnect: audioDisconnect,
   } = useAudio(defaultRoom?.id || null);
 
-  const { unreadCount: notificationCount } = useNotifications();
+  const { totalCount: notificationCount } = useNotifications();
   const totalBadgeCount = notificationCount + roomInvites.length;
 
   const [loading, setLoading] = useState(true);

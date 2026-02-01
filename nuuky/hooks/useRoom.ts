@@ -41,6 +41,33 @@ export const useRoom = () => {
     }
   }, [currentRoom?.id]);
 
+  // Subscribe to participant changes for the current room (any user joining/leaving)
+  useEffect(() => {
+    if (!currentRoom) return;
+
+    const subId = `room-participants-room-${currentRoom.id}`;
+    const cleanup = subscriptionManager.register(subId, () => {
+      return supabase
+        .channel(subId)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'room_participants',
+            filter: `room_id=eq.${currentRoom.id}`,
+          },
+          () => {
+            loadParticipants();
+            loadMyRooms();
+          }
+        )
+        .subscribe();
+    });
+
+    return cleanup;
+  }, [currentRoom?.id]);
+
   const loadActiveRooms = async () => {
     if (!currentUser) return;
 

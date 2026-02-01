@@ -321,6 +321,7 @@ export const useNotifications = () => {
   return {
     notifications,
     unreadCount: unreadNotificationCount,
+    totalCount: notifications.length,
     loading,
     refreshing,
     loadNotifications,

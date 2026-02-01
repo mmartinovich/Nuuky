@@ -141,6 +141,30 @@ export const useAudio = (roomId: string | null) => {
     return true;
   };
 
+  // Connect to audio room for listening (mic off)
+  const handleConnect = useCallback(async (): Promise<boolean> => {
+    if (!roomId || !currentUser) return false;
+    if (isConnected()) return true;
+
+    currentRoomId.current = roomId;
+    const success = await connectToAudioRoom(roomId, false);
+
+    if (!success) {
+      currentRoomId.current = null;
+      return false;
+    }
+
+    setMicEnabled(false);
+    return true;
+  }, [roomId, currentUser]);
+
+  // Auto-connect for listening when room changes
+  useEffect(() => {
+    if (roomId && currentUser) {
+      handleConnect();
+    }
+  }, [roomId, currentUser?.id]);
+
   // Connect to audio when unmuting
   const handleUnmute = useCallback(async (): Promise<boolean> => {
     if (!roomId || !currentUser) {
@@ -165,9 +189,9 @@ export const useAudio = (roomId: string | null) => {
       return false;
     }
 
-    // Connect to audio room
+    // Connect to audio room with mic enabled
     currentRoomId.current = roomId;
-    const success = await connectToAudioRoom(roomId);
+    const success = await connectToAudioRoom(roomId, true);
 
     if (!success) {
       currentRoomId.current = null;
