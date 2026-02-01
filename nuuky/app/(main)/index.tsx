@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Alert, StatusBar, Image } from "react-native";
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Alert, StatusBar, Image, Animated as RNAnimated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
@@ -518,14 +518,23 @@ export default function QuantumOrbitScreen() {
   const orbitSettled = orbitUsers.length > 0 || (!loading && friendList.length === 0 && defaultRoomLoaded);
   const isDataReady = !!currentUser && !firstTimeLoading && (orbitSettled || safetyTimeout);
 
+  const fadeAnim = useRef(new RNAnimated.Value(0)).current;
+  const [hasRevealedOnce, setHasRevealedOnce] = useState(false);
+
   useEffect(() => {
-    if (isDataReady) {
+    if (isDataReady && !hasRevealedOnce) {
       SplashScreen.hideAsync();
+      RNAnimated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }).start();
+      setHasRevealedOnce(true);
     }
   }, [isDataReady]);
 
   if (!isDataReady) {
-    return null;
+    return <View style={{ flex: 1, backgroundColor: '#050510' }} />;
   }
 
   const userMoodColors = activeCustomMood
@@ -533,7 +542,7 @@ export default function QuantumOrbitScreen() {
     : getMoodColor(currentUser?.mood || "neutral");
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.bg.primary }]}>
+    <RNAnimated.View style={[styles.container, { backgroundColor: theme.colors.bg.primary, opacity: fadeAnim }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       <LinearGradient colors={theme.gradients.background} style={StyleSheet.absoluteFill} />
@@ -714,7 +723,7 @@ export default function QuantumOrbitScreen() {
           }}
         />
       )}
-    </View>
+    </RNAnimated.View>
   );
 }
 

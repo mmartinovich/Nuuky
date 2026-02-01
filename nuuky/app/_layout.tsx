@@ -1,6 +1,6 @@
 import { logger } from '../lib/logger';
 import { useEffect, useState, useRef } from "react";
-import { Alert } from "react-native";
+import { Alert, View } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Linking from "expo-linking";
@@ -642,14 +642,9 @@ export default function RootLayout() {
     };
   }, []);
 
-  // Hide splash screen once layout is ready
-  // The main screen may also call hideAsync() for a data-loaded transition,
-  // but we must ensure it's called here too for auth/onboarding routes
-  useEffect(() => {
-    if (isReady) {
-      SplashScreen.hideAsync();
-    }
-  }, [isReady]);
+  // Splash screen is hidden by individual screens when they're ready:
+  // - (main)/index.tsx hides it after orbit data loads
+  // - Auth/onboarding screens hide it on mount
 
   // Execute pending deep link when user becomes authenticated
   useEffect(() => {
@@ -707,9 +702,9 @@ export default function RootLayout() {
     return () => { isMounted = false; };
   }, [currentUser]);
 
-  // Keep splash screen visible while initializing (return null to render nothing)
+  // Match splash background to avoid white flash during initialization
   if (!isReady || !fontsLoaded) {
-    return null;
+    return <View style={{ flex: 1, backgroundColor: '#050510' }} />;
   }
 
   return (

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View } from 'react-native';
 import { Redirect } from 'expo-router';
 import { useAppStore } from '../stores/appStore';
 import { supabase } from '../lib/supabase';
@@ -23,13 +23,9 @@ export default function Index() {
     checkAuth();
   }, []);
   
-  // Show loading while checking auth
+  // Match splash screen background to avoid white flash
   if (isLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.bg.primary }}>
-        <ActivityIndicator size="large" color={theme.colors.text.primary} />
-      </View>
-    );
+    return <View style={{ flex: 1, backgroundColor: '#050510' }} />;
   }
   
   // Redirect based on authentication status and profile completion

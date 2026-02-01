@@ -196,13 +196,13 @@ export default function NotificationsScreen() {
         <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
           {selectionMode ? (
             <TouchableOpacity
-              style={[styles.headerTextButton]}
+              style={[styles.editIconButton, { backgroundColor: accent.soft, borderColor: theme.colors.ui.borderLight }]}
               onPress={allSelected ? deselectAll : selectAll}
               activeOpacity={interactionStates.pressed}
+              accessibilityLabel={allSelected ? 'Deselect all' : 'Select all'}
+              accessibilityRole="button"
             >
-              <Text style={[styles.headerTextButtonLabel, { color: accent.primary }]}>
-                {allSelected ? 'Deselect All' : 'Select All'}
-              </Text>
+              <Ionicons name={allSelected ? 'remove' : 'add'} size={22} color={accent.primary} />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
@@ -220,23 +220,23 @@ export default function NotificationsScreen() {
 
           {selectionMode ? (
             <TouchableOpacity
-              style={[styles.headerTextButton]}
+              style={[styles.editIconButton, { backgroundColor: accent.soft, borderColor: theme.colors.ui.borderLight }]}
               onPress={clearSelection}
               activeOpacity={interactionStates.pressed}
+              accessibilityLabel="Done"
+              accessibilityRole="button"
             >
-              <Text style={[styles.headerTextButtonLabel, { color: accent.primary }]}>
-                Done
-              </Text>
+              <Ionicons name="checkmark" size={22} color={accent.primary} />
             </TouchableOpacity>
           ) : hasNotifications ? (
             <TouchableOpacity
-              style={styles.headerTextButton}
+              style={[styles.editIconButton, { backgroundColor: accent.soft, borderColor: theme.colors.ui.borderLight }]}
               onPress={() => enterSelectionMode()}
               activeOpacity={interactionStates.pressed}
+              accessibilityLabel="Edit notifications"
+              accessibilityRole="button"
             >
-              <Text style={[styles.headerTextButtonLabel, { color: accent.primary }]}>
-                Edit
-              </Text>
+              <Ionicons name="pencil" size={20} color={accent.primary} />
             </TouchableOpacity>
           ) : (
             <View style={styles.placeholderButton} />
@@ -404,6 +404,14 @@ const styles = StyleSheet.create({
   editButtonText: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  editIconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
   },
   headerTextButton: {
     height: 44,
