@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import React, { useMemo, useEffect, useRef } from 'react';
 import { View, StyleSheet, TouchableWithoutFeedback, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -24,7 +25,7 @@ try {
   };
 } catch (e) {
   // Skia not available (e.g., in Expo Go) - will use fallback
-  console.warn('react-native-skia not available, using fallback component');
+  logger.warn('react-native-skia not available, using fallback component');
 }
 
 interface Particle {

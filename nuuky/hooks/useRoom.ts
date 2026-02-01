@@ -1,20 +1,19 @@
-import { useState, useEffect, useMemo } from 'react';
+import { logger } from '../lib/logger';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Alert } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../stores/appStore';
 import { subscriptionManager } from '../lib/subscriptionManager';
 import { Room, RoomParticipant } from '../types';
 
-// Throttle mechanism to prevent excessive API calls
-let lastRoomsRefresh = 0;
-let lastParticipantsRefresh = 0;
 const REFRESH_THROTTLE_MS = 2000; // Only allow refresh every 2 seconds
 
-// Prevent multiple simultaneous joinRoom calls
-let isJoiningRoom = false;
-let lastJoinedRoomId: string | null = null;
-
 export const useRoom = () => {
+  // Instance-level refs instead of module-level variables to avoid cross-instance race conditions
+  const lastRoomsRefreshRef = useRef(0);
+  const lastParticipantsRefreshRef = useRef(0);
+  const isJoiningRoomRef = useRef(false);
+  const lastJoinedRoomIdRef = useRef<string | null>(null);
   const { currentUser, currentRoom, setCurrentRoom, setActiveRooms, myRooms, setMyRooms, addMyRoom, updateMyRoom, removeMyRoom, setRoomParticipants, roomParticipants } = useAppStore();
   const [activeRooms, setActiveRoomsList] = useState<Room[]>([]);
   const [loading, setLoading] = useState(false);
@@ -72,7 +71,7 @@ export const useRoom = () => {
       setActiveRoomsList(data || []);
       setActiveRooms(data || []);
     } catch (error: any) {
-      console.error('Error loading active rooms:', error);
+      logger.error('Error loading active rooms:', error);
     }
   };
 
@@ -125,7 +124,7 @@ export const useRoom = () => {
 
       setMyRooms(data || []);
     } catch (error: any) {
-      console.error('Error loading my rooms:', error);
+      logger.error('Error loading my rooms:', error);
     }
   };
 
@@ -154,7 +153,7 @@ export const useRoom = () => {
       // Update the global store
       setRoomParticipants(participantsData);
     } catch (error: any) {
-      console.error('Error loading participants:', error);
+      logger.error('Error loading participants:', error);
     }
   };
 
@@ -167,16 +166,16 @@ export const useRoom = () => {
     // Throttled refresh function
     const throttledRefresh = () => {
       const now = Date.now();
-      if (now - lastRoomsRefresh < REFRESH_THROTTLE_MS) return;
-      lastRoomsRefresh = now;
+      if (now - lastRoomsRefreshRef.current < REFRESH_THROTTLE_MS) return;
+      lastRoomsRefreshRef.current = now;
       loadActiveRooms();
       loadMyRooms();
     };
 
     const throttledParticipantsRefresh = () => {
       const now = Date.now();
-      if (now - lastParticipantsRefresh < REFRESH_THROTTLE_MS) return;
-      lastParticipantsRefresh = now;
+      if (now - lastParticipantsRefreshRef.current < REFRESH_THROTTLE_MS) return;
+      lastParticipantsRefreshRef.current = now;
       const room = useAppStore.getState().currentRoom;
       if (room) {
         loadParticipants();
@@ -238,7 +237,7 @@ export const useRoom = () => {
 
       return (data?.length || 0) < 5;
     } catch (error: any) {
-      console.error('Error checking room limit:', error);
+      logger.error('Error checking room limit:', error);
       return false;
     }
   };
@@ -312,7 +311,7 @@ export const useRoom = () => {
           });
         } catch (notificationError) {
           // Don't fail room creation if notifications fail
-          console.error('Failed to send room invite notifications:', notificationError);
+          logger.error('Failed to send room invite notifications:', notificationError);
         }
       }
 
@@ -323,7 +322,7 @@ export const useRoom = () => {
 
       return room;
     } catch (error: any) {
-      console.error('Error creating room:', error);
+      logger.error('Error creating room:', error);
       Alert.alert('Error', 'Failed to create room');
       return null;
     } finally {
@@ -338,16 +337,16 @@ export const useRoom = () => {
     }
 
     // Prevent multiple simultaneous calls
-    if (isJoiningRoom) {
+    if (isJoiningRoomRef.current) {
       return false;
     }
-    if (lastJoinedRoomId === roomId && currentRoom?.id === roomId) {
+    if (lastJoinedRoomIdRef.current === roomId && currentRoom?.id === roomId) {
       // Already in this room, but refresh participants to ensure fresh data
       await loadParticipants();
       return true;
     }
 
-    isJoiningRoom = true;
+    isJoiningRoomRef.current = true;
     setLoading(true);
     try {
       // Check if already in the room
@@ -370,7 +369,7 @@ export const useRoom = () => {
           // Load myRooms first to ensure we have fresh participant data
           await loadMyRooms();
           setCurrentRoom(room);
-          lastJoinedRoomId = roomId;
+          lastJoinedRoomIdRef.current = roomId;
           return true;
         }
       }
@@ -398,16 +397,16 @@ export const useRoom = () => {
       // Load rooms data first to ensure we have fresh participant data
       await Promise.all([loadActiveRooms(), loadMyRooms()]);
       setCurrentRoom(room);
-      lastJoinedRoomId = roomId;
+      lastJoinedRoomIdRef.current = roomId;
 
       return true;
     } catch (error: any) {
-      console.error('Error joining room:', error);
+      logger.error('Error joining room:', error);
       Alert.alert('Error', 'Failed to join room');
       return false;
     } finally {
       setLoading(false);
-      isJoiningRoom = false;
+      isJoiningRoomRef.current = false;
     }
   };
 
@@ -457,11 +456,11 @@ export const useRoom = () => {
 
       setCurrentRoom(null);
       setRoomParticipants([]);
-      lastJoinedRoomId = null;
+      lastJoinedRoomIdRef.current = null;
       await loadActiveRooms();
       await loadMyRooms();
     } catch (error: any) {
-      console.error('Error leaving room:', error);
+      logger.error('Error leaving room:', error);
       Alert.alert('Error', 'Failed to leave room');
     } finally {
       setLoading(false);
@@ -485,13 +484,13 @@ export const useRoom = () => {
       if (currentRoom?.id === roomId) {
         setCurrentRoom(null);
         setRoomParticipants([]);
-        lastJoinedRoomId = null;
+        lastJoinedRoomIdRef.current = null;
       }
 
       removeMyRoom(roomId);
       await loadMyRooms();
     } catch (error: any) {
-      console.error('Error leaving room:', error);
+      logger.error('Error leaving room:', error);
       Alert.alert('Error', 'Failed to leave room');
     }
   };
@@ -521,7 +520,7 @@ export const useRoom = () => {
 
       await loadParticipants();
     } catch (error: any) {
-      console.error('Error toggling mute:', error);
+      logger.error('Error toggling mute:', error);
     }
   };
 
@@ -565,7 +564,7 @@ export const useRoom = () => {
       Alert.alert('Success', 'Room deleted');
       return true;
     } catch (error: any) {
-      console.error('Error deleting room:', error);
+      logger.error('Error deleting room:', error);
       Alert.alert('Error', 'Failed to delete room');
       return false;
     } finally {
@@ -612,7 +611,7 @@ export const useRoom = () => {
 
       return true;
     } catch (error: any) {
-      console.error('Error updating room name:', error);
+      logger.error('Error updating room name:', error);
       Alert.alert('Error', 'Failed to update room name');
 
       // Rollback optimistic update on error by reloading from database
@@ -668,7 +667,7 @@ export const useRoom = () => {
 
       return true;
     } catch (error: any) {
-      console.error('Error removing participant:', error);
+      logger.error('Error removing participant:', error);
       Alert.alert('Error', 'Failed to remove participant');
       return false;
     } finally {
@@ -725,7 +724,7 @@ export const useRoom = () => {
       Alert.alert('Success', 'Ownership transferred');
       return true;
     } catch (error: any) {
-      console.error('Error transferring ownership:', error);
+      logger.error('Error transferring ownership:', error);
       Alert.alert('Error', 'Failed to transfer ownership');
       return false;
     } finally {
@@ -792,7 +791,7 @@ export const useRoom = () => {
       Alert.alert('Success', 'Invite sent!');
       return true;
     } catch (error: any) {
-      console.error('Error inviting friend:', error);
+      logger.error('Error inviting friend:', error);
       Alert.alert('Error', 'Failed to send invite');
       return false;
     }
@@ -800,7 +799,7 @@ export const useRoom = () => {
 
   // Clear the last joined room ID to allow rejoining
   const clearLastJoinedRoom = () => {
-    lastJoinedRoomId = null;
+    lastJoinedRoomIdRef.current = null;
   };
 
   return {

@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { supabase } from '../lib/supabase';
@@ -48,7 +49,7 @@ export const usePreferences = () => {
         setPreferences(data);
       }
     } catch (error: any) {
-      console.error('Error loading preferences:', error);
+      logger.error('Error loading preferences:', error);
       // Set default preferences locally if loading fails
       setPreferences({
         id: '',
@@ -83,7 +84,7 @@ export const usePreferences = () => {
       if (error) throw error;
       return true;
     } catch (error: any) {
-      console.error('Error updating preference:', error);
+      logger.error('Error updating preference:', error);
       // Revert optimistic update on failure
       setPreferences(previousPreferences);
       Alert.alert('Error', 'Failed to update preference. Please try again.');

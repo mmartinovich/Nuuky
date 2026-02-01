@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { sendExpoNotification, sendSilentNotification } from '../_shared/expo-push.ts';
+import { authenticateRequest, verifySender, rateLimit, AuthError, authErrorResponse } from '../_shared/auth.ts';
 
 interface NudgeRequest {
   receiver_id: string;
@@ -9,12 +9,13 @@ interface NudgeRequest {
 
 serve(async (req) => {
   try {
-    // Only allow POST requests
     if (req.method !== 'POST') {
       return new Response('Method not allowed', { status: 405 });
     }
 
-    // Parse request body
+    // Authenticate and authorize
+    const { userId, supabase } = await authenticateRequest(req);
+
     const { receiver_id, sender_id }: NudgeRequest = await req.json();
 
     if (!receiver_id || !sender_id) {
@@ -24,14 +25,11 @@ serve(async (req) => {
       );
     }
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    verifySender(userId, sender_id);
+    rateLimit(userId);
 
     console.log(`Processing nudge from ${sender_id} to ${receiver_id}`);
 
-    // Get sender info
     const { data: sender, error: senderError } = await supabase
       .from('users')
       .select('display_name')
@@ -46,7 +44,6 @@ serve(async (req) => {
       );
     }
 
-    // Get receiver info and push token
     const { data: receiver, error: receiverError } = await supabase
       .from('users')
       .select('fcm_token, display_name')
@@ -61,14 +58,12 @@ serve(async (req) => {
       );
     }
 
-    // Check if receiver has nudges enabled
     const { data: preferences } = await supabase
       .from('user_preferences')
       .select('nudges_enabled')
       .eq('user_id', receiver_id)
       .single();
 
-    // Default to enabled if no preferences found
     const nudgesEnabled = preferences?.nudges_enabled ?? true;
 
     if (!nudgesEnabled) {
@@ -87,7 +82,6 @@ serve(async (req) => {
       );
     }
 
-    // Send notification
     const notification = {
       title: '👋 Nudge from ' + sender.display_name,
       body: `${sender.display_name} is thinking of you`,
@@ -102,7 +96,6 @@ serve(async (req) => {
 
     const sent = await sendExpoNotification(receiver.fcm_token, notification);
 
-    // Send silent notification for background sync (Discord/Slack pattern)
     await sendSilentNotification(receiver.fcm_token, {
       sync_type: 'sync_notifications',
       notification_type: 'nudge',
@@ -110,7 +103,6 @@ serve(async (req) => {
       sender_name: sender.display_name,
     });
 
-    // Insert notification into database for persistence
     const { error: notificationError } = await supabase
       .from('notifications')
       .insert({
@@ -142,6 +134,9 @@ serve(async (req) => {
     }
 
   } catch (error) {
+    if (error instanceof AuthError) {
+      return authErrorResponse(error);
+    }
     console.error('Function error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),

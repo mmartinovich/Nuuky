@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { Alert, Platform, PermissionsAndroid } from 'react-native';
 import { useAppStore } from '../stores/appStore';
@@ -12,9 +13,6 @@ import {
   getCurrentRoom,
 } from '../lib/livekit';
 import { AudioConnectionStatus } from '../types';
-
-// Permission cache (module-level to persist across hook instances)
-let permissionGranted: boolean | null = null;
 
 export const useAudio = (roomId: string | null) => {
   const {
@@ -60,12 +58,20 @@ export const useAudio = (roomId: string | null) => {
           audioMode: 'videoChat',
         });
       } catch (error) {
-        console.error('[useAudio] Failed to configure iOS audio:', error);
+        logger.error('[useAudio] Failed to configure iOS audio:', error);
       }
     };
 
     configureIOSAudio();
   }, [audioConnectionStatus]); // Re-run when connection status changes
+
+  // Disconnect from audio — defined before the useEffect that references it
+  const handleDisconnect = useCallback(async (): Promise<void> => {
+    await disconnectFromAudioRoom();
+    currentRoomId.current = null;
+    setMicEnabled(false);
+    clearSpeakingParticipants();
+  }, [clearSpeakingParticipants]);
 
   // Set up event callbacks with proper cleanup
   useEffect(() => {
@@ -85,14 +91,12 @@ export const useAudio = (roomId: string | null) => {
         Alert.alert('Audio Error', error);
       },
       onAllMuted: () => {
-        // Disconnect after 30 seconds of silence
         handleDisconnect();
       },
     };
-    
+
     setAudioEventCallbacks(callbacks);
-    
-    // Cleanup: clear callbacks on unmount to prevent stale closures
+
     return () => {
       setAudioEventCallbacks(null);
     };
@@ -109,17 +113,9 @@ export const useAudio = (roomId: string | null) => {
     };
   }, [roomId]);
 
-  // Request microphone permission
+  // Request microphone permission — always check fresh (user may toggle in Settings)
   const requestMicrophonePermission = async (): Promise<boolean> => {
-    // Return cached result if available
-    if (permissionGranted !== null) {
-      return permissionGranted;
-    }
-
     if (Platform.OS === 'ios') {
-      // iOS handles permissions via Info.plist and runtime prompts
-      // The LiveKit SDK will trigger the permission prompt automatically
-      permissionGranted = true;
       return true;
     }
 
@@ -135,23 +131,20 @@ export const useAudio = (roomId: string | null) => {
             buttonPositive: 'OK',
           }
         );
-        permissionGranted = granted === PermissionsAndroid.RESULTS.GRANTED;
-        return permissionGranted;
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
       } catch (err) {
-        console.error('[useAudio] Permission error:', err);
-        permissionGranted = false;
+        logger.error('[useAudio] Permission error:', err);
         return false;
       }
     }
 
-    permissionGranted = true;
     return true;
   };
 
   // Connect to audio when unmuting
   const handleUnmute = useCallback(async (): Promise<boolean> => {
     if (!roomId || !currentUser) {
-      console.warn('[useAudio] Cannot unmute: no room or user');
+      logger.warn('[useAudio] Cannot unmute: no room or user');
       return false;
     }
 
@@ -194,14 +187,6 @@ export const useAudio = (roomId: string | null) => {
       setMicEnabled(false);
     }
   }, []);
-
-  // Disconnect from audio
-  const handleDisconnect = useCallback(async (): Promise<void> => {
-    await disconnectFromAudioRoom();
-    currentRoomId.current = null;
-    setMicEnabled(false);
-    clearSpeakingParticipants();
-  }, [clearSpeakingParticipants]);
 
   // Check if a participant is speaking
   const isParticipantSpeaking = useCallback(

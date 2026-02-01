@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { useState } from 'react';
 import { Alert } from 'react-native';
 import { supabase } from '../lib/supabase';
@@ -40,7 +41,7 @@ export const useMood = () => {
 
       return true;
     } catch (error: any) {
-      console.error('Error updating mood:', error);
+      logger.error('Error updating mood:', error);
       Alert.alert('Error', 'Failed to update mood');
       return false;
     } finally {

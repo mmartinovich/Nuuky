@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { useState, useEffect, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
@@ -70,7 +71,7 @@ export const useDefaultRoom = () => {
         await AsyncStorage.setItem(DEFAULT_ROOM_KEY, userData.default_room_id);
       }
     } catch (error) {
-      console.error('Error initializing default room:', error);
+      logger.error('Error initializing default room:', error);
     } finally {
       setLoading(false);
     }
@@ -92,7 +93,7 @@ export const useDefaultRoom = () => {
       .eq('id', currentUser.id)
       .then(({ error }) => {
         if (error) {
-          console.error('Error syncing default room to Supabase:', error);
+          logger.error('Error syncing default room to Supabase:', error);
         }
       });
 
@@ -117,7 +118,7 @@ export const useDefaultRoom = () => {
 
       return true;
     } catch (error) {
-      console.error('Error clearing default room:', error);
+      logger.error('Error clearing default room:', error);
       return false;
     }
   };

@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Share, ActivityIndicator } from "react-native";
 import { BlurView } from "expo-blur";
@@ -42,7 +43,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
     try {
       await Share.share({ message: value });
     } catch (error) {
-      console.error("Error sharing:", error);
+      logger.error("Error sharing:", error);
     } finally {
       setTimeout(() => setCopying(false), 1000);
     }
@@ -55,7 +56,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
         url: value,
       });
     } catch (error) {
-      console.error("Error sharing:", error);
+      logger.error("Error sharing:", error);
     }
   };
 

@@ -1,3 +1,4 @@
+import { logger } from './logger';
 import { AppState, AppStateStatus } from 'react-native';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from './supabase';
@@ -117,7 +118,7 @@ class SubscriptionManager {
       subscription.channel = subscription.createChannel();
       subscription.isActive = true;
     } catch (error) {
-      console.error(`Failed to start subscription ${subscription.id}:`, error);
+      logger.error(`Failed to start subscription ${subscription.id}:`, error);
     }
   }
 
@@ -131,7 +132,7 @@ class SubscriptionManager {
       }
       subscription.isActive = false;
     } catch (error) {
-      console.error(`Failed to stop subscription ${subscription.id}:`, error);
+      logger.error(`Failed to stop subscription ${subscription.id}:`, error);
     }
   }
 

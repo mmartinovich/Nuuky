@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { useState, useCallback } from "react";
 import { Alert } from "react-native";
 import { supabase } from "../lib/supabase";
@@ -66,14 +67,14 @@ export const useUsername = () => {
         const { data, error } = await supabase.from("users").select("id").eq("username", normalized).maybeSingle();
 
         if (error) {
-          console.error("Error checking username availability:", error);
+          logger.error("Error checking username availability:", error);
           return false;
         }
 
         // Available if no user found
         return data === null;
       } catch (error) {
-        console.error("Error checking username availability:", error);
+        logger.error("Error checking username availability:", error);
         return false;
       } finally {
         setChecking(false);
@@ -140,7 +141,7 @@ export const useUsername = () => {
         setCurrentUser({ ...currentUser, username: normalized });
         return true;
       } catch (error: any) {
-        console.error("Error updating username:", error);
+        logger.error("Error updating username:", error);
         Alert.alert("Error", "Failed to update username. Please try again.");
         return false;
       } finally {

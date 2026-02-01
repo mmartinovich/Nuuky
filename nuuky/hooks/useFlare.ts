@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { useState, useEffect, useRef } from "react";
 import { Alert } from "react-native";
 import * as Haptics from "expo-haptics";
@@ -240,7 +241,7 @@ export const useFlare = () => {
                   .single();
 
                 if (error) {
-                  console.error("[Flare] Database insert error:", error);
+                  logger.error("[Flare] Database insert error:", error);
                   throw error;
                 }
 
@@ -257,16 +258,16 @@ export const useFlare = () => {
                     });
 
                     if (notifError) {
-                      console.warn("[Flare] Notification warning:", notifError);
+                      logger.warn("[Flare] Notification warning:", notifError);
                       // Log but continue - notifications are best-effort
                     }
 
                     if (data) {
-                      console.log("[Flare] Notification result:", data);
+                      logger.log("[Flare] Notification result:", data);
                     }
                   }
                 } catch (notifError) {
-                  console.error("[Flare] Notification error:", notifError);
+                  logger.error("[Flare] Notification error:", notifError);
                   // Don't fail the flare if notification fails - flare is already created
                 }
 
@@ -280,7 +281,7 @@ export const useFlare = () => {
                 await loadActiveFlares();
                 resolve(true);
               } catch (error: any) {
-                console.error("[Flare] Failed to send flare:", error);
+                logger.error("[Flare] Failed to send flare:", error);
                 Alert.alert("Error", error?.message || "Failed to send flare");
                 resolve(false);
               } finally {

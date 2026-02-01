@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { logger } from '../lib/logger';
+import { useEffect, useState, useRef } from 'react';
 import { Alert } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../stores/appStore';
@@ -8,6 +9,11 @@ import { registerForPushNotificationsAsync, savePushTokenToUser } from '../lib/n
 export const useAuth = () => {
   const { currentUser, isAuthenticated, setCurrentUser, logout } = useAppStore();
   const [loading, setLoading] = useState(true);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   useEffect(() => {
     // Check for existing session
@@ -37,7 +43,7 @@ export const useAuth = () => {
         await fetchUserProfile(session.user.id);
       }
     } catch (error) {
-      console.error('Error checking session:', error);
+      logger.error('Error checking session:', error);
       Alert.alert('Session Error', 'Failed to restore your session. Please sign in again.');
     } finally {
       setLoading(false);
@@ -78,10 +84,10 @@ export const useAuth = () => {
 
       if (data) {
         const userProfile = data as User;
-        // Ensure mood defaults to neutral if not set
         if (!userProfile.mood) {
           userProfile.mood = 'neutral';
         }
+        if (!isMountedRef.current) return;
         setCurrentUser(userProfile);
         // Update online status
         await updateOnlineStatus(true);
@@ -89,7 +95,7 @@ export const useAuth = () => {
         await registerPushNotifications(userId);
       }
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      logger.error('Error fetching user profile:', error);
       Alert.alert('Profile Error', 'Failed to load your profile. Please try again.');
     }
   };
@@ -108,7 +114,7 @@ export const useAuth = () => {
         })
         .eq('id', user.id);
     } catch (error) {
-      console.error('Error updating online status:', error);
+      logger.error('Error updating online status:', error);
     }
   };
 
@@ -119,7 +125,7 @@ export const useAuth = () => {
         await savePushTokenToUser(userId, token);
       }
     } catch (error) {
-      console.error('Error registering push notifications:', error);
+      logger.error('Error registering push notifications:', error);
     }
   };
 
@@ -138,7 +144,7 @@ export const useAuth = () => {
 
       logout();
     } catch (error) {
-      console.error('Error deleting account:', error);
+      logger.error('Error deleting account:', error);
       throw error;
     }
   };
@@ -150,7 +156,7 @@ export const useAuth = () => {
       await supabase.auth.signOut();
       logout();
     } catch (error) {
-      console.error('Error signing out:', error);
+      logger.error('Error signing out:', error);
       throw error;
     }
   };

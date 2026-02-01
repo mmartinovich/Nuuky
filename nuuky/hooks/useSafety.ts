@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { supabase } from '../lib/supabase';
@@ -40,7 +41,7 @@ export const useSafety = () => {
       if (error) throw error;
       setAnchors(data || []);
     } catch (error: any) {
-      console.error('Error loading anchors:', error);
+      logger.error('Error loading anchors:', error);
     }
   };
 
@@ -63,7 +64,7 @@ export const useSafety = () => {
         setIsInGhostMode(false);
       }
     } catch (error: any) {
-      console.error('Error checking ghost mode:', error);
+      logger.error('Error checking ghost mode:', error);
     }
   };
 
@@ -86,7 +87,7 @@ export const useSafety = () => {
         setIsOnBreak(false);
       }
     } catch (error: any) {
-      console.error('Error checking break mode:', error);
+      logger.error('Error checking break mode:', error);
     }
   };
 
@@ -114,7 +115,7 @@ export const useSafety = () => {
       Alert.alert('Ghost Mode Enabled', `You're invisible for ${durationMinutes} minutes`);
       return true;
     } catch (error: any) {
-      console.error('Error enabling ghost mode:', error);
+      logger.error('Error enabling ghost mode:', error);
       Alert.alert('Error', 'Failed to enable ghost mode');
       return false;
     } finally {
@@ -140,7 +141,7 @@ export const useSafety = () => {
       setIsInGhostMode(false);
       return true;
     } catch (error: any) {
-      console.error('Error disabling ghost mode:', error);
+      logger.error('Error disabling ghost mode:', error);
       Alert.alert('Error', 'Failed to disable ghost mode');
       return false;
     } finally {
@@ -172,7 +173,7 @@ export const useSafety = () => {
       Alert.alert('Break Mode Enabled', `Taking a break for ${durationHours} hours`);
       return true;
     } catch (error: any) {
-      console.error('Error enabling break mode:', error);
+      logger.error('Error enabling break mode:', error);
       Alert.alert('Error', 'Failed to enable break mode');
       return false;
     } finally {
@@ -198,7 +199,7 @@ export const useSafety = () => {
       setIsOnBreak(false);
       return true;
     } catch (error: any) {
-      console.error('Error ending break:', error);
+      logger.error('Error ending break:', error);
       Alert.alert('Error', 'Failed to end break');
       return false;
     } finally {
@@ -233,7 +234,7 @@ export const useSafety = () => {
       Alert.alert('Report Submitted', 'Thank you for your report. We will review it shortly.');
       return true;
     } catch (error: any) {
-      console.error('Error reporting user:', error);
+      logger.error('Error reporting user:', error);
       Alert.alert('Error', 'Failed to submit report');
       return false;
     } finally {
@@ -281,7 +282,7 @@ export const useSafety = () => {
       Alert.alert('Anchor Added', 'This person is now your safety anchor');
       return true;
     } catch (error: any) {
-      console.error('Error adding anchor:', error);
+      logger.error('Error adding anchor:', error);
       Alert.alert('Error', 'Failed to add anchor');
       return false;
     } finally {
@@ -306,7 +307,7 @@ export const useSafety = () => {
       Alert.alert('Anchor Removed', 'This person is no longer your anchor');
       return true;
     } catch (error: any) {
-      console.error('Error removing anchor:', error);
+      logger.error('Error removing anchor:', error);
       Alert.alert('Error', 'Failed to remove anchor');
       return false;
     } finally {
@@ -332,7 +333,7 @@ export const useSafety = () => {
       Alert.alert('Visibility Updated', 'Friend visibility settings have been updated');
       return true;
     } catch (error: any) {
-      console.error('Error updating visibility:', error);
+      logger.error('Error updating visibility:', error);
       Alert.alert('Error', 'Failed to update visibility');
       return false;
     } finally {

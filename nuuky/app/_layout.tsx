@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { useEffect, useState, useRef } from "react";
 import { Alert } from "react-native";
 import { Stack, useRouter } from "expo-router";
@@ -28,6 +29,41 @@ import {
   setupNotificationListeners,
   isSilentNotification,
 } from "../lib/notifications";
+
+// Global error handlers to prevent silent crashes
+// ErrorUtils is a React Native global, not an export
+const _ErrorUtils = (global as any).ErrorUtils;
+if (_ErrorUtils) {
+  const previousHandler = _ErrorUtils.getGlobalHandler();
+  _ErrorUtils.setGlobalHandler((error: any, isFatal: boolean) => {
+    logger.error(`[GlobalError] ${isFatal ? 'FATAL' : 'non-fatal'}:`, error);
+    if (previousHandler) previousHandler(error, isFatal);
+  });
+}
+
+// Unhandled promise rejection handler
+if (typeof globalThis.addEventListener === 'function') {
+  globalThis.addEventListener('unhandledrejection', ((event: PromiseRejectionEvent) => {
+    logger.error('[UnhandledPromiseRejection]:', event.reason);
+  }) as any);
+}
+
+// Deep link validation helpers
+const VALID_USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
+const VALID_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const deepLinkTimestamps: number[] = [];
+const DEEP_LINK_RATE_LIMIT = 5;
+const DEEP_LINK_RATE_WINDOW_MS = 60_000;
+
+function isDeepLinkRateLimited(): boolean {
+  const now = Date.now();
+  while (deepLinkTimestamps.length > 0 && now - deepLinkTimestamps[0] > DEEP_LINK_RATE_WINDOW_MS) {
+    deepLinkTimestamps.shift();
+  }
+  if (deepLinkTimestamps.length >= DEEP_LINK_RATE_LIMIT) return true;
+  deepLinkTimestamps.push(now);
+  return false;
+}
 
 // Type for pending deep link actions (to execute after login)
 interface PendingDeepLinkAction {
@@ -237,7 +273,7 @@ export default function RootLayout() {
                     ]);
                     Alert.alert("Success", `${targetUser.display_name} added as friend!`);
                   } catch (err) {
-                    console.error("Error adding friend:", err);
+                    logger.error("Error adding friend:", err);
                     Alert.alert("Error", "Failed to add friend");
                   }
                 },
@@ -246,7 +282,7 @@ export default function RootLayout() {
           );
         }
       } catch (err) {
-        console.error("Error handling profile deep link:", err);
+        logger.error("Error handling profile deep link:", err);
       }
     };
 
@@ -342,7 +378,7 @@ export default function RootLayout() {
                   Alert.alert("Joined!", `You've joined ${link.room.name || "the room"}`);
                   router.push(`/(main)/room/${link.room.id}`);
                 } catch (err) {
-                  console.error("Error joining room:", err);
+                  logger.error("Error joining room:", err);
                   Alert.alert("Error", "Failed to join room");
                 }
               },
@@ -350,7 +386,7 @@ export default function RootLayout() {
           ],
         );
       } catch (err) {
-        console.error("Error handling room invite deep link:", err);
+        logger.error("Error handling room invite deep link:", err);
       }
     };
 
@@ -423,10 +459,16 @@ export default function RootLayout() {
         return;
       }
 
+      // Rate limit deep links
+      if (isDeepLinkRateLimited()) {
+        logger.warn('Deep link rate limited');
+        return;
+      }
+
       // Handle profile link: nuuky://u/{username}
       if (path?.startsWith("u/")) {
         const username = path.substring(2);
-        if (username) {
+        if (username && VALID_USERNAME_RE.test(username)) {
           await handleProfileDeepLink(username);
         }
         return;
@@ -435,7 +477,7 @@ export default function RootLayout() {
       // Handle room invite link: nuuky://r/{token}
       if (path?.startsWith("r/")) {
         const token = path.substring(2);
-        if (token) {
+        if (token && VALID_UUID_RE.test(token)) {
           await handleRoomInviteDeepLink(token);
         }
         return;
@@ -460,7 +502,7 @@ export default function RootLayout() {
           ]);
         } catch (_error) {
           // Silently fail preloading - images will load on demand
-          console.log('Asset preload failed or timed out, continuing...');
+          logger.log('Asset preload failed or timed out, continuing...');
         }
 
         // Listen for incoming deep links
@@ -478,7 +520,7 @@ export default function RootLayout() {
             await handleDeepLink(url);
           }
         } catch (error) {
-          console.log('Deep link check failed:', error);
+          logger.log('Deep link check failed:', error);
         }
 
         // Check for existing session on mount (with timeout protection)
@@ -516,18 +558,18 @@ export default function RootLayout() {
                   .then((pushToken) => {
                     if (pushToken) {
                       savePushTokenToUser(data.id, pushToken).catch((err) =>
-                        console.log('Failed to save push token:', err)
+                        logger.log('Failed to save push token:', err)
                       );
                     }
                   })
-                  .catch((err) => console.log('Push notification registration failed:', err));
+                  .catch((err) => logger.log('Push notification registration failed:', err));
               }
             } catch (error) {
-              console.log('User profile fetch failed:', error);
+              logger.log('User profile fetch failed:', error);
             }
           }
         } catch (error) {
-          console.log('Session check failed:', error);
+          logger.log('Session check failed:', error);
         }
 
         // Mark app as ready after initialization (always set, even if some operations failed)
@@ -537,7 +579,7 @@ export default function RootLayout() {
 
         return subscription;
       } catch (error) {
-        console.error('Initialization error:', error);
+        logger.error('Initialization error:', error);
         // Always mark as ready even if initialization fails
         if (mounted) {
           setIsReady(true);
@@ -572,7 +614,7 @@ export default function RootLayout() {
     // Fallback timeout: ensure app loads even if initialization hangs
     const fallbackTimeout = setTimeout(() => {
       if (mounted) {
-        console.warn('Initialization timeout reached, forcing app ready');
+        logger.warn('Initialization timeout reached, forcing app ready');
         setIsReady(true);
       }
     }, 10000); // 10 second maximum wait
@@ -583,7 +625,7 @@ export default function RootLayout() {
         clearTimeout(fallbackTimeout);
       })
       .catch((error) => {
-        console.error('Initialization promise rejected:', error);
+        logger.error('Initialization promise rejected:', error);
         clearTimeout(fallbackTimeout);
         if (mounted) {
           setIsReady(true);
@@ -610,12 +652,15 @@ export default function RootLayout() {
 
   // Execute pending deep link when user becomes authenticated
   useEffect(() => {
+    let isMounted = true;
+
     if (currentUser && pendingDeepLinkRef.current) {
       const pendingAction = pendingDeepLinkRef.current;
       pendingDeepLinkRef.current = null;
 
       // Wait for navigation to settle
       const timer = setTimeout(async () => {
+        if (!isMounted) return;
         if (pendingAction.type === "profile") {
           // Look up user and prompt to add friend
           const { data: targetUser } = await supabase
@@ -640,7 +685,7 @@ export default function RootLayout() {
                       ]);
                       Alert.alert("Success", `${targetUser.display_name} added as friend!`);
                     } catch (err) {
-                      console.error("Error adding friend:", err);
+                      logger.error("Error adding friend:", err);
                     }
                   },
                 },
@@ -653,8 +698,12 @@ export default function RootLayout() {
         }
       }, 1000);
 
-      return () => clearTimeout(timer);
+      return () => {
+        isMounted = false;
+        clearTimeout(timer);
+      };
     }
+    return () => { isMounted = false; };
   }, [currentUser]);
 
   // Keep splash screen visible while initializing (return null to render nothing)

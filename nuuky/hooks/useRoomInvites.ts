@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { supabase } from '../lib/supabase';
@@ -61,7 +62,7 @@ export const useRoomInvites = () => {
 
       setRoomInvites(data || []);
     } catch (error: any) {
-      console.error('Error loading invites:', error);
+      logger.error('Error loading invites:', error);
       Alert.alert('Error', 'Failed to load invites');
     } finally {
       setLoading(false);
@@ -79,7 +80,7 @@ export const useRoomInvites = () => {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
       if (sessionError || !session) {
-        console.error('No active session:', sessionError);
+        logger.error('No active session:', sessionError);
         Alert.alert('Authentication Error', 'Please log in again to send invites.');
         setLoading(false);
         return false;
@@ -123,7 +124,7 @@ export const useRoomInvites = () => {
         .single();
 
       if (error) {
-        console.error('Room invite insert error details:', {
+        logger.error('Room invite insert error details:', {
           code: error.code,
           message: error.message,
           details: error.details,
@@ -145,13 +146,13 @@ export const useRoomInvites = () => {
           },
         });
       } catch (notifError) {
-        console.error('Failed to send notification:', notifError);
+        logger.error('Failed to send notification:', notifError);
         // Don't fail the invite if notification fails
       }
 
       return true;
     } catch (error: any) {
-      console.error('Error sending invite:', error);
+      logger.error('Error sending invite:', error);
       Alert.alert('Error', 'Failed to send invite');
       return false;
     } finally {
@@ -170,7 +171,7 @@ export const useRoomInvites = () => {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
       if (sessionError || !session) {
-        console.error('No active session:', sessionError);
+        logger.error('No active session:', sessionError);
         Alert.alert('Authentication Error', 'Please log in again to send invites.');
         setLoading(false);
         return false;
@@ -204,7 +205,7 @@ export const useRoomInvites = () => {
         .insert(invites);
 
       if (error) {
-        console.error('Bulk room invite insert error details:', {
+        logger.error('Bulk room invite insert error details:', {
           code: error.code,
           message: error.message,
           details: error.details,
@@ -226,14 +227,14 @@ export const useRoomInvites = () => {
           },
         });
       } catch (notifError) {
-        console.error('Failed to send notifications:', notifError);
+        logger.error('Failed to send notifications:', notifError);
         // Don't fail the invites if notifications fail
       }
 
       Alert.alert('Success', `Sent ${newFriendIds.length} invite(s)`);
       return true;
     } catch (error: any) {
-      console.error('Error sending invites:', error);
+      logger.error('Error sending invites:', error);
       Alert.alert('Error', 'Failed to send invites');
       return false;
     } finally {
@@ -322,7 +323,7 @@ export const useRoomInvites = () => {
       Alert.alert('Success', 'You joined the room!');
       return true;
     } catch (error: any) {
-      console.error('Error accepting invite:', error);
+      logger.error('Error accepting invite:', error);
       Alert.alert('Error', 'Failed to accept invite');
       return false;
     } finally {
@@ -352,7 +353,7 @@ export const useRoomInvites = () => {
 
       return true;
     } catch (error: any) {
-      console.error('Error declining invite:', error);
+      logger.error('Error declining invite:', error);
       Alert.alert('Error', 'Failed to decline invite');
       return false;
     } finally {
@@ -382,7 +383,7 @@ export const useRoomInvites = () => {
       if (error) throw error;
       return data || [];
     } catch (error: any) {
-      console.error('Error loading room invites:', error);
+      logger.error('Error loading room invites:', error);
       return [];
     }
   };
@@ -404,7 +405,7 @@ export const useRoomInvites = () => {
 
       return true;
     } catch (error: any) {
-      console.error('Error canceling invite:', error);
+      logger.error('Error canceling invite:', error);
       Alert.alert('Error', 'Failed to cancel invite');
       return false;
     } finally {

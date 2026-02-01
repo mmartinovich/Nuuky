@@ -233,10 +233,13 @@ export const useAppStore = create<AppState>()(
     unreadNotificationCount: notifications.filter(n => !n.is_read).length
   }),
 
-  addNotification: (notification) => set((state) => ({
-    notifications: [notification, ...state.notifications],
-    unreadNotificationCount: state.unreadNotificationCount + (notification.is_read ? 0 : 1)
-  })),
+  addNotification: (notification) => set((state) => {
+    const updated = [notification, ...state.notifications].slice(0, 200);
+    return {
+      notifications: updated,
+      unreadNotificationCount: updated.filter(n => !n.is_read).length,
+    };
+  }),
 
   markNotificationRead: (notificationId) => set((state) => {
     const notification = state.notifications.find(n => n.id === notificationId);

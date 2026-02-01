@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import {
   View,
@@ -241,7 +242,7 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
         await shareInviteLink(link.token, roomName);
       }
     } catch (error) {
-      console.error("Error sharing link:", error);
+      logger.error("Error sharing link:", error);
       Alert.alert("Error", "Failed to create share link");
     } finally {
       setSharingLink(false);

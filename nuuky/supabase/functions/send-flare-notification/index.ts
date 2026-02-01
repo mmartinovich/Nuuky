@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { sendBatchExpoNotifications, sendBatchSilentNotifications } from '../_shared/expo-push.ts';
+import { authenticateRequest, verifySender, rateLimit, AuthError, authErrorResponse } from '../_shared/auth.ts';
 
 interface FlareRequest {
   user_id: string;
@@ -9,12 +9,12 @@ interface FlareRequest {
 
 serve(async (req) => {
   try {
-    // Only allow POST requests
     if (req.method !== 'POST') {
       return new Response('Method not allowed', { status: 405 });
     }
 
-    // Parse request body
+    const { userId, supabase } = await authenticateRequest(req);
+
     const { user_id, flare_id }: FlareRequest = await req.json();
 
     if (!user_id || !flare_id) {
@@ -24,14 +24,11 @@ serve(async (req) => {
       );
     }
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    verifySender(userId, user_id);
+    rateLimit(userId);
 
     console.log(`Processing flare ${flare_id} from user ${user_id}`);
 
-    // Get user info
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('display_name')
@@ -46,7 +43,6 @@ serve(async (req) => {
       );
     }
 
-    // Get all friends of this user
     const { data: friendships, error: friendsError } = await supabase
       .from('friendships')
       .select(`
@@ -76,7 +72,6 @@ serve(async (req) => {
       );
     }
 
-    // Check which friends are anchors (they get stronger notification)
     const { data: anchors } = await supabase
       .from('anchors')
       .select('anchor_id')
@@ -84,29 +79,24 @@ serve(async (req) => {
 
     const anchorIds = new Set(anchors?.map(a => a.anchor_id) || []);
 
-    // Get all friend IDs to check their preferences
     const friendIds = friendships.map((f: any) => f.friend_id);
 
-    // Fetch notification preferences for all friends
     const { data: allPreferences } = await supabase
       .from('user_preferences')
       .select('user_id, flares_enabled')
       .in('user_id', friendIds);
 
-    // Create a map of user_id -> flares_enabled (default true if not found)
     const preferencesMap = new Map<string, boolean>();
     allPreferences?.forEach((pref: any) => {
       preferencesMap.set(pref.user_id, pref.flares_enabled);
     });
 
-    // Collect push tokens (only for users who have flares enabled)
     const regularTokens: string[] = [];
     const anchorTokens: string[] = [];
     const filteredFriendships: any[] = [];
 
     friendships.forEach((friendship: any) => {
       const friend = friendship.friend;
-      // Default to enabled if no preference found
       const flaresEnabled = preferencesMap.get(friend?.id) ?? true;
 
       if (!flaresEnabled) {
@@ -129,7 +119,6 @@ serve(async (req) => {
 
     let totalSent = 0;
 
-    // Insert notifications only for friends who have flares enabled
     const notificationsToInsert = filteredFriendships.map((friendship: any) => ({
       user_id: friendship.friend_id,
       type: 'flare',
@@ -154,7 +143,6 @@ serve(async (req) => {
       }
     }
 
-    // Send stronger notification to anchors
     if (anchorTokens.length > 0) {
       const anchorNotification = {
         title: '🚨 FLARE from ' + user.display_name,
@@ -175,7 +163,6 @@ serve(async (req) => {
       console.log(`Sent ${anchorResult.success} anchor notifications`);
     }
 
-    // Send regular notification to other friends
     if (regularTokens.length > 0) {
       const regularNotification = {
         title: '🚨 Flare from ' + user.display_name,
@@ -196,7 +183,6 @@ serve(async (req) => {
       console.log(`Sent ${regularResult.success} regular notifications`);
     }
 
-    // Send silent notifications for background sync to ALL friends (Discord/Slack pattern)
     const allTokens = [...anchorTokens, ...regularTokens];
     if (allTokens.length > 0) {
       await sendBatchSilentNotifications(allTokens, {
@@ -220,6 +206,9 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    if (error instanceof AuthError) {
+      return authErrorResponse(error);
+    }
     console.error('Function error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),

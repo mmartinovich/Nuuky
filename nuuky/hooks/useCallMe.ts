@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { useState } from 'react';
 import { Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -38,7 +39,7 @@ export const useCallMe = () => {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
       if (sessionError || !session) {
-        console.error('No active session:', sessionError);
+        logger.error('No active session:', sessionError);
         Alert.alert('Authentication Error', 'Please log in again.');
         setLoading(false);
         return false;
@@ -69,9 +70,9 @@ export const useCallMe = () => {
         },
       });
 
-      console.log('[CallMe] Response data:', data);
+      logger.log('[CallMe] Response data:', data);
       if (error) {
-        console.warn('[CallMe] Edge function returned error:', error);
+        logger.warn('[CallMe] Edge function returned error:', error);
       }
 
       // Edge Functions may return error status even when notification is created in DB
@@ -80,7 +81,7 @@ export const useCallMe = () => {
 
       if (!notificationSent && error) {
         // Only fail if explicitly marked as failed AND there's an error
-        console.error('[CallMe] Failed to send notification');
+        logger.error('[CallMe] Failed to send notification');
         throw new Error('Failed to send call request');
       }
 
@@ -91,7 +92,7 @@ export const useCallMe = () => {
 
       return true;
     } catch (error: any) {
-      console.error('[CallMe] Error sending call request:', error);
+      logger.error('[CallMe] Error sending call request:', error);
       Alert.alert('Error', error?.message || 'Failed to send call request');
       return false;
     } finally {

@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { useState, useCallback } from 'react';
 import * as SMS from 'expo-sms';
 import * as Linking from 'expo-linking';
@@ -73,7 +74,7 @@ Download now: ${getInviteLink()}`;
 
       return false;
     } catch (error) {
-      console.error('SMS invite error:', error);
+      logger.error('SMS invite error:', error);
       Alert.alert('Error', 'Failed to open SMS. Please try again.');
       return false;
     } finally {
@@ -110,7 +111,7 @@ Download now: ${getInviteLink()}`;
         return false;
       }
 
-      console.error('Share error:', error);
+      logger.error('Share error:', error);
       Alert.alert('Error', 'Failed to share invite. Please try again.');
       return false;
     } finally {
@@ -151,7 +152,7 @@ Download now: ${getInviteLink()}`;
         return false;
       }
     } catch (error) {
-      console.error('WhatsApp invite error:', error);
+      logger.error('WhatsApp invite error:', error);
       return false;
     } finally {
       setSending(false);

@@ -1,22 +1,11 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { sendExpoNotification, sendSilentNotification } from '../_shared/expo-push.ts';
-
-/**
- * Send Call Me Notification
- *
- * This is a request from one friend to another to start a call.
- * Similar to nudge but specifically for initiating voice/video calls.
- *
- * Sends both:
- * 1. A visible push notification so the user sees the request
- * 2. A silent notification for background data sync
- */
+import { authenticateRequest, verifySender, rateLimit, AuthError, authErrorResponse } from '../_shared/auth.ts';
 
 interface CallMeRequest {
   receiver_id: string;
   sender_id: string;
-  room_id?: string; // Optional: specific room to call in
+  room_id?: string;
 }
 
 serve(async (req) => {
@@ -24,6 +13,8 @@ serve(async (req) => {
     if (req.method !== 'POST') {
       return new Response('Method not allowed', { status: 405 });
     }
+
+    const { userId, supabase } = await authenticateRequest(req);
 
     const { receiver_id, sender_id, room_id }: CallMeRequest = await req.json();
 
@@ -34,13 +25,11 @@ serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    verifySender(userId, sender_id);
+    rateLimit(userId);
 
     console.log(`Processing call me request from ${sender_id} to ${receiver_id}`);
 
-    // Get sender info
     const { data: sender, error: senderError } = await supabase
       .from('users')
       .select('display_name, avatar_url')
@@ -55,7 +44,6 @@ serve(async (req) => {
       );
     }
 
-    // Get receiver info and push token
     const { data: receiver, error: receiverError } = await supabase
       .from('users')
       .select('fcm_token, display_name')
@@ -70,7 +58,6 @@ serve(async (req) => {
       );
     }
 
-    // Check if receiver has call notifications enabled (reusing nudges_enabled preference)
     const { data: preferences } = await supabase
       .from('user_preferences')
       .select('nudges_enabled')
@@ -95,7 +82,6 @@ serve(async (req) => {
       );
     }
 
-    // Prepare notification data
     const notificationData = {
       type: 'call_me',
       sender_id: sender_id,
@@ -104,7 +90,6 @@ serve(async (req) => {
       room_id: room_id,
     };
 
-    // 1. Send visible push notification
     const visibleNotification = {
       title: '📞 ' + sender.display_name + ' wants to talk',
       body: `${sender.display_name} is asking you to call them`,
@@ -115,14 +100,12 @@ serve(async (req) => {
 
     const sent = await sendExpoNotification(receiver.fcm_token, visibleNotification);
 
-    // 2. Send silent notification for background sync (Discord/Slack pattern)
     await sendSilentNotification(receiver.fcm_token, {
       sync_type: 'sync_notifications',
       notification_type: 'call_me',
       ...notificationData,
     });
 
-    // 3. Insert notification into database for persistence
     const { error: notificationError } = await supabase
       .from('notifications')
       .insert({
@@ -146,8 +129,6 @@ serve(async (req) => {
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     } else {
-      // Push notification failed but DB notification was still created
-      // Return 200 since the notification is persisted and will be visible in-app
       console.warn(`⚠ Push notification failed for ${receiver.display_name}, but DB notification created`);
       return new Response(
         JSON.stringify({ message: 'Notification created in DB (push failed)', sent: false }),
@@ -156,6 +137,9 @@ serve(async (req) => {
     }
 
   } catch (error) {
+    if (error instanceof AuthError) {
+      return authErrorResponse(error);
+    }
     console.error('Function error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
