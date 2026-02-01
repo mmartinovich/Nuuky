@@ -14,7 +14,7 @@ interface UseStreakBoltsProps {
   orbitAngleValueRef: React.MutableRefObject<number>;
   orbitAngle: RNAnimated.Value;
   boltTick: number;
-  setBoltTick: React.Dispatch<React.SetStateAction<number>>;
+  setBoltTick?: React.Dispatch<React.SetStateAction<number>>;
   isSpinning: boolean;
   boltPositionsRef: React.MutableRefObject<Array<{ x: number; y: number }>>;
   computeBoltPositionsRef: React.MutableRefObject<(() => void) | null>;
@@ -28,7 +28,6 @@ export function useStreakBolts({
   orbitAngleValueRef,
   orbitAngle,
   boltTick,
-  setBoltTick,
   isSpinning,
   boltPositionsRef,
   computeBoltPositionsRef,
@@ -82,7 +81,6 @@ export function useStreakBolts({
     };
 
     boltPositionsRef.current = computePositions();
-    setBoltTick((t) => t + 1);
 
     const listenerId = orbitAngle.addListener(() => {
       boltPositionsRef.current = computePositions();

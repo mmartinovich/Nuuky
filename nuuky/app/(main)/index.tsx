@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Alert, StatusBar, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
@@ -44,7 +44,7 @@ try {
     },
   };
 }
-import { useAppStore } from "../../stores/appStore";
+import { useAppStore, useCurrentUser, useFriendsStore, useSpeakingParticipants, useActiveCustomMood } from "../../stores/appStore";
 import { User } from "../../types";
 import { MoodPicker } from "../../components/MoodPicker";
 
@@ -94,7 +94,11 @@ export default function QuantumOrbitScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme, isDark, accent } = useTheme();
-  const { currentUser, friends, setFriends, speakingParticipants, activeCustomMood } = useAppStore();
+  const currentUser = useCurrentUser();
+  const friends = useFriendsStore();
+  const speakingParticipants = useSpeakingParticipants();
+  const activeCustomMood = useActiveCustomMood();
+  const setFriends = useAppStore((s) => s.setFriends);
   const { currentMood, changeMood } = useMood();
   const { customMoods, createCustomMood, selectCustomMood, deleteCustomMood } = useCustomMood();
   const { sendNudge } = useNudge();
@@ -138,6 +142,7 @@ export default function QuantumOrbitScreen() {
   const [showRoomList, setShowRoomList] = useState(false);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
   const [showRoomSettings, setShowRoomSettings] = useState(false);
+  const [boltsReady, setBoltsReady] = useState(false);
 
   // Extracted hooks
   const isCurrentUserSpeaking = currentUser?.id ? speakingParticipants.includes(currentUser.id) : false;
@@ -161,9 +166,11 @@ export default function QuantumOrbitScreen() {
   const currentVibe = useMemo(() => getVibeText(currentUser?.mood || "neutral"), [currentUser?.mood]);
 
   // Calculate friend list and positions
-  const friendList = friends
+  const friendList = useMemo(() => friends
     .map((f) => f.friend as User)
-    .filter((f): f is User => f !== null && f !== undefined && f.id !== currentUser?.id);
+    .filter((f): f is User => f !== null && f !== undefined && f.id !== currentUser?.id)
+    .sort((a, b) => a.id.localeCompare(b.id)),
+    [friends, currentUser?.id]);
 
   const roomParticipants = useMemo(() => {
     if (!defaultRoomId) return [];
@@ -175,16 +182,32 @@ export default function QuantumOrbitScreen() {
     if (roomParticipants.length === 0) return [];
     return roomParticipants
       .map((p) => p.user)
-      .filter((u): u is User => u !== null && u !== undefined && u.id !== currentUser?.id);
+      .filter((u): u is User => u !== null && u !== undefined && u.id !== currentUser?.id)
+      .sort((a, b) => a.id.localeCompare(b.id));
   }, [roomParticipants, currentUser?.id]);
 
-  const orbitUsers = defaultRoom ? participantUsers : friendList;
-
-  useEffect(() => {
-    if (currentUser && friends.length === 0 && friendList.length === 0) {
-      loadFriends(true);
+  // If we know a default room exists (persisted ID), wait for participant data
+  // instead of briefly showing friendList then switching
+  const orbitUsers = useMemo(() => {
+    if (defaultRoomId) {
+      // We expect room participants — only show them once loaded
+      return participantUsers;
     }
-  }, [currentUser?.id, friends.length, friendList.length]);
+    return friendList;
+  }, [defaultRoomId, participantUsers, friendList]);
+
+  const orbitIds = useMemo(() => orbitUsers.map((f) => f.id).join(","), [orbitUsers]);
+
+  // Delay bolt visibility until avatars have had a frame to mount
+  useEffect(() => {
+    if (orbitUsers.length > 0 && !boltsReady) {
+      const timer = setTimeout(() => setBoltsReady(true), 300);
+      return () => clearTimeout(timer);
+    }
+    if (orbitUsers.length === 0) {
+      setBoltsReady(false);
+    }
+  }, [orbitUsers.length, boltsReady]);
 
   // Organic layout algorithm
   const calculateFriendPositions = (count: number) => {
@@ -252,7 +275,6 @@ export default function QuantumOrbitScreen() {
     return positions;
   };
 
-  const orbitIds = useMemo(() => orbitUsers.map((f) => f.id).join(","), [orbitUsers]);
   const orbitPositions = useMemo(() => calculateFriendPositions(orbitUsers.length), [orbitUsers.length, orbitIds]);
 
   const orbitBaseAngles = useMemo(() => {
@@ -503,8 +525,9 @@ export default function QuantumOrbitScreen() {
     }
   }, [defaultRoom, isMuted, audioUnmute, audioMute]);
 
-  // Keep splash screen visible until data is loaded
-  const isDataReady = !((loading && friendList.length === 0 && !currentUser) || (firstTimeLoading && !defaultRoom));
+  // Keep splash screen visible until orbit data has settled
+  const orbitSettled = orbitUsers.length > 0 || (!loading && friendList.length === 0);
+  const isDataReady = !!currentUser && !firstTimeLoading && orbitSettled;
 
   useEffect(() => {
     if (isDataReady) {
@@ -530,7 +553,7 @@ export default function QuantumOrbitScreen() {
       <View style={[styles.grain, { backgroundColor: theme.colors.grain }]} pointerEvents="none" />
 
       {/* Electric Bolt Layer */}
-      {activeBolts.length > 0 && !isSpinning && boltPositionsRef.current.length === activeBolts.length && (
+      {activeBolts.length > 0 && !isSpinning && boltsReady && boltPositionsRef.current.length === activeBolts.length && (
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           {activeBolts.map(({ streak: s }, i) => (
             <ElectricBolt

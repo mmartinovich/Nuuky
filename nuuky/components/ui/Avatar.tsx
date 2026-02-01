@@ -82,7 +82,7 @@ export const Avatar: React.FC<AvatarProps> = memo(({
           ]}
           cachePolicy="memory-disk"
           contentFit="cover"
-          transition={200}
+          transition={0}
         />
       ) : (
         <LinearGradient

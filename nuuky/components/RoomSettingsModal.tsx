@@ -506,7 +506,7 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                         renderStackedAvatar(participant, index)
                       )}
                       {overflowCount > 0 && (
-                        <View style={[styles.stackedAvatarWrapper, styles.overflowBadge, { backgroundColor: theme.colors.glass.border, borderColor: theme.colors.bg.secondary }]}>
+                        <View style={[styles.stackedAvatarWrapper, styles.overflowBadge, { backgroundColor: theme.colors.glass.border, borderColor: theme.colors.glass.border }]}>
                           <Text style={[styles.overflowText, { color: theme.colors.text.secondary }]}>+{overflowCount}</Text>
                         </View>
                       )}

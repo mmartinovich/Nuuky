@@ -370,13 +370,20 @@ function FriendParticleComponent({
           {/* Avatar circle - on top */}
           <View style={styles.avatarContainer}>
             {friend.avatar_url ? (
-              <CachedImage
-                source={{ uri: friend.avatar_url }}
-                style={styles.avatar}
-                cachePolicy="memory-disk"
-                contentFit="cover"
-                transition={200}
-              />
+              <>
+                <CachedImage
+                  source={{ uri: friend.avatar_url }}
+                  style={styles.avatar}
+                  cachePolicy="memory-disk"
+                  contentFit="cover"
+                  transition={0}
+                  recyclingKey={friend.id}
+                />
+                {/* Initials behind image as instant fallback while image loads from disk */}
+                <View style={[styles.avatarPlaceholder, { backgroundColor: `${moodColors.base}30`, position: 'absolute', width: '100%', height: '100%', zIndex: 0 }]}>
+                  <Text style={[styles.initialsText, { color: theme.colors.text.primary }]}>{getInitials(friend.display_name)}</Text>
+                </View>
+              </>
             ) : (
               <View style={[styles.avatarPlaceholder, { backgroundColor: `${moodColors.base}30` }]}>
                 <Text style={[styles.initialsText, { color: theme.colors.text.primary }]}>{getInitials(friend.display_name)}</Text>
@@ -431,7 +438,8 @@ export const FriendParticle = memo(FriendParticleComponent, (prevProps, nextProp
     prevProps.friend.avatar_url === nextProps.friend.avatar_url &&
     prevProps.friend.is_online === nextProps.friend.is_online &&
     prevProps.friend.last_seen_at === nextProps.friend.last_seen_at &&
-    prevProps.position === nextProps.position &&
+    prevProps.position.x === nextProps.position.x &&
+    prevProps.position.y === nextProps.position.y &&
     prevProps.hasActiveFlare === nextProps.hasActiveFlare &&
     prevProps.baseAngle === nextProps.baseAngle &&
     prevProps.radius === nextProps.radius &&
