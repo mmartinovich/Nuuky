@@ -80,6 +80,18 @@ export default function MainLayout() {
           animation: "slide_from_bottom",
         }}
       />
+      <Stack.Screen
+        name="privacy-policy"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="terms-of-service"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }

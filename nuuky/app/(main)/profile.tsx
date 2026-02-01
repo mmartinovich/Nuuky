@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CountryPicker, { Country, CountryCode, DARK_THEME } from "react-native-country-picker-modal";
 import { useAppStore } from "../../stores/appStore";
 import { useProfile } from "../../hooks/useProfile";
+import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../hooks/useTheme";
 import { spacing, interactionStates } from "../../lib/theme";
 import { QRCodeModal } from "../../components/QRCode";
@@ -144,6 +145,7 @@ export default function ProfileScreen() {
   const { theme, isDark } = useTheme();
   const { currentUser } = useAppStore();
   const { loading, previewUri, pickAndUploadAvatar, updateDisplayName, updatePhone, deleteAvatar } = useProfile();
+  const { deleteAccount } = useAuth();
 
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(currentUser?.display_name || "");
@@ -154,6 +156,7 @@ export default function ProfileScreen() {
   const [imageKey, setImageKey] = useState(Date.now());
   const [showQRModal, setShowQRModal] = useState(false);
 
+  const [deleting, setDeleting] = useState(false);
   const phoneInputRef = useRef<TextInput>(null);
 
   // Phone formatting helpers
@@ -685,6 +688,76 @@ export default function ProfileScreen() {
             />
           </ProfileSection>
         )}
+
+        {/* Delete Account Section */}
+        <ProfileSection
+          title="DANGER ZONE"
+          footer="This will permanently delete your account, friends, rooms, and all associated data. This action cannot be undone."
+          theme={theme}
+        >
+          <TouchableOpacity
+            activeOpacity={interactionStates.pressed}
+            onPress={() => {
+              Alert.alert(
+                "Delete Account",
+                "Are you sure you want to permanently delete your account? All your data, friends, rooms, and history will be lost forever.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: () => {
+                      Alert.alert(
+                        "Final Confirmation",
+                        "This cannot be undone. Delete your account?",
+                        [
+                          { text: "Cancel", style: "cancel" },
+                          {
+                            text: "Delete Forever",
+                            style: "destructive",
+                            onPress: async () => {
+                              try {
+                                setDeleting(true);
+                                await deleteAccount();
+                                router.replace("/(auth)/login");
+                              } catch (error) {
+                                Alert.alert("Error", "Failed to delete account. Please try again.");
+                              } finally {
+                                setDeleting(false);
+                              }
+                            },
+                          },
+                        ]
+                      );
+                    },
+                  },
+                ]
+              );
+            }}
+          >
+            <View
+              style={[
+                styles.rowContainer,
+                {
+                  backgroundColor: theme.colors.glass.background,
+                  borderRadius: 16,
+                },
+              ]}
+            >
+              <View style={styles.rowContent}>
+                <Ionicons
+                  name="trash-outline"
+                  size={22}
+                  color="#FF3B30"
+                  style={styles.rowIcon}
+                />
+                <Text style={[styles.rowLabel, { color: "#FF3B30" }]}>
+                  {deleting ? "Deleting Account..." : "Delete Account"}
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </ProfileSection>
       </ScrollView>
 
       {/* QR Code Modal */}

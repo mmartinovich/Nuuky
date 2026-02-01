@@ -396,6 +396,16 @@ export const getMoodColor = (mood: 'good' | 'neutral' | 'not_great' | 'reach_out
   }
 };
 
+// Determine if text on a given hex color should be dark or light
+const getTextOnColor = (hex: string): string => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  // Relative luminance formula
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.55 ? '#1A1A1A' : '#FFFFFF';
+};
+
 // Helper function to get accent colors from mood (for dynamic theming)
 export const getAccentFromMood = (mood?: PresetMood): AccentColors => {
   const moodColors = getMoodColor(mood || 'neutral');
@@ -404,7 +414,7 @@ export const getAccentFromMood = (mood?: PresetMood): AccentColors => {
     soft: moodColors.soft,
     glow: moodColors.glow,
     gradient: moodColors.gradient,
-    textOnPrimary: '#FFFFFF',
+    textOnPrimary: getTextOnColor(moodColors.base),
   };
 };
 

@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View, StyleSheet, Text, TouchableOpacity, ScrollView, TextInput, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, radius } from '../lib/theme';
 import { useTheme } from '../hooks/useTheme';
@@ -21,28 +21,57 @@ export const EmojiInput: React.FC<EmojiInputProps> = ({
   onChangeEmoji,
 }) => {
   const { theme } = useTheme();
+  const inputRef = useRef<TextInput>(null);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+
+  const handleChangeText = (text: string) => {
+    if (text.length > 0) {
+      const emojiRegex = /\p{Extended_Pictographic}(\u200D\p{Extended_Pictographic}|\uFE0F)*/gu;
+      const matches = [...text.matchAll(emojiRegex)];
+      const lastEmoji = matches[matches.length - 1]?.[0];
+      if (lastEmoji) {
+        onChangeEmoji(lastEmoji);
+        Keyboard.dismiss();
+        setIsKeyboardOpen(false);
+        return;
+      }
+    }
+    setTimeout(() => {
+      inputRef.current?.setNativeProps({ text: '' });
+    }, 0);
+  };
+
+  const handleOpenKeyboard = () => {
+    setIsKeyboardOpen(true);
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+  };
+
   return (
     <View style={styles.container}>
-      {/* Selected emoji or placeholder inline with the grid */}
       <View style={styles.row}>
-        <View
+        <TouchableOpacity
           style={[
             styles.selectedBox,
             { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border },
           ]}
+          onPress={handleOpenKeyboard}
+          activeOpacity={0.7}
         >
           {value ? (
             <Text style={styles.selectedEmoji}>{value}</Text>
           ) : (
-            <Ionicons name="happy-outline" size={28} color={theme.colors.text.tertiary} />
+            <Ionicons name="keypad-outline" size={24} color={theme.colors.text.tertiary} />
           )}
-        </View>
+        </TouchableOpacity>
 
         {/* Emoji grid */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.emojiGrid}
+          keyboardShouldPersistTaps="always"
         >
           {POPULAR_EMOJIS.map((emoji) => (
             <TouchableOpacity
@@ -64,6 +93,19 @@ export const EmojiInput: React.FC<EmojiInputProps> = ({
           ))}
         </ScrollView>
       </View>
+
+      {isKeyboardOpen && (
+        <TextInput
+          ref={inputRef}
+          style={[styles.keyboardInput, { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border, color: theme.colors.text.primary }]}
+          onChangeText={handleChangeText}
+          autoCorrect={false}
+          placeholder="Tap 🌐 for emojis"
+          placeholderTextColor={theme.colors.text.tertiary}
+          autoFocus
+          onBlur={() => setIsKeyboardOpen(false)}
+        />
+      )}
     </View>
   );
 };
@@ -86,6 +128,14 @@ const styles = StyleSheet.create({
   },
   selectedEmoji: {
     fontSize: 32,
+  },
+  keyboardInput: {
+    marginTop: spacing.xs,
+    height: 40,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    fontSize: 16,
   },
   emojiGrid: {
     flexDirection: 'row',
