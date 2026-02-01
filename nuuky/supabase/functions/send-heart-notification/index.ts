@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { sendExpoNotification, sendSilentNotification } from '../_shared/expo-push.ts';
+import { authenticateRequest, verifySender, rateLimit, AuthError, authErrorResponse } from '../_shared/auth.ts';
 
 interface HeartRequest {
   receiver_id: string;
@@ -13,6 +13,8 @@ serve(async (req) => {
       return new Response('Method not allowed', { status: 405 });
     }
 
+    const { userId, supabase } = await authenticateRequest(req);
+
     const { receiver_id, sender_id }: HeartRequest = await req.json();
 
     if (!receiver_id || !sender_id) {
@@ -22,9 +24,8 @@ serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    verifySender(userId, sender_id);
+    rateLimit(userId);
 
     console.log(`Processing heart from ${sender_id} to ${receiver_id}`);
 
@@ -117,6 +118,9 @@ serve(async (req) => {
     }
 
   } catch (error) {
+    if (error instanceof AuthError) {
+      return authErrorResponse(error);
+    }
     console.error('Function error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),

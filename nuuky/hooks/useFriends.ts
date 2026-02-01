@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { supabase } from '../lib/supabase';
@@ -64,7 +65,7 @@ export const useFriends = () => {
       setFriends(data || []);
       setHasLoadedOnce(true);
     } catch (error: any) {
-      console.error('Error loading friends:', error);
+      logger.error('Error loading friends:', error);
       setFriends([]); // Clear friends on error
       // Only show alert on refresh, not initial load to avoid startup spam
       if (!isInitial && hasLoadedOnce) {
@@ -121,7 +122,7 @@ export const useFriends = () => {
 
         useAppStore.getState().setFriends(data || []);
       } catch (error: any) {
-        console.error('Error refreshing friends via realtime:', error);
+        logger.error('Error refreshing friends via realtime:', error);
       }
     };
 
@@ -175,7 +176,7 @@ export const useFriends = () => {
         .or(`and(user_id.eq.${currentUser.id},friend_id.eq.${userId}),and(user_id.eq.${userId},friend_id.eq.${currentUser.id})`);
 
       if (checkError) {
-        console.error('Error checking existing friendship:', checkError);
+        logger.error('Error checking existing friendship:', checkError);
       }
 
       if (existing && existing.length > 0) {
@@ -211,7 +212,7 @@ export const useFriends = () => {
           .select();
 
         if (insertMissingError) {
-          console.error('Error inserting missing direction:', insertMissingError);
+          logger.error('Error inserting missing direction:', insertMissingError);
           if (insertMissingError.code !== '23505') {
             throw insertMissingError;
           }
@@ -246,7 +247,7 @@ export const useFriends = () => {
         .select();
 
       if (insertError) {
-        console.error('Insert error:', insertError);
+        logger.error('Insert error:', insertError);
         // Handle duplicate key error - means they're already friends
         if (insertError.code === '23505') {
           await loadFriends();
@@ -260,7 +261,7 @@ export const useFriends = () => {
       Alert.alert('Success', `${targetUser?.display_name || 'Friend'} added!`);
       return true;
     } catch (error: any) {
-      console.error('Error adding friend:', error);
+      logger.error('Error adding friend:', error);
 
       // Don't show error for duplicate - just refresh
       if (error.code === '23505') {
@@ -289,7 +290,7 @@ export const useFriends = () => {
         .eq('is_active', true);
 
       if (roomsError) {
-        console.error('Error fetching rooms:', roomsError);
+        logger.error('Error fetching rooms:', roomsError);
       }
 
       // Remove the friend from all rooms where the current user is the creator
@@ -302,7 +303,7 @@ export const useFriends = () => {
           .in('room_id', roomIds);
 
         if (removeParticipantError) {
-          console.error('Error removing friend from rooms:', removeParticipantError);
+          logger.error('Error removing friend from rooms:', removeParticipantError);
         }
       }
 
@@ -316,7 +317,7 @@ export const useFriends = () => {
       if (error) throw error;
 
       // Immediately update local state to prevent the realtime subscription from showing stale data
-      setFriends(friends.filter(f => f.friend_id !== friendId));
+      setFriends((friends || []).filter(f => f.friend_id !== friendId));
 
       // Update room participants if the removed friend is in the currently viewed room
       const { roomParticipants, currentRoom } = useAppStore.getState();
@@ -328,7 +329,7 @@ export const useFriends = () => {
 
       return true;
     } catch (error: any) {
-      console.error('Error removing friend:', error);
+      logger.error('Error removing friend:', error);
       Alert.alert('Error', 'Failed to remove friend');
       return false;
     } finally {

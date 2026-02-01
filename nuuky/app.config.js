@@ -23,6 +23,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.nuuky.app",
+      buildNumber: "1",
       usesAppleSignIn: true,
       icon: "./assets/icon.png",
       appClips: {
@@ -31,9 +32,23 @@ export default {
       infoPlist: {
         NSFaceIDUsageDescription: "Nūūky uses Face ID to verify your identity before signing in.",
         NSMicrophoneUsageDescription: "Nūūky needs microphone access to let you talk with friends in rooms.",
-        NSCameraUsageDescription: "Nūūky needs camera access for video calls with friends.",
+        NSCameraUsageDescription: "Nūūky needs camera access to scan QR codes.",
         UIBackgroundModes: ["audio"],
         ITSAppUsesNonExemptEncryption: false,
+        NSPrivacyAccessedAPITypes: [
+          {
+            NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategoryUserDefaults",
+            NSPrivacyAccessedAPITypeReasons: ["CA92.1"],
+          },
+          {
+            NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategorySystemBootTime",
+            NSPrivacyAccessedAPITypeReasons: ["35F9.1"],
+          },
+          {
+            NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategoryDiskSpace",
+            NSPrivacyAccessedAPITypeReasons: ["E174.1"],
+          },
+        ],
         UIAppFonts: [],
         // Appearance-specific icons for iOS 13+
         CFBundleAlternateIcons: {

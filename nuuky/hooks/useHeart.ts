@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { useState } from 'react';
 import { Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -19,7 +20,7 @@ export const useHeart = () => {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
       if (sessionError || !session) {
-        console.error('No active session:', sessionError);
+        logger.error('No active session:', sessionError);
         Alert.alert('Authentication Error', 'Please log in again.');
         setLoading(false);
         return false;
@@ -50,7 +51,7 @@ export const useHeart = () => {
           },
         });
       } catch (notifError) {
-        console.error('Failed to send heart notification:', notifError);
+        logger.error('Failed to send heart notification:', notifError);
       }
 
       await Haptics.notificationAsync(
@@ -59,7 +60,7 @@ export const useHeart = () => {
 
       return true;
     } catch (error: any) {
-      console.error('Error sending heart:', error);
+      logger.error('Error sending heart:', error);
       return false;
     } finally {
       setLoading(false);

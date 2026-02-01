@@ -1,3 +1,4 @@
+import { logger } from './logger';
 import { registerGlobals } from '@livekit/react-native-webrtc';
 import { AudioSession } from '@livekit/react-native';
 import {
@@ -100,7 +101,7 @@ export const requestLiveKitToken = async (
       data: { session },
     } = await supabase.auth.getSession();
     if (!session?.access_token) {
-      console.error('[LiveKit] No active session found');
+      logger.error('[LiveKit] No active session found');
       throw new Error('No active session');
     }
 
@@ -113,7 +114,7 @@ export const requestLiveKitToken = async (
     });
 
     if (error) {
-      console.error('[LiveKit] Token request error:', error);
+      logger.error('[LiveKit] Token request error:', error);
       throw error;
     }
 
@@ -124,7 +125,7 @@ export const requestLiveKitToken = async (
 
     return data;
   } catch (error) {
-    console.error('[LiveKit] Failed to get token:', error);
+    logger.error('[LiveKit] Failed to get token:', error);
     eventCallbacks?.onError('Failed to get audio token');
     return null;
   }
@@ -189,7 +190,7 @@ export const connectToAudioRoom = async (roomId: string): Promise<boolean> => {
 
     return true;
   } catch (error) {
-    console.error('[LiveKit] Failed to connect:', error);
+    logger.error('[LiveKit] Failed to connect:', error);
     eventCallbacks?.onConnectionStatusChange('error');
     eventCallbacks?.onError('Failed to connect to audio');
     return false;
@@ -215,7 +216,7 @@ export const setLocalMicrophoneEnabled = async (
   enabled: boolean
 ): Promise<void> => {
   if (!currentRoom?.localParticipant) {
-    console.warn('[LiveKit] No local participant to toggle mic');
+    logger.warn('[LiveKit] No local participant to toggle mic');
     return;
   }
 
@@ -309,7 +310,7 @@ const setupRoomEventListeners = (room: Room) => {
   // Handle track subscribed - ensures remote audio is properly played
   room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
     if (track.kind === Track.Kind.Audio) {
-      console.log(`[LiveKit] Audio track subscribed from ${participant.identity}`);
+      logger.log(`[LiveKit] Audio track subscribed from ${participant.identity}`);
       // Audio tracks should play automatically, but we log for debugging
       // If issues persist, we may need to explicitly call track.attach() here
     }

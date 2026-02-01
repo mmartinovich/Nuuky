@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { useState, useCallback } from "react";
 import { Alert, Share } from "react-native";
 import { supabase } from "../lib/supabase";
@@ -79,7 +80,7 @@ export const useInviteLink = () => {
 
         return data as RoomInviteLink;
       } catch (error: any) {
-        console.error("Error creating invite link:", error);
+        logger.error("Error creating invite link:", error);
         Alert.alert("Error", "Failed to create invite link");
         return null;
       } finally {
@@ -156,7 +157,7 @@ export const useInviteLink = () => {
         reason,
       };
     } catch (error: any) {
-      console.error("Error fetching invite link info:", error);
+      logger.error("Error fetching invite link info:", error);
       return null;
     } finally {
       setLoading(false);
@@ -240,7 +241,7 @@ export const useInviteLink = () => {
         Alert.alert("Joined!", `You've joined ${linkInfo.room.name || "the room"}`);
         return linkInfo.room;
       } catch (error: any) {
-        console.error("Error joining room by token:", error);
+        logger.error("Error joining room by token:", error);
         Alert.alert("Error", "Failed to join room");
         return null;
       } finally {
@@ -260,7 +261,7 @@ export const useInviteLink = () => {
         await Share.share({ message: url });
         return true;
       } catch (error) {
-        console.error("Error copying link:", error);
+        logger.error("Error copying link:", error);
         return false;
       }
     },
@@ -283,7 +284,7 @@ export const useInviteLink = () => {
 
         return result.action === Share.sharedAction;
       } catch (error) {
-        console.error("Error sharing link:", error);
+        logger.error("Error sharing link:", error);
         return false;
       }
     },
@@ -307,7 +308,7 @@ export const useInviteLink = () => {
 
       return data as RoomInviteLink[];
     } catch (error: any) {
-      console.error("Error fetching room invite links:", error);
+      logger.error("Error fetching room invite links:", error);
       return [];
     }
   }, []);
@@ -325,7 +326,7 @@ export const useInviteLink = () => {
 
       return true;
     } catch (error: any) {
-      console.error("Error deleting invite link:", error);
+      logger.error("Error deleting invite link:", error);
       Alert.alert("Error", "Failed to delete invite link");
       return false;
     }

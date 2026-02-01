@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { useEffect, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { supabase } from '../lib/supabase';
@@ -40,7 +41,7 @@ export const usePresence = () => {
         })
         .eq('id', user.id);
     } catch (error) {
-      console.error('Error updating presence:', error);
+      logger.error('Error updating presence:', error);
     }
   };
 

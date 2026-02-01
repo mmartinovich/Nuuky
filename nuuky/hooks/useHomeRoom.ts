@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { useState, useEffect, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
@@ -82,7 +83,7 @@ export const useHomeRoom = () => {
         }
       }
     } catch (error) {
-      console.error('Error initializing home room:', error);
+      logger.error('Error initializing home room:', error);
     } finally {
       setLoading(false);
     }
@@ -111,7 +112,7 @@ export const useHomeRoom = () => {
 
       return true;
     } catch (error) {
-      console.error('Error setting home room:', error);
+      logger.error('Error setting home room:', error);
       return false;
     }
   };
@@ -134,7 +135,7 @@ export const useHomeRoom = () => {
 
       return true;
     } catch (error) {
-      console.error('Error clearing home room:', error);
+      logger.error('Error clearing home room:', error);
       return false;
     }
   };

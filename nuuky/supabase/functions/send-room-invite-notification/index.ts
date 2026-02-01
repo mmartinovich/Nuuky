@@ -1,21 +1,21 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { sendBatchExpoNotifications, sendBatchSilentNotifications } from '../_shared/expo-push.ts';
+import { authenticateRequest, verifySender, rateLimit, validateArraySize, AuthError, authErrorResponse } from '../_shared/auth.ts';
 
 interface RoomInviteRequest {
   room_id: string;
   sender_id: string;
-  receiver_ids: string[]; // Can invite multiple people
+  receiver_ids: string[];
 }
 
 serve(async (req) => {
   try {
-    // Only allow POST requests
     if (req.method !== 'POST') {
       return new Response('Method not allowed', { status: 405 });
     }
 
-    // Parse request body
+    const { userId, supabase } = await authenticateRequest(req);
+
     const { room_id, sender_id, receiver_ids }: RoomInviteRequest = await req.json();
 
     if (!room_id || !sender_id || !receiver_ids || receiver_ids.length === 0) {
@@ -25,14 +25,12 @@ serve(async (req) => {
       );
     }
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    verifySender(userId, sender_id);
+    rateLimit(userId);
+    validateArraySize(receiver_ids, 'receiver_ids');
 
     console.log(`Processing room invite from ${sender_id} for room ${room_id}`);
 
-    // Get sender info
     const { data: sender, error: senderError } = await supabase
       .from('users')
       .select('display_name')
@@ -47,7 +45,6 @@ serve(async (req) => {
       );
     }
 
-    // Get room info
     const { data: room, error: roomError } = await supabase
       .from('rooms')
       .select('name, is_private')
@@ -64,7 +61,6 @@ serve(async (req) => {
 
     const roomName = room.name || 'a room';
 
-    // Get all receivers and their push tokens
     const { data: receivers, error: receiversError } = await supabase
       .from('users')
       .select('id, display_name, fcm_token')
@@ -85,7 +81,6 @@ serve(async (req) => {
       );
     }
 
-    // Collect push tokens
     const tokens = receivers
       .filter(r => r.fcm_token)
       .map(r => r.fcm_token as string);
@@ -98,7 +93,6 @@ serve(async (req) => {
       );
     }
 
-    // Send notifications
     const notification = {
       title: '🎙️ Room Invite from ' + sender.display_name,
       body: `${sender.display_name} invited you to join ${roomName}`,
@@ -113,7 +107,6 @@ serve(async (req) => {
       priority: 'high' as const,
     };
 
-    // Insert notifications for all receivers into database
     const notificationsToInsert = receivers.map((receiver: any) => ({
       user_id: receiver.id,
       type: 'room_invite',
@@ -136,7 +129,6 @@ serve(async (req) => {
 
     const result = await sendBatchExpoNotifications(tokens, notification);
 
-    // Send silent notifications for background sync (Discord/Slack pattern)
     await sendBatchSilentNotifications(tokens, {
       sync_type: 'sync_rooms',
       notification_type: 'room_invite',
@@ -159,6 +151,9 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    if (error instanceof AuthError) {
+      return authErrorResponse(error);
+    }
     console.error('Function error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),

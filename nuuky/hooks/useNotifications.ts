@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -46,7 +47,7 @@ export const useNotifications = () => {
 
       setNotifications(data || []);
     } catch (error: any) {
-      console.error('Error loading notifications:', error);
+      logger.error('Error loading notifications:', error);
     } finally {
       setLoading(false);
     }
@@ -69,7 +70,7 @@ export const useNotifications = () => {
 
       setNotifications(data || []);
     } catch (error: any) {
-      console.error('Error refreshing notifications:', error);
+      logger.error('Error refreshing notifications:', error);
       Alert.alert('Error', 'Failed to refresh notifications. Please try again.');
     } finally {
       setRefreshing(false);
@@ -93,7 +94,7 @@ export const useNotifications = () => {
       markNotificationRead(notificationId);
       return true;
     } catch (error: any) {
-      console.error('Error marking notification as read:', error);
+      logger.error('Error marking notification as read:', error);
       return false;
     }
   };
@@ -115,7 +116,7 @@ export const useNotifications = () => {
       markAllNotificationsRead();
       return true;
     } catch (error: any) {
-      console.error('Error marking all notifications as read:', error);
+      logger.error('Error marking all notifications as read:', error);
       return false;
     }
   };
@@ -137,7 +138,7 @@ export const useNotifications = () => {
       removeNotification(notificationId);
       return true;
     } catch (error: any) {
-      console.error('Error deleting notification:', error);
+      logger.error('Error deleting notification:', error);
       return false;
     }
   };
@@ -193,7 +194,7 @@ export const useNotifications = () => {
                 useAppStore.getState().addNotification(payload.new as AppNotification);
               }
             } catch (error) {
-              console.error('Error handling new notification:', error);
+              logger.error('Error handling new notification:', error);
             }
           }
         )
@@ -217,7 +218,7 @@ export const useNotifications = () => {
                 store.setNotifications(notifications);
               }
             } catch (error) {
-              console.error('Error handling notification update:', error);
+              logger.error('Error handling notification update:', error);
             }
           }
         )
@@ -235,7 +236,7 @@ export const useNotifications = () => {
                 useAppStore.getState().removeNotification(payload.old.id);
               }
             } catch (error) {
-              console.error('Error handling notification deletion:', error);
+              logger.error('Error handling notification deletion:', error);
             }
           }
         )

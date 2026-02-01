@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../stores/appStore';
@@ -44,7 +45,7 @@ export const useFirstTimeRoom = () => {
         setIsFirstTime(false);
       }
     } catch (error: any) {
-      console.error('Error checking first time status:', error);
+      logger.error('Error checking first time status:', error);
     } finally {
       setLoading(false);
     }
@@ -65,7 +66,7 @@ export const useFirstTimeRoom = () => {
         await loadMyRooms();
       }
     } catch (error: any) {
-      console.error('Error creating default room:', error);
+      logger.error('Error creating default room:', error);
     }
   };
 

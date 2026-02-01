@@ -1,3 +1,4 @@
+import { logger } from '../../lib/logger';
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -101,7 +102,7 @@ export default function EmailAuthScreen() {
       setStep("verify");
       startTimer();
     } catch (err: any) {
-      console.error("Error sending OTP:", err);
+      logger.error("Error sending OTP:", err);
       setError(getOTPErrorMessage(err));
     } finally {
       setLoading(false);
@@ -138,7 +139,7 @@ export default function EmailAuthScreen() {
         }
       }
     } catch (err: any) {
-      console.error("Error verifying OTP:", err);
+      logger.error("Error verifying OTP:", err);
       setError(getOTPErrorMessage(err));
     } finally {
       setLoading(false);
@@ -169,7 +170,7 @@ export default function EmailAuthScreen() {
         .single();
 
       if (insertError) {
-        console.error("Error creating user profile:", insertError);
+        logger.error("Error creating user profile:", insertError);
         Alert.alert("Error", "Failed to create profile. Please try again.");
         return null;
       }
@@ -204,7 +205,7 @@ export default function EmailAuthScreen() {
       startTimer();
       setOtp("");
     } catch (err: any) {
-      console.error("Error resending OTP:", err);
+      logger.error("Error resending OTP:", err);
       setError(getOTPErrorMessage(err));
     } finally {
       setLoading(false);

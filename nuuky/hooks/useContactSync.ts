@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { useState, useCallback } from 'react';
 import * as Contacts from 'expo-contacts';
 import { Alert } from 'react-native';
@@ -60,7 +61,7 @@ export const useContactSync = () => {
 
       return granted;
     } catch (error) {
-      console.error('Error requesting contacts permission:', error);
+      logger.error('Error requesting contacts permission:', error);
       return false;
     }
   };
@@ -75,7 +76,7 @@ export const useContactSync = () => {
       setHasPermission(granted);
       return granted;
     } catch (error) {
-      console.error('Error checking contacts permission:', error);
+      logger.error('Error checking contacts permission:', error);
       return false;
     }
   };
@@ -157,7 +158,7 @@ export const useContactSync = () => {
           .in('phone', batch);
 
         if (error) {
-          console.error('Error querying users:', error);
+          logger.error('Error querying users:', error);
           continue;
         }
 
@@ -208,7 +209,7 @@ export const useContactSync = () => {
         `Found ${onNuuky.length} friend${onNuuky.length !== 1 ? 's' : ''} on Nūūky and ${notOnNuuky.length} to invite.`
       );
     } catch (error: any) {
-      console.error('Error syncing contacts:', error);
+      logger.error('Error syncing contacts:', error);
       Alert.alert('Error', 'Failed to sync contacts. Please try again.');
     } finally {
       setLoading(false);

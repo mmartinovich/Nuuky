@@ -101,8 +101,10 @@ export default function QRScannerScreen() {
     if (scanned) return;
     setScanned(true);
 
-    // Parse the QR data
-    const nuukyUrlMatch = data.match(/^nuuky:\/\/(.+)/);
+    // Parse the QR data — only accept recognized nuuky:// paths
+    const profileMatch = data.match(/^nuuky:\/\/u\/([a-zA-Z0-9_]{3,20})$/);
+    const roomMatch = data.match(/^nuuky:\/\/r\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    const nuukyUrlMatch = profileMatch || roomMatch;
     if (nuukyUrlMatch) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showSuccessOverlay();

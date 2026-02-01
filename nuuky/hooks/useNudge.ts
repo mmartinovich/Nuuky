@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { useState } from 'react';
 import { Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -44,7 +45,7 @@ export const useNudge = () => {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
       if (sessionError || !session) {
-        console.error('No active session:', sessionError);
+        logger.error('No active session:', sessionError);
         Alert.alert('Authentication Error', 'Please log in again to send nudges.');
         setLoading(false);
         return false;
@@ -59,7 +60,7 @@ export const useNudge = () => {
         });
 
       if (error) {
-        console.error('Nudge insert error details:', {
+        logger.error('Nudge insert error details:', {
           code: error.code,
           message: error.message,
           details: error.details,
@@ -90,7 +91,7 @@ export const useNudge = () => {
           },
         });
       } catch (notifError) {
-        console.error('Failed to send notification:', notifError);
+        logger.error('Failed to send notification:', notifError);
         // Don't fail the nudge if notification fails
       }
 
@@ -101,7 +102,7 @@ export const useNudge = () => {
 
       return true;
     } catch (error: any) {
-      console.error('Error sending nudge:', error);
+      logger.error('Error sending nudge:', error);
       Alert.alert('Error', 'Failed to send nudge');
       return false;
     } finally {

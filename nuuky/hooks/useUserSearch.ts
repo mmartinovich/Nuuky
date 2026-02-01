@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { useState, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { useAppStore } from "../stores/appStore";
@@ -60,7 +61,7 @@ export const useUserSearch = () => {
         setResults(filteredResults);
         return filteredResults;
       } catch (err: any) {
-        console.error("Error searching users:", err);
+        logger.error("Error searching users:", err);
         setError("Failed to search users");
         setResults([]);
         return [];
@@ -101,7 +102,7 @@ export const useUserSearch = () => {
 
       return data as UserSearchResult;
     } catch (err: any) {
-      console.error("Error fetching user by username:", err);
+      logger.error("Error fetching user by username:", err);
       setError("Failed to find user");
       return null;
     } finally {
