@@ -16,7 +16,7 @@ import { supabase } from '../../../lib/supabase';
 export default function RoomScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { theme } = useTheme();
+  const { theme, accent } = useTheme();
   const { currentUser, friends, setCurrentRoom, setRoomParticipants } = useAppStore();
   useFriends(); // Ensure friends are loaded for invite dropdown
   const {
@@ -193,20 +193,20 @@ export default function RoomScreen() {
           style={[
             styles.muteButton,
             {
-              backgroundColor: isMuted ? 'transparent' : theme.colors.accent.primary,
-              borderColor: theme.colors.accent.primary,
-              shadowColor: theme.colors.accent.primary,
+              backgroundColor: isMuted ? 'transparent' : accent.primary,
+              borderColor: accent.primary,
+              shadowColor: accent.primary,
               opacity: isAudioConnecting ? 0.7 : 1,
             },
           ]}
         >
           {isAudioConnecting ? (
-            <ActivityIndicator size="small" color={isMuted ? theme.colors.accent.primary : theme.colors.text.primary} />
+            <ActivityIndicator size="small" color={isMuted ? accent.primary : accent.textOnPrimary} />
           ) : (
             <Ionicons
               name={isMuted ? 'mic-off' : 'mic'}
               size={28}
-              color={isMuted ? theme.colors.accent.primary : theme.colors.text.primary}
+              color={isMuted ? accent.primary : accent.textOnPrimary}
             />
           )}
         </TouchableOpacity>

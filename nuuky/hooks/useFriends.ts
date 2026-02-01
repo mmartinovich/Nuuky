@@ -36,44 +36,32 @@ export const useFriends = () => {
     }
 
     try {
-      // Fetch friendships and blocks in parallel for better performance
-      const [friendsResult, blocksResult] = await Promise.all([
-        supabase
-          .from('friendships')
-          .select(`
-            *,
-            friend:friend_id (
+      const { data, error } = await supabase
+        .from('friendships')
+        .select(`
+          *,
+          friend:friend_id (
+            id,
+            display_name,
+            mood,
+            custom_mood_id,
+            is_online,
+            last_seen_at,
+            avatar_url,
+            custom_mood:custom_mood_id (
               id,
-              display_name,
-              mood,
-              custom_mood_id,
-              is_online,
-              last_seen_at,
-              avatar_url,
-              custom_mood:custom_mood_id (
-                id,
-                emoji,
-                text,
-                color
-              )
+              emoji,
+              text,
+              color
             )
-          `)
-          .eq('user_id', currentUser.id)
-          .eq('status', 'accepted'),
-        supabase
-          .from('blocks')
-          .select('blocked_id')
-          .eq('blocker_id', currentUser.id)
-      ]);
+          )
+        `)
+        .eq('user_id', currentUser.id)
+        .eq('status', 'accepted');
 
-      if (friendsResult.error) throw friendsResult.error;
+      if (error) throw error;
 
-      const blockedIds = new Set(blocksResult.data?.map(b => b.blocked_id) || []);
-
-      // Filter out blocked friends
-      const filteredFriends = friendsResult.data?.filter(f => !blockedIds.has(f.friend_id)) || [];
-
-      setFriends(filteredFriends);
+      setFriends(data || []);
       setHasLoadedOnce(true);
     } catch (error: any) {
       console.error('Error loading friends:', error);
@@ -106,44 +94,32 @@ export const useFriends = () => {
       if (!user) return;
 
       try {
-        // Fetch friendships and blocks in parallel for better performance
-        const [friendsResult, blocksResult] = await Promise.all([
-          supabase
-            .from('friendships')
-            .select(`
-              *,
-              friend:friend_id (
+        const { data, error } = await supabase
+          .from('friendships')
+          .select(`
+            *,
+            friend:friend_id (
+              id,
+              display_name,
+              mood,
+              custom_mood_id,
+              is_online,
+              last_seen_at,
+              avatar_url,
+              custom_mood:custom_mood_id (
                 id,
-                display_name,
-                mood,
-                custom_mood_id,
-                is_online,
-                last_seen_at,
-                avatar_url,
-                custom_mood:custom_mood_id (
-                  id,
-                  emoji,
-                  text,
-                  color
-                )
+                emoji,
+                text,
+                color
               )
-            `)
-            .eq('user_id', user.id)
-            .eq('status', 'accepted'),
-          supabase
-            .from('blocks')
-            .select('blocked_id')
-            .eq('blocker_id', user.id)
-        ]);
+            )
+          `)
+          .eq('user_id', user.id)
+          .eq('status', 'accepted');
 
-        if (friendsResult.error) throw friendsResult.error;
+        if (error) throw error;
 
-        const blockedIds = new Set(blocksResult.data?.map(b => b.blocked_id) || []);
-
-        // Filter out blocked friends
-        const filteredFriends = friendsResult.data?.filter(f => !blockedIds.has(f.friend_id)) || [];
-
-        useAppStore.getState().setFriends(filteredFriends);
+        useAppStore.getState().setFriends(data || []);
       } catch (error: any) {
         console.error('Error refreshing friends via realtime:', error);
       }

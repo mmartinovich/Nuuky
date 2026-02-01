@@ -11,6 +11,7 @@ export const useFlare = () => {
   const [loading, setLoading] = useState(false);
   const [activeFlares, setActiveFlares] = useState<Flare[]>([]);
   const [myActiveFlare, setMyActiveFlare] = useState<Flare | null>(null);
+  const [lastFlareSentAt, setLastFlareSentAt] = useState<Date | null>(null);
   const isMountedRef = useRef(true);
 
   useEffect(() => {
@@ -102,8 +103,18 @@ export const useFlare = () => {
         .gte("expires_at", new Date().toISOString())
         .maybeSingle();
 
+      // Get most recent flare for cooldown check
+      const { data: lastFlare } = await supabase
+        .from("flares")
+        .select("created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
       if (isMountedRef.current) {
         setMyActiveFlare(myFlare);
+        setLastFlareSentAt(lastFlare ? new Date(lastFlare.created_at) : null);
       }
     } catch (_error: any) {
       // Silently fail
@@ -163,6 +174,20 @@ export const useFlare = () => {
       const remainingMinutes = Math.ceil((new Date(myActiveFlare.expires_at).getTime() - Date.now()) / 60000);
       Alert.alert("Flare Active", `You have an active flare for ${remainingMinutes} more minutes`);
       return false;
+    }
+
+    // Check 60-minute cooldown since last flare
+    if (lastFlareSentAt) {
+      const cooldownMs = 60 * 60 * 1000;
+      const elapsed = Date.now() - lastFlareSentAt.getTime();
+      if (elapsed < cooldownMs) {
+        const remainingMinutes = Math.ceil((cooldownMs - elapsed) / 60000);
+        Alert.alert(
+          "Cooldown Active",
+          `You can send another flare in ${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''}.`
+        );
+        return false;
+      }
     }
 
     // MOCK MODE: Skip Supabase, just show success
@@ -248,7 +273,9 @@ export const useFlare = () => {
                 // Play strong haptic feedback
                 await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-                Alert.alert("Flare Sent! 🚨", "Your friends have been notified. The  active for 5 minutes.");
+                setLastFlareSentAt(new Date());
+
+                Alert.alert("Flare Sent! 🚨", "Your friends have been notified. The flare will be active for 5 minutes.");
 
                 await loadActiveFlares();
                 resolve(true);

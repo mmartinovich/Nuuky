@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,11 @@ import {
   Modal,
   TouchableOpacity,
   ScrollView,
-} from 'react';
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { colors, spacing, radius, typography } from '../lib/theme';
+import { useTheme } from '../hooks/useTheme';
+import { spacing, radius, typography } from '../lib/theme';
 
 type Visibility = 'full' | 'limited' | 'minimal' | 'hidden';
 
@@ -29,6 +30,8 @@ export const VisibilityPicker: React.FC<VisibilityPickerProps> = ({
   friendName,
 }) => {
   const [selectedVisibility, setSelectedVisibility] = useState<Visibility>(currentVisibility);
+  const { theme } = useTheme();
+  const colors = theme.colors;
 
   const handleSave = () => {
     onSelect(selectedVisibility);
@@ -39,14 +42,14 @@ export const VisibilityPicker: React.FC<VisibilityPickerProps> = ({
     {
       value: 'full' as Visibility,
       title: 'Full Access',
-      description: 'They can see when you're online, your mood, and what rooms you're in',
+      description: "They can see when you're online, your mood, and what rooms you're in",
       icon: '👁️',
       color: colors.mood.good.base,
     },
     {
       value: 'limited' as Visibility,
       title: 'Limited',
-      description: 'They can see when you're online and your mood, but not rooms or other details',
+      description: "They can see when you're online and your mood, but not rooms or other details",
       icon: '👤',
       color: colors.mood.neutral.base,
     },
@@ -65,6 +68,129 @@ export const VisibilityPicker: React.FC<VisibilityPickerProps> = ({
       color: colors.mood.reachOut.base,
     },
   ];
+
+  const styles = useMemo(() => StyleSheet.create({
+    overlay: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    modalContainer: {
+      maxHeight: '85%',
+    },
+    modal: {
+      borderTopLeftRadius: radius['2xl'],
+      borderTopRightRadius: radius['2xl'],
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: colors.glass.border,
+    },
+    header: {
+      padding: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.glass.border,
+    },
+    title: {
+      fontSize: typography.sizes['2xl'],
+      fontWeight: typography.weights.bold,
+      color: colors.text.primary,
+      marginBottom: spacing.xs,
+    },
+    subtitle: {
+      fontSize: typography.sizes.sm,
+      color: colors.text.secondary,
+    },
+    optionsList: {
+      maxHeight: 450,
+    },
+    optionsContent: {
+      padding: spacing.lg,
+      gap: spacing.md,
+    },
+    optionCard: {
+      backgroundColor: colors.glass.background,
+      borderRadius: radius.lg,
+      padding: spacing.md,
+      borderWidth: 2,
+      borderColor: colors.glass.border,
+    },
+    optionCardSelected: {
+      borderColor: colors.mood.neutral.base,
+      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    },
+    optionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
+    optionIcon: {
+      fontSize: 32,
+      marginRight: spacing.md,
+    },
+    optionInfo: {
+      flex: 1,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    optionTitle: {
+      fontSize: typography.sizes.lg,
+      fontWeight: typography.weights.bold,
+      color: colors.text.primary,
+    },
+    checkmark: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    checkmarkText: {
+      color: colors.text.primary,
+      fontSize: typography.sizes.sm,
+      fontWeight: typography.weights.bold,
+    },
+    optionDescription: {
+      fontSize: typography.sizes.sm,
+      color: colors.text.secondary,
+      lineHeight: 20,
+    },
+    buttons: {
+      flexDirection: 'row',
+      gap: spacing.md,
+      padding: spacing.lg,
+      borderTopWidth: 1,
+      borderTopColor: colors.glass.border,
+    },
+    cancelButton: {
+      flex: 1,
+      padding: spacing.md,
+      borderRadius: radius.full,
+      backgroundColor: colors.glass.background,
+      borderWidth: 1,
+      borderColor: colors.glass.border,
+      alignItems: 'center',
+    },
+    cancelText: {
+      fontSize: typography.sizes.md,
+      fontWeight: typography.weights.semibold,
+      color: colors.text.secondary,
+    },
+    saveButton: {
+      flex: 1,
+      borderRadius: radius.full,
+      overflow: 'hidden',
+    },
+    saveGradient: {
+      padding: spacing.md,
+      alignItems: 'center',
+    },
+    saveText: {
+      fontSize: typography.sizes.md,
+      fontWeight: typography.weights.bold,
+      color: colors.text.primary,
+    },
+  }), [colors]);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -129,126 +255,3 @@ export const VisibilityPicker: React.FC<VisibilityPickerProps> = ({
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContainer: {
-    maxHeight: '85%',
-  },
-  modal: {
-    borderTopLeftRadius: radius['2xl'],
-    borderTopRightRadius: radius['2xl'],
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.glass.border,
-  },
-  header: {
-    padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.glass.border,
-  },
-  title: {
-    fontSize: typography.sizes['2xl'],
-    fontWeight: typography.weights.bold,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    fontSize: typography.sizes.sm,
-    color: colors.text.secondary,
-  },
-  optionsList: {
-    maxHeight: 450,
-  },
-  optionsContent: {
-    padding: spacing.lg,
-    gap: spacing.md,
-  },
-  optionCard: {
-    backgroundColor: colors.glass.background,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    borderWidth: 2,
-    borderColor: colors.glass.border,
-  },
-  optionCardSelected: {
-    borderColor: colors.mood.neutral.base,
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-  },
-  optionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  optionIcon: {
-    fontSize: 32,
-    marginRight: spacing.md,
-  },
-  optionInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  optionTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.text.primary,
-  },
-  checkmark: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkmarkText: {
-    color: colors.text.primary,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
-  },
-  optionDescription: {
-    fontSize: typography.sizes.sm,
-    color: colors.text.secondary,
-    lineHeight: 20,
-  },
-  buttons: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    padding: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.glass.border,
-  },
-  cancelButton: {
-    flex: 1,
-    padding: spacing.md,
-    borderRadius: radius.full,
-    backgroundColor: colors.glass.background,
-    borderWidth: 1,
-    borderColor: colors.glass.border,
-    alignItems: 'center',
-  },
-  cancelText: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-    color: colors.text.secondary,
-  },
-  saveButton: {
-    flex: 1,
-    borderRadius: radius.full,
-    overflow: 'hidden',
-  },
-  saveGradient: {
-    padding: spacing.md,
-    alignItems: 'center',
-  },
-  saveText: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.text.primary,
-  },
-});

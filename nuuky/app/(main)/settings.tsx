@@ -301,13 +301,13 @@ export default function SettingsScreen() {
           <SettingsRow
             icon="document-text"
             label="Privacy Policy"
-            onPress={() => {}}
+            onPress={() => router.push("/(main)/privacy-policy")}
             theme={theme}
           />
           <SettingsRow
             icon="reader"
             label="Terms of Service"
-            onPress={() => {}}
+            onPress={() => router.push("/(main)/terms-of-service")}
             isLast
             theme={theme}
           />

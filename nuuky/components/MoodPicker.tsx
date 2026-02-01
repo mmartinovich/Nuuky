@@ -197,9 +197,9 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                   styles.customCard,
                   { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border },
                   !isEditing && customMood && isCustomMoodActive && {
-                    borderColor: getCustomMoodColor(customMood.color).base,
+                    borderColor: accent.primary,
                     borderWidth: 2,
-                    backgroundColor: getCustomMoodColor(customMood.color).soft,
+                    backgroundColor: accent.primary + '18',
                   },
                   !isEditing && !customMood && { borderStyle: 'dashed' as const },
                 ]}
@@ -218,12 +218,19 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                       handleStartEditing();
                     }
                   }}
+                  onLongPress={() => {
+                    if (customMood && !isEditing) {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      handleStartEditing();
+                    }
+                  }}
+                  delayLongPress={400}
                 >
                   <View style={styles.imageWrapperSmall}>
                     {customMood && !isEditing ? (
-                      <Text style={{ fontSize: 36 }}>{customMood.emoji}</Text>
+                      <Text style={{ fontSize: 42 }}>{customMood.emoji}</Text>
                     ) : isEditing && editEmoji ? (
-                      <Text style={{ fontSize: 36 }}>{editEmoji}</Text>
+                      <Text style={{ fontSize: 42 }}>{editEmoji}</Text>
                     ) : (
                       <Ionicons name="add-circle-outline" size={36} color={theme.colors.text.tertiary} />
                     )}
@@ -233,21 +240,12 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                       {customMood && !isEditing ? customMood.text : 'Custom mood'}
                     </Text>
                     <Text style={[styles.moodDescription, { color: theme.colors.text.tertiary }]}>
-                      {customMood && !isEditing ? 'Custom mood' : 'Pick your own emoji & message'}
+                      {customMood && !isEditing ? 'Hold to edit' : 'Pick your own emoji & message'}
                     </Text>
                   </View>
-                  {customMood && !isEditing && (
-                    <Pressable
-                      style={[styles.editButton, { backgroundColor: theme.colors.glass.border }]}
-                      onPress={handleStartEditing}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    >
-                      <Ionicons name="pencil" size={14} color={theme.colors.text.secondary} />
-                    </Pressable>
-                  )}
                   {isCustomMoodActive && !isEditing && customMood && (
-                    <View style={[styles.checkmark, { backgroundColor: getCustomMoodColor(customMood.color).base, shadowColor: getCustomMoodColor(customMood.color).base }]}>
-                      <Ionicons name="checkmark" size={20} color="#FFFFFF" />
+                    <View style={[styles.checkmark, { backgroundColor: accent.primary, shadowColor: accent.primary }]}>
+                      <Ionicons name="checkmark" size={20} color={accent.textOnPrimary} />
                     </View>
                   )}
                 </Pressable>
@@ -288,7 +286,7 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                         activeOpacity={0.7}
                         disabled={!canSave}
                       >
-                        <Text style={{ color: canSave ? '#FFF' : theme.colors.text.tertiary, fontSize: 14, fontWeight: '600' }}>
+                        <Text style={{ color: canSave ? accent.textOnPrimary : theme.colors.text.tertiary, fontSize: 14, fontWeight: '600' }}>
                           Save & Use
                         </Text>
                       </TouchableOpacity>
@@ -358,8 +356,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   imageWrapperSmall: {
-    width: 48,
-    height: 48,
+    width: 56,
+    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -395,19 +393,12 @@ const styles = StyleSheet.create({
   customCard: {
     borderRadius: radius.md,
     borderWidth: 1,
-    padding: 12,
+    padding: 16,
   },
   customTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-  },
-  editButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   // Inline editor
   editorArea: {

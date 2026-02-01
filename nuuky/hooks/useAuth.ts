@@ -123,6 +123,26 @@ export const useAuth = () => {
     }
   };
 
+  const deleteAccount = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No active session');
+
+      const response = await supabase.functions.invoke('delete-account', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) throw response.error;
+
+      logout();
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      throw error;
+    }
+  };
+
   const signOut = async () => {
     try {
       // Update online status before signing out
@@ -168,6 +188,7 @@ export const useAuth = () => {
     isAuthenticated,
     loading,
     signOut,
+    deleteAccount,
     updateOnlineStatus,
     sendEmailOTP,
     verifyEmailOTP,

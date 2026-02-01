@@ -169,7 +169,7 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
                 <Text
                   style={[
                     styles.createBtnText,
-                    { color: canCreate ? '#FFFFFF' : theme.colors.text.tertiary },
+                    { color: canCreate ? accent.textOnPrimary : theme.colors.text.tertiary },
                   ]}
                 >
                   Create

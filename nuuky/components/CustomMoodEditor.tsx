@@ -208,7 +208,7 @@ export const CustomMoodEditor: React.FC<CustomMoodEditorProps> = ({
                 <Text
                   style={[
                     styles.saveButtonText,
-                    { color: canSave ? '#FFFFFF' : theme.colors.text.tertiary },
+                    { color: canSave ? accent.textOnPrimary : theme.colors.text.tertiary },
                   ]}
                 >
                   Save & Use

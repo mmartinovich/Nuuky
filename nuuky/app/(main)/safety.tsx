@@ -17,13 +17,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { spacing, interactionStates } from "../../lib/theme";
 import { useTheme } from "../../hooks/useTheme";
 import { useSafety } from "../../hooks/useSafety";
-import { useFriends } from "../../hooks/useFriends";
 
 // iOS-style icon backgrounds
 const ICON_BACKGROUNDS = {
   ghost: "#AF52DE",
   break: "#5856D6",
-  blocked: "#FF3B30",
   anchor: "#007AFF",
   info: "#8E8E93",
 };
@@ -186,7 +184,6 @@ export default function SafetyScreen() {
   const insets = useSafeAreaInsets();
   const { theme, isDark } = useTheme();
   const {
-    blocks,
     anchors,
     isInGhostMode,
     isOnBreak,
@@ -194,10 +191,8 @@ export default function SafetyScreen() {
     disableGhostMode,
     takeBreak,
     endBreak,
-    unblockUser,
     removeAnchor,
   } = useSafety();
-  const { friends } = useFriends();
 
   const handleGhostModeToggle = () => {
     if (isInGhostMode) {
@@ -228,13 +223,6 @@ export default function SafetyScreen() {
     }
   };
 
-  const handleUnblock = (userId: string, userName: string) => {
-    Alert.alert("Unblock User", `Unblock ${userName}?`, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Unblock", onPress: () => unblockUser(userId) },
-    ]);
-  };
-
   const handleRemoveAnchor = (userId: string, userName: string) => {
     Alert.alert("Remove Anchor", `Remove ${userName} as your anchor?`, [
       { text: "Cancel", style: "cancel" },
@@ -242,26 +230,8 @@ export default function SafetyScreen() {
     ]);
   };
 
-  const getBlockedUserName = (blockedId: string) => {
-    const friend = friends.find((f) => f.friend_id === blockedId);
-    return friend?.friend?.display_name || "Unknown User";
-  };
-
   const getAnchorName = (anchor: any) => {
     return anchor.anchor?.display_name || "Unknown";
-  };
-
-  const getBlockTypeLabel = (blockType: string) => {
-    switch (blockType) {
-      case "mute":
-        return "Muted";
-      case "soft":
-        return "Soft Block";
-      case "hard":
-        return "Hard Block";
-      default:
-        return "Blocked";
-    }
   };
 
   return (
@@ -351,40 +321,6 @@ export default function SafetyScreen() {
           </SafetyRow>
         </SafetySection>
 
-        {/* Blocked Users Section */}
-        <SafetySection title="BLOCKED USERS" theme={theme}>
-          {blocks.length === 0 ? (
-            <View
-              style={[
-                styles.emptyCard,
-                { backgroundColor: theme.colors.glass.background },
-              ]}
-            >
-              <Text style={[styles.emptyText, { color: theme.colors.text.tertiary }]}>
-                No blocked users
-              </Text>
-            </View>
-          ) : (
-            blocks.map((block, index) => (
-              <SafetyRow
-                key={block.id}
-                icon="person-remove"
-                iconBg={ICON_BACKGROUNDS.blocked}
-                label={getBlockedUserName(block.blocked_id)}
-                description={getBlockTypeLabel(block.block_type)}
-                value="Unblock"
-                onPress={() =>
-                  handleUnblock(block.blocked_id, getBlockedUserName(block.blocked_id))
-                }
-                isFirst={index === 0}
-                isLast={index === blocks.length - 1}
-                theme={theme}
-                isDark={isDark}
-              />
-            ))
-          )}
-        </SafetySection>
-
         {/* Safety Anchors Section */}
         <SafetySection
           title="SAFETY ANCHORS"
@@ -435,16 +371,6 @@ export default function SafetyScreen() {
               { backgroundColor: theme.colors.glass.background },
             ]}
           >
-            <View style={styles.infoRow}>
-              <Ionicons
-                name="checkmark-circle"
-                size={16}
-                color={theme.colors.text.tertiary}
-              />
-              <Text style={[styles.infoText, { color: theme.colors.text.secondary }]}>
-                All blocks are silent - users won't know
-              </Text>
-            </View>
             <View style={styles.infoRow}>
               <Ionicons
                 name="checkmark-circle"

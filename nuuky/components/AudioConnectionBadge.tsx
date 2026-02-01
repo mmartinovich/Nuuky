@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
-import { typography, spacing, radius } from '../lib/theme';
+import { radius } from '../lib/theme';
 import { AudioConnectionStatus } from '../types';
 
 interface AudioConnectionBadgeProps {
@@ -65,25 +65,19 @@ export const AudioConnectionBadge: React.FC<AudioConnectionBadgeProps> = ({
       {config.showSpinner ? (
         <ActivityIndicator size="small" color={config.color} />
       ) : (
-        <Ionicons name={config.icon} size={14} color={config.color} />
+        <Ionicons name={config.icon} size={16} color={config.color} />
       )}
-      <Text style={[styles.text, { color: config.color }]}>{config.text}</Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    justifyContent: 'center',
+    width: 32,
+    height: 32,
     borderRadius: radius.full,
     borderWidth: 1,
-    gap: spacing.xs,
-  },
-  text: {
-    fontSize: typography.size.xs,
-    fontWeight: typography.weight.medium as any,
   },
 });

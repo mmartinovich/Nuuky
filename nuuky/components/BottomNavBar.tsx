@@ -5,7 +5,7 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
 interface BottomNavBarProps {
-  accent: { primary: string; soft: string; glow: string; gradient: [string, string] };
+  accent: { primary: string; soft: string; glow: string; gradient: [string, string]; textOnPrimary: string };
   theme: any;
   isMuted: boolean;
   isAudioConnecting: boolean;
@@ -102,9 +102,9 @@ export const BottomNavBar = React.memo(function BottomNavBar({
             accessibilityRole="button"
           >
             {isAudioConnecting ? (
-              <Ionicons name="hourglass" size={28} color={isMuted ? accent.primary : "#FFFFFF"} />
+              <Ionicons name="hourglass" size={28} color={isMuted ? accent.primary : accent.textOnPrimary} />
             ) : (
-              <Ionicons name={isMuted ? "mic-off" : "mic"} size={28} color={isMuted ? accent.primary : "#FFFFFF"} />
+              <Ionicons name={isMuted ? "mic-off" : "mic"} size={28} color={isMuted ? accent.primary : accent.textOnPrimary} />
             )}
           </TouchableOpacity>
         </RNAnimated.View>
