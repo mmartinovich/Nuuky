@@ -22,11 +22,12 @@ Notifications.setNotificationHandler({
       };
     }
 
-    // Regular notifications show full UI
+    // When app is foregrounded, suppress system notification UI
+    // The in-app banner (NotificationBannerContext) handles display instead
     return {
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: true,
+      shouldShowAlert: false,
+      shouldPlaySound: false,
+      shouldSetBadge: false,
     };
   },
 });

@@ -21,6 +21,8 @@ export const useNotifications = () => {
   } = useAppStore();
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (currentUser) {
@@ -246,6 +248,76 @@ export const useNotifications = () => {
     return cleanup;
   };
 
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const selectAll = useCallback(() => {
+    setSelectedIds(new Set(notifications.map((n) => n.id)));
+  }, [notifications]);
+
+  const deselectAll = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+  }, []);
+
+  const enterSelectionMode = useCallback((initialId?: string) => {
+    setSelectionMode(true);
+    if (initialId) {
+      setSelectedIds(new Set([initialId]));
+    }
+  }, []);
+
+  const deleteSelected = useCallback(async () => {
+    if (!currentUser || selectedIds.size === 0) return false;
+    const ids = Array.from(selectedIds);
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .in('id', ids)
+        .eq('user_id', currentUser.id);
+      if (error) throw error;
+      ids.forEach((id) => removeNotification(id));
+      clearSelection();
+      return true;
+    } catch (error: any) {
+      logger.error('Error deleting selected notifications:', error);
+      return false;
+    }
+  }, [currentUser, selectedIds, removeNotification, clearSelection]);
+
+  const markSelectedAsRead = useCallback(async () => {
+    if (!currentUser || selectedIds.size === 0) return false;
+    const ids = Array.from(selectedIds);
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .in('id', ids)
+        .eq('user_id', currentUser.id);
+      if (error) throw error;
+      ids.forEach((id) => markNotificationRead(id));
+      clearSelection();
+      return true;
+    } catch (error: any) {
+      logger.error('Error marking selected as read:', error);
+      return false;
+    }
+  }, [currentUser, selectedIds, markNotificationRead, clearSelection]);
+
   return {
     notifications,
     unreadCount: unreadNotificationCount,
@@ -257,5 +329,14 @@ export const useNotifications = () => {
     markAllAsRead,
     deleteNotification,
     handleNotificationTap,
+    selectionMode,
+    selectedIds,
+    toggleSelect,
+    selectAll,
+    deselectAll,
+    clearSelection,
+    enterSelectionMode,
+    deleteSelected,
+    markSelectedAsRead,
   };
 };

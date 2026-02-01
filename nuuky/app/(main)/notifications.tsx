@@ -9,6 +9,7 @@ import {
   StatusBar,
   Animated,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -36,6 +37,15 @@ export default function NotificationsScreen() {
     markAllAsRead,
     deleteNotification,
     handleNotificationTap,
+    selectionMode,
+    selectedIds,
+    toggleSelect,
+    selectAll,
+    deselectAll,
+    clearSelection,
+    enterSelectionMode,
+    deleteSelected,
+
   } = useNotifications();
 
   const { roomInvites, loadMyInvites, acceptInvite, declineInvite } = useRoomInvites();
@@ -48,6 +58,13 @@ export default function NotificationsScreen() {
     loadNotifications();
     loadMyInvites();
   }, []);
+
+  // Mark all as read when viewing the screen
+  useEffect(() => {
+    if (unreadCount > 0) {
+      markAllAsRead();
+    }
+  }, [notifications.length]);
 
   const handleAcceptInvite = async (inviteId: string) => {
     const success = await acceptInvite(inviteId);
@@ -104,17 +121,31 @@ export default function NotificationsScreen() {
     return groups;
   }, [notifications]);
 
-  const handleMarkAllAsRead = async () => {
-    await markAllAsRead();
-  };
-
   const handleDeleteNotification = async (notificationId: string) => {
     await deleteNotification(notificationId);
   };
 
+  const handleDeleteSelected = async () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    await deleteSelected();
+  };
+
+
+  const allSelected = notifications.length > 0 && selectedIds.size === notifications.length;
+
+  // Bottom bar animation
+  const bottomBarAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(bottomBarAnim, {
+      toValue: selectionMode ? 1 : 0,
+      useNativeDriver: true,
+      friction: 8,
+    }).start();
+  }, [selectionMode]);
+
   // Dynamic styles that depend on theme
   const dynamicStyles = {
-    markReadButton: {
+    editButton: {
       backgroundColor: accent.soft,
     },
     emptyIconContainer: {
@@ -144,6 +175,10 @@ export default function NotificationsScreen() {
               onPress={() => handleNotificationTap(notification)}
               onDelete={() => handleDeleteNotification(notification.id)}
               animationDelay={baseDelay + index * 50}
+              selectionMode={selectionMode}
+              isSelected={selectedIds.has(notification.id)}
+              onToggleSelect={() => toggleSelect(notification.id)}
+              onEnterSelectionMode={() => enterSelectionMode(notification.id)}
             />
           ))}
         </View>
@@ -157,28 +192,50 @@ export default function NotificationsScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.bg.primary }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <LinearGradient colors={theme.gradients.background} style={styles.gradient}>
-        {/* Header - Loóna style */}
+        {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            activeOpacity={interactionStates.pressed}
-          >
-            <Ionicons name="chevron-back" size={28} color={theme.colors.text.primary} />
-          </TouchableOpacity>
+          {selectionMode ? (
+            <TouchableOpacity
+              style={[styles.headerTextButton]}
+              onPress={allSelected ? deselectAll : selectAll}
+              activeOpacity={interactionStates.pressed}
+            >
+              <Text style={[styles.headerTextButtonLabel, { color: accent.primary }]}>
+                {allSelected ? 'Deselect All' : 'Select All'}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+              activeOpacity={interactionStates.pressed}
+            >
+              <Ionicons name="chevron-back" size={28} color={theme.colors.text.primary} />
+            </TouchableOpacity>
+          )}
 
           <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
             Notifications
           </Text>
 
-          {unreadCount > 0 ? (
+          {selectionMode ? (
             <TouchableOpacity
-              style={[styles.markReadButton, dynamicStyles.markReadButton]}
-              onPress={handleMarkAllAsRead}
+              style={[styles.headerTextButton]}
+              onPress={clearSelection}
               activeOpacity={interactionStates.pressed}
             >
-              <Text style={styles.markReadText}>
-                Mark All
+              <Text style={[styles.headerTextButtonLabel, { color: accent.primary }]}>
+                Done
+              </Text>
+            </TouchableOpacity>
+          ) : hasNotifications ? (
+            <TouchableOpacity
+              style={styles.headerTextButton}
+              onPress={() => enterSelectionMode()}
+              activeOpacity={interactionStates.pressed}
+            >
+              <Text style={[styles.headerTextButtonLabel, { color: accent.primary }]}>
+                Edit
               </Text>
             </TouchableOpacity>
           ) : (
@@ -191,7 +248,7 @@ export default function NotificationsScreen() {
           style={styles.scrollView}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingBottom: insets.bottom + spacing.xl },
+            { paddingBottom: insets.bottom + spacing.xl + (selectionMode ? 70 : 0) },
           ]}
           showsVerticalScrollIndicator={false}
           refreshControl={
@@ -269,6 +326,43 @@ export default function NotificationsScreen() {
             </View>
           )}
         </ScrollView>
+
+        {/* Bottom action bar */}
+        <Animated.View
+          style={[
+            styles.bottomBar,
+            {
+              paddingBottom: insets.bottom + spacing.sm,
+              backgroundColor: theme.colors.bg.secondary,
+              borderTopColor: theme.colors.glass.border,
+              transform: [
+                {
+                  translateY: bottomBarAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [120, 0],
+                  }),
+                },
+              ],
+              opacity: bottomBarAnim,
+            },
+          ]}
+          pointerEvents={selectionMode ? 'auto' : 'none'}
+        >
+          <TouchableOpacity
+            style={[
+              styles.bottomBarButton,
+              { backgroundColor: '#EF4444', opacity: selectedIds.size > 0 ? 1 : 0.4 },
+            ]}
+            onPress={handleDeleteSelected}
+            activeOpacity={interactionStates.pressed}
+            disabled={selectedIds.size === 0}
+          >
+            <Ionicons name="trash-outline" size={18} color="#FFFFFF" />
+            <Text style={styles.bottomBarButtonText}>
+              Delete{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
       </LinearGradient>
     </View>
   );
@@ -300,17 +394,25 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.5,
   },
-  markReadButton: {
+  editButton: {
     height: 36,
     paddingHorizontal: 14,
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  markReadText: {
+  editButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#A855F7',
+  },
+  headerTextButton: {
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTextButtonLabel: {
+    fontSize: 15,
+    fontWeight: '600',
   },
   placeholderButton: {
     width: 44,
@@ -374,5 +476,30 @@ const styles = StyleSheet.create({
     fontSize: typography.size.md,
     textAlign: 'center',
     lineHeight: 22,
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    gap: spacing.sm,
+    borderTopWidth: 1,
+  },
+  bottomBarButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 44,
+    borderRadius: radius.md,
+  },
+  bottomBarButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

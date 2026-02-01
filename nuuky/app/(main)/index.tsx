@@ -128,7 +128,7 @@ export default function QuantumOrbitScreen() {
   const { unreadCount: notificationCount } = useNotifications();
   const totalBadgeCount = notificationCount + roomInvites.length;
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [showMoodPicker, setShowMoodPicker] = useState(false);
   const [showHint, setShowHint] = useState(true);
   const [selectedFriend, setSelectedFriend] = useState<User | null>(null);
@@ -157,11 +157,13 @@ export default function QuantumOrbitScreen() {
   const currentVibe = useMemo(() => getVibeText(currentUser?.mood || "neutral"), [currentUser?.mood]);
 
   // Calculate friend list and positions
-  const friendList = useMemo(() => friends
-    .map((f) => f.friend as User)
-    .filter((f): f is User => f !== null && f !== undefined && f.id !== currentUser?.id)
-    .sort((a, b) => a.id.localeCompare(b.id)),
-    [friends, currentUser?.id]);
+  const friendList = useMemo(() => {
+    if (!currentUser?.id) return [];
+    return friends
+      .map((f) => f.friend as User)
+      .filter((f): f is User => f !== null && f !== undefined && f.id !== currentUser.id)
+      .sort((a, b) => a.id.localeCompare(b.id));
+  }, [friends, currentUser?.id]);
 
   const roomParticipants = useMemo(() => {
     if (!defaultRoomId) return [];
@@ -170,25 +172,30 @@ export default function QuantumOrbitScreen() {
   }, [defaultRoomId, myRooms]);
 
   const participantUsers: User[] = useMemo(() => {
-    if (roomParticipants.length === 0) return [];
+    if (!currentUser?.id || roomParticipants.length === 0) return [];
     return roomParticipants
       .map((p) => p.user)
-      .filter((u): u is User => u !== null && u !== undefined && u.id !== currentUser?.id)
+      .filter((u): u is User => u !== null && u !== undefined && u.id !== currentUser.id)
       .sort((a, b) => a.id.localeCompare(b.id));
   }, [roomParticipants, currentUser?.id]);
 
   // If we know a default room exists (persisted ID), wait for participant data
   // instead of briefly showing friendList then switching.
   // If the user is the only participant, fall back to friendList so the orbit isn't empty.
+  // Whether myRooms has loaded the default room's data yet
+  const defaultRoomLoaded = !defaultRoomId || myRooms.some((r) => r.id === defaultRoomId);
+
   const orbitUsers = useMemo(() => {
     if (defaultRoomId) {
-      // We expect room participants — only show them once loaded
-      // But if user is the only one in the room, participantUsers is empty
-      // (current user is filtered out), so fall back to friendList
+      if (!defaultRoomLoaded) {
+        // Room data hasn't loaded yet — show nothing to avoid flash
+        return [];
+      }
+      // Room loaded: show participants, or fall back to friendList if alone
       return participantUsers.length > 0 ? participantUsers : friendList;
     }
     return friendList;
-  }, [defaultRoomId, participantUsers, friendList]);
+  }, [defaultRoomId, defaultRoomLoaded, participantUsers, friendList]);
 
   const orbitIds = useMemo(() => orbitUsers.map((f) => f.id).join(","), [orbitUsers]);
 
@@ -508,7 +515,7 @@ export default function QuantumOrbitScreen() {
   }, []);
 
   // Keep splash screen visible until orbit data has settled
-  const orbitSettled = orbitUsers.length > 0 || (!loading && friendList.length === 0);
+  const orbitSettled = orbitUsers.length > 0 || (!loading && friendList.length === 0 && defaultRoomLoaded);
   const isDataReady = !!currentUser && !firstTimeLoading && (orbitSettled || safetyTimeout);
 
   useEffect(() => {
