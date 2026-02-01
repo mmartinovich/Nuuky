@@ -213,7 +213,7 @@ export function FriendActionBubble({
   const tailOffset = position.x - bubbleX;
 
   // Helper to reset icon back from sent state
-  const resetAfterSent = (scaleVal: Animated.Value, action: 'nudge' | 'call' | 'heart') => {
+  const resetAfterSent = (scaleVal: Animated.Value) => {
     setTimeout(() => {
       Animated.timing(scaleVal, { toValue: 0, duration: 100, useNativeDriver: true }).start(() => {
         setSentAction(null);
@@ -263,7 +263,7 @@ export function FriendActionBubble({
         onNudge();
         onInteraction?.();
         Animated.spring(nudgeScale, { toValue: 1, tension: 300, friction: 10, useNativeDriver: true }).start(() => {
-          resetAfterSent(nudgeScale, 'nudge');
+          resetAfterSent(nudgeScale);
         });
       });
     });
@@ -312,7 +312,7 @@ export function FriendActionBubble({
         onCallMe();
         onInteraction?.();
         Animated.spring(callScale, { toValue: 1, tension: 300, friction: 10, useNativeDriver: true }).start(() => {
-          resetAfterSent(callScale, 'call');
+          resetAfterSent(callScale);
         });
       });
     });
@@ -358,7 +358,7 @@ export function FriendActionBubble({
       onInteraction?.();
       // Pop checkmark back in
       Animated.spring(heartScale, { toValue: 1, tension: 300, friction: 10, useNativeDriver: true }).start(() => {
-        resetAfterSent(heartScale, 'heart');
+        resetAfterSent(heartScale);
       });
     });
   };

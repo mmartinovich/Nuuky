@@ -17,6 +17,13 @@ interface ElectricBoltProps {
 const SEGMENTS = 12;
 const MAX_OFFSET = 8;
 
+function getTierColors(state: StreakState): [string, string, string] {
+  if (state === 'fading' || state === 'broken') {
+    return ['rgba(0,240,255,0.4)', 'rgba(59,130,246,0.3)', 'rgba(181,55,242,0.3)'];
+  }
+  return ['#00f0ff', '#3B82F6', '#b537f2'];
+}
+
 function generateBoltPath(
   fromX: number,
   fromY: number,
@@ -49,6 +56,7 @@ function generateBoltPath(
   return points.join(' ');
 }
 
+
 function ElectricBoltComponent({
   fromX,
   fromY,
@@ -61,6 +69,29 @@ function ElectricBoltComponent({
   const { isDark } = useTheme();
   const [pathD, setPathD] = useState(() => generateBoltPath(fromX, fromY, toX, toY));
   const opacityAnim = useRef(new Animated.Value(state === 'active' ? 0.85 : 0.4)).current;
+
+  // Strike-in: draw the bolt on mount
+  const drawProgress = useRef(new Animated.Value(0)).current;
+  const [hasStruck, setHasStruck] = useState(false);
+
+  const [color1, color2, color3] = getTierColors(state);
+  const strokeWidth = Math.min(1.5 + consecutiveDays * 0.5, 6);
+  const gradientId = `bolt-grad-${boltIndex}`;
+
+  // Strike-in on mount
+  useEffect(() => {
+    if (state === 'active') {
+      Animated.timing(drawProgress, {
+        toValue: 1,
+        duration: 400,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start(() => setHasStruck(true));
+    } else {
+      drawProgress.setValue(1);
+      setHasStruck(true);
+    }
+  }, []);
 
   // Jitter: regenerate path periodically
   useEffect(() => {
@@ -97,9 +128,17 @@ function ElectricBoltComponent({
     return () => animation.stop();
   }, [state]);
 
-  // Stroke width scales with streak strength
-  const strokeWidth = Math.min(1.5 + consecutiveDays * 0.5, 6);
-  const gradientId = `bolt-grad-${boltIndex}`;
+  // Estimated path length for stroke-dasharray draw-on
+  const dx = toX - fromX;
+  const dy = toY - fromY;
+  const estimatedLength = Math.sqrt(dx * dx + dy * dy) * 1.3;
+
+  const strokeDashoffset = hasStruck
+    ? undefined
+    : drawProgress.interpolate({
+        inputRange: [0, 1],
+        outputRange: [estimatedLength, 0],
+      });
 
   return (
     <Animated.View
@@ -116,11 +155,12 @@ function ElectricBoltComponent({
       <Svg style={{ flex: 1 }}>
         <Defs>
           <SvgLinearGradient id={gradientId} x1={fromX} y1={fromY} x2={toX} y2={toY} gradientUnits="userSpaceOnUse">
-            <Stop offset="0" stopColor={state === 'active' ? '#00f0ff' : 'rgba(0,240,255,0.4)'} />
-            <Stop offset="0.5" stopColor={state === 'active' ? '#3B82F6' : 'rgba(59,130,246,0.3)'} />
-            <Stop offset="1" stopColor={state === 'active' ? '#b537f2' : 'rgba(181,55,242,0.3)'} />
+            <Stop offset="0" stopColor={color1} />
+            <Stop offset="0.5" stopColor={color2} />
+            <Stop offset="1" stopColor={color3} />
           </SvgLinearGradient>
         </Defs>
+
         {/* Outer glow */}
         <Path
           d={pathD}
@@ -129,7 +169,10 @@ function ElectricBoltComponent({
           strokeLinecap="round"
           strokeLinejoin="round"
           fill="none"
+          strokeDasharray={hasStruck ? undefined : `${estimatedLength}`}
+          strokeDashoffset={hasStruck ? undefined : (strokeDashoffset as any)}
         />
+
         {/* White hot core */}
         <Path
           d={pathD}
@@ -138,7 +181,10 @@ function ElectricBoltComponent({
           strokeLinecap="round"
           strokeLinejoin="round"
           fill="none"
+          strokeDasharray={hasStruck ? undefined : `${estimatedLength}`}
+          strokeDashoffset={hasStruck ? undefined : (strokeDashoffset as any)}
         />
+
       </Svg>
     </Animated.View>
   );
