@@ -31,7 +31,7 @@ serve(async (req) => {
 
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('display_name')
+      .select('display_name, avatar_url')
       .eq('id', user_id)
       .single();
 
@@ -127,6 +127,7 @@ serve(async (req) => {
       data: {
         sender_id: user_id,
         sender_name: user.display_name,
+        sender_avatar_url: user.avatar_url,
         flare_id: flare_id,
       },
       source_id: user_id,

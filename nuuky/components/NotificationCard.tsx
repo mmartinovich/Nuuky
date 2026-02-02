@@ -51,7 +51,7 @@ const getNotificationStyle = (type: NotificationType) => {
       };
     case 'flare':
       return {
-        icon: 'heart' as const,
+        icon: 'flame' as const,
         iconSet: 'ionicons' as const,
         color: '#EF4444',
       };
@@ -72,6 +72,12 @@ const getNotificationStyle = (type: NotificationType) => {
         icon: 'people' as const,
         iconSet: 'ionicons' as const,
         color: '#A855F7',
+      };
+    case 'heart':
+      return {
+        icon: 'heart' as const,
+        iconSet: 'ionicons' as const,
+        color: '#EF4444',
       };
     default:
       return {

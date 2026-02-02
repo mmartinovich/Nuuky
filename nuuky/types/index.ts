@@ -207,7 +207,7 @@ export interface LiveKitTokenResponse {
 }
 
 // Notification types
-export type NotificationType = "nudge" | "flare" | "friend_request" | "friend_accepted" | "room_invite" | "call_me";
+export type NotificationType = "nudge" | "flare" | "friend_request" | "friend_accepted" | "room_invite" | "call_me" | "heart";
 
 export interface NotificationData {
   sender_id?: string;

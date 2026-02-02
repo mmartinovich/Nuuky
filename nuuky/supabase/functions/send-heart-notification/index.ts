@@ -31,7 +31,7 @@ serve(async (req) => {
 
     const { data: sender, error: senderError } = await supabase
       .from('users')
-      .select('display_name')
+      .select('display_name, avatar_url')
       .eq('id', sender_id)
       .single();
 
@@ -69,6 +69,7 @@ serve(async (req) => {
       type: 'heart',
       sender_id: sender_id,
       sender_name: sender.display_name,
+      sender_avatar_url: sender.avatar_url,
     };
 
     const notification = {
