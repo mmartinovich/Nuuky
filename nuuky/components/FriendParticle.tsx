@@ -52,7 +52,9 @@ function FriendParticleComponent({
     [friend.is_online, friend.last_seen_at]
   );
   const pulseAnim = useRef(new Animated.Value(0)).current;
-  const flareAnim = useRef(new Animated.Value(0)).current;
+  const flareAnim1 = useRef(new Animated.Value(0)).current;
+  const flareAnim2 = useRef(new Animated.Value(0)).current;
+  const flareAnim3 = useRef(new Animated.Value(0)).current;
   const bounceAnim = useRef(new Animated.Value(0)).current;
 
   const centerX = CENTER_X;
@@ -229,25 +231,37 @@ function FriendParticleComponent({
   }, [isOnline, index, lowPowerMode]);
 
   useEffect(() => {
-    let flareAnimation: Animated.CompositeAnimation | null = null;
-    
+    const anims: Animated.CompositeAnimation[] = [];
+
     if (hasActiveFlare) {
-      flareAnimation = Animated.loop(
-        Animated.timing(flareAnim, {
-          toValue: 1,
-          duration: 350,
-          easing: Easing.ease,
-          useNativeDriver: true,
-        })
-      );
-      flareAnimation.start();
+      [flareAnim1, flareAnim2, flareAnim3].forEach((anim, i) => {
+        const animation = Animated.loop(
+          Animated.sequence([
+            Animated.delay(i * 400),
+            Animated.timing(anim, {
+              toValue: 1,
+              duration: 1200,
+              easing: Easing.out(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(anim, {
+              toValue: 0,
+              duration: 0,
+              useNativeDriver: true,
+            }),
+          ])
+        );
+        animation.start();
+        anims.push(animation);
+      });
     } else {
-      flareAnim.setValue(0);
+      flareAnim1.setValue(0);
+      flareAnim2.setValue(0);
+      flareAnim3.setValue(0);
     }
 
-    // Cleanup on unmount
     return () => {
-      flareAnimation?.stop();
+      anims.forEach(a => a.stop());
     };
   }, [hasActiveFlare]);
 
@@ -280,15 +294,6 @@ function FriendParticleComponent({
     outputRange: [0.25, 0.4],
   });
 
-  const flareScale = flareAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1.0, 1.8],
-  });
-
-  const flareOpacity = flareAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 0.9],
-  });
 
   return (
     <Animated.View
@@ -311,24 +316,6 @@ function FriendParticleComponent({
         }}
         pointerEvents="box-none"
       >
-      {/* Emergency Flare Alert */}
-      {hasActiveFlare && (
-        <Animated.View
-          style={[
-            styles.flareGlow,
-            {
-              transform: [{ scale: flareScale }],
-              opacity: flareOpacity,
-            },
-          ]}
-          pointerEvents="none"
-        >
-          <LinearGradient
-            colors={['rgba(244, 112, 182, 0.5)', 'rgba(236, 72, 153, 0.3)', 'transparent']}
-            style={styles.flareCircle}
-          />
-        </Animated.View>
-      )}
 
       {/* Main Particle with Avatar */}
       <TouchableOpacity activeOpacity={0.8} onPress={handlePress} style={{ zIndex: 100 }}>
@@ -367,6 +354,28 @@ function FriendParticleComponent({
               }
             ]}
           />
+
+          {/* Pulsating red rings for active flare */}
+          {hasActiveFlare && [flareAnim1, flareAnim2, flareAnim3].map((anim, i) => (
+            <Animated.View
+              key={`flare-ring-${i}`}
+              style={[
+                styles.flareRing,
+                {
+                  borderColor: '#EF4444',
+                  opacity: anim.interpolate({
+                    inputRange: [0, 0.7, 1],
+                    outputRange: [0.8, 0.3, 0],
+                  }),
+                  transform: [{ scale: anim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [1.0, 1.35],
+                  }) }],
+                },
+              ]}
+              pointerEvents="none"
+            />
+          ))}
           
           {/* Avatar circle - on top */}
           <View style={styles.avatarContainer}>
@@ -539,14 +548,12 @@ const styles = StyleSheet.create({
     maxWidth: 80,
     letterSpacing: 0.1,
   },
-  flareGlow: {
+  flareRing: {
     position: 'absolute',
-    width: PARTICLE_SIZE * 3,
-    height: PARTICLE_SIZE * 3,
-  },
-  flareCircle: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 9999,
+    width: PARTICLE_SIZE + 8,
+    height: PARTICLE_SIZE + 8,
+    borderRadius: (PARTICLE_SIZE + 8) / 2,
+    borderWidth: 1.5,
+    zIndex: 2,
   },
 });

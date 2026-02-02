@@ -629,38 +629,6 @@ export default function QuantumOrbitScreen() {
         bottomInset={insets.bottom}
       />
 
-      {/* Active Flares Alert */}
-      {activeFlares.length > 0 && (
-        <View style={styles.flaresAlert}>
-          <BlurView
-            intensity={isDark ? 50 : 30}
-            tint={theme.colors.blurTint}
-            style={[
-              styles.flaresBlur,
-              {
-                borderColor: theme.colors.neon.pink,
-                shadowColor: theme.colors.neon.pink,
-              },
-            ]}
-          >
-            <LinearGradient
-              colors={theme.gradients.neonPink}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.flaresGradient}
-            >
-              <Text style={[styles.flaresTitle, { color: theme.colors.text.primary }]}>
-                🚨 {activeFlares.length} friend{activeFlares.length > 1 ? "s" : ""} need u rn
-              </Text>
-              {activeFlares.slice(0, 2).map((flare: any) => (
-                <Text key={flare.id} style={[styles.flaresText, { color: theme.colors.text.secondary }]}>
-                  💜 {flare.user.display_name}
-                </Text>
-              ))}
-            </LinearGradient>
-          </BlurView>
-        </View>
-      )}
 
       <MoodPicker
         visible={showMoodPicker}
@@ -731,35 +699,6 @@ export default function QuantumOrbitScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  flaresAlert: {
-    position: "absolute",
-    top: 160,
-    left: 20,
-    right: 20,
-  },
-  flaresBlur: {
-    borderRadius: 20,
-    overflow: "hidden",
-    borderWidth: 2,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 16,
-    elevation: 15,
-  },
-  flaresGradient: {
-    padding: 18,
-  },
-  flaresTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    marginBottom: 10,
-    textTransform: "lowercase",
-  },
-  flaresText: {
-    fontSize: 14,
-    marginTop: 6,
-    fontWeight: "600",
   },
   grain: {
     position: "absolute",
