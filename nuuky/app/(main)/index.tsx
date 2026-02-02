@@ -191,8 +191,8 @@ export default function QuantumOrbitScreen() {
         // Room data hasn't loaded yet — show nothing to avoid flash
         return [];
       }
-      // Room loaded: show participants, or fall back to friendList if alone
-      return participantUsers.length > 0 ? participantUsers : friendList;
+      // Room loaded: show only room participants (empty orbit if alone)
+      return participantUsers;
     }
     return friendList;
   }, [defaultRoomId, defaultRoomLoaded, participantUsers, friendList]);
@@ -604,6 +604,7 @@ export default function QuantumOrbitScreen() {
         theme={theme}
         totalBadgeCount={totalBadgeCount}
         defaultRoom={defaultRoom}
+        currentUserId={currentUser?.id}
         currentVibe={currentVibe}
         audioConnectionStatus={audioConnectionStatus}
         onNotificationPress={() => router.push("/(main)/notifications")}

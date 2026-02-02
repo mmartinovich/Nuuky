@@ -9,6 +9,7 @@ interface TopHeaderProps {
   theme: any;
   totalBadgeCount: number;
   defaultRoom: any | null;
+  currentUserId?: string;
   currentVibe: string;
   audioConnectionStatus: string;
   onNotificationPress: () => void;
@@ -20,11 +21,18 @@ export const TopHeader = React.memo(function TopHeader({
   theme,
   totalBadgeCount,
   defaultRoom,
+  currentUserId,
   currentVibe,
   audioConnectionStatus,
   onNotificationPress,
   onRoomPillPress,
 }: TopHeaderProps) {
+  const isCreator = defaultRoom?.creator_id === currentUserId;
+  const isHomeRoom = defaultRoom?.name === 'My Nūūky';
+  const creatorName = defaultRoom?.creator?.display_name;
+  const roomDisplayName = isHomeRoom && !isCreator && creatorName
+    ? `${creatorName}'s Nūūky`
+    : (defaultRoom?.name || 'Room');
   return (
     <View style={styles.topHeader} pointerEvents="box-none">
       <Image source={require("../assets/wordmark.png")} style={styles.wordmarkSmall} resizeMode="contain" />
@@ -58,11 +66,11 @@ export const TopHeader = React.memo(function TopHeader({
           ]}
           onPress={onRoomPillPress}
           activeOpacity={0.7}
-          accessibilityLabel={`Current room: ${defaultRoom.name || "Room"}. Tap to open settings`}
+          accessibilityLabel={`Current room: ${roomDisplayName}. Tap to open settings`}
           accessibilityRole="button"
         >
           <Text style={[styles.roomPillText, { color: theme.colors.text.primary }]}>
-            {defaultRoom.name || "Room"}
+            {roomDisplayName}
           </Text>
           <Ionicons name="chevron-down" size={14} color={theme.colors.text.secondary} />
         </TouchableOpacity>
