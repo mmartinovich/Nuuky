@@ -102,16 +102,51 @@ export const useAudio = (roomId: string | null) => {
     };
   }, [currentUser?.id, handleDisconnect, setAudioConnectionStatus, setAudioError, addSpeakingParticipant, removeSpeakingParticipant]);
 
-  // Clean up on room change or unmount
+  // Debounce timer for audio connections
+  const connectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Disconnect only on actual component unmount — NOT on room switches.
+  // Room switches are handled entirely by connectToAudioRoom which properly
+  // awaits the old Room's disconnect before creating a new one.
   useEffect(() => {
     return () => {
+      if (connectTimerRef.current) {
+        clearTimeout(connectTimerRef.current);
+        connectTimerRef.current = null;
+      }
       if (currentRoomId.current) {
         disconnectFromAudioRoom();
         currentRoomId.current = null;
         clearSpeakingParticipants();
       }
     };
-  }, [roomId]);
+  }, []);
+
+  // Handle room changes — disconnect old room, but DON'T auto-connect to new one.
+  // Audio will connect lazily when the user unmutes. This makes room switching instant
+  // instead of waiting 2-3s for LiveKit disconnect→token→WebRTC handshake.
+  useEffect(() => {
+    if (connectTimerRef.current) {
+      clearTimeout(connectTimerRef.current);
+      connectTimerRef.current = null;
+    }
+
+    if (roomId && currentRoomId.current && currentRoomId.current !== roomId) {
+      // Switched to a different room — disconnect old one in background
+      disconnectFromAudioRoom();
+      currentRoomId.current = null;
+      clearSpeakingParticipants();
+    }
+
+    if (roomId) {
+      currentRoomId.current = roomId;
+    } else if (currentRoomId.current) {
+      // Room cleared (e.g. left all rooms) — disconnect
+      disconnectFromAudioRoom();
+      currentRoomId.current = null;
+      clearSpeakingParticipants();
+    }
+  }, [roomId, currentUser?.id]);
 
   // Request microphone permission — always check fresh (user may toggle in Settings)
   const requestMicrophonePermission = async (): Promise<boolean> => {
@@ -157,13 +192,6 @@ export const useAudio = (roomId: string | null) => {
     setMicEnabled(false);
     return true;
   }, [roomId, currentUser]);
-
-  // Auto-connect for listening when room changes
-  useEffect(() => {
-    if (roomId && currentUser) {
-      handleConnect();
-    }
-  }, [roomId, currentUser?.id]);
 
   // Connect to audio when unmuting
   const handleUnmute = useCallback(async (): Promise<boolean> => {

@@ -515,7 +515,7 @@ export default function QuantumOrbitScreen() {
   }, []);
 
   // Keep splash screen visible until orbit data has settled
-  const orbitSettled = orbitUsers.length > 0 || (!loading && friendList.length === 0 && defaultRoomLoaded);
+  const orbitSettled = orbitUsers.length > 0 || defaultRoomLoaded || (!loading && friendList.length === 0);
   const isDataReady = !!currentUser && !firstTimeLoading && (orbitSettled || safetyTimeout);
 
   const fadeAnim = useRef(new RNAnimated.Value(0)).current;

@@ -8,12 +8,17 @@ import { Room, RoomParticipant } from '../types';
 
 const REFRESH_THROTTLE_MS = 2000; // Only allow refresh every 2 seconds
 
+// Module-level tracking: only ONE useRoom instance owns realtime subscriptions at a time.
+// Prevents rooms.tsx from stealing index.tsx's subscriptions when it mounts its own useRoom.
+let activeSubscriptionOwner: string | null = null;
+
 export const useRoom = () => {
   // Instance-level refs instead of module-level variables to avoid cross-instance race conditions
   const lastRoomsRefreshRef = useRef(0);
   const lastParticipantsRefreshRef = useRef(0);
   const isJoiningRoomRef = useRef(false);
   const lastJoinedRoomIdRef = useRef<string | null>(null);
+  const instanceIdRef = useRef(`useRoom-${Date.now()}-${Math.random()}`);
   const { currentUser, currentRoom, setCurrentRoom, setActiveRooms, myRooms, setMyRooms, addMyRoom, updateMyRoom, removeMyRoom, setRoomParticipants, roomParticipants } = useAppStore();
   const [activeRooms, setActiveRoomsList] = useState<Room[]>([]);
   const [loading, setLoading] = useState(false);
@@ -28,22 +33,47 @@ export const useRoom = () => {
 
   useEffect(() => {
     if (currentUser) {
-      loadActiveRooms();
-      loadMyRooms();
-      const cleanup = setupRealtimeSubscription();
-      return cleanup;
+      // Only load from network if myRooms is empty (first mount).
+      // Subsequent useRoom instances (e.g. rooms.tsx) reuse Zustand data.
+      const state = useAppStore.getState();
+      if (state.myRooms.length === 0) {
+        loadActiveRooms();
+        loadMyRooms();
+      }
+
+      // Only the first instance sets up realtime subscriptions.
+      // This prevents rooms.tsx from stealing and then deleting index.tsx's subs.
+      if (!activeSubscriptionOwner) {
+        activeSubscriptionOwner = instanceIdRef.current;
+        const cleanup = setupRealtimeSubscription();
+        return () => {
+          cleanup();
+          if (activeSubscriptionOwner === instanceIdRef.current) {
+            activeSubscriptionOwner = null;
+          }
+        };
+      }
     }
   }, [currentUser?.id]); // Use id to avoid re-running on mood change
 
   useEffect(() => {
     if (currentRoom) {
-      loadParticipants();
+      // Extract participants from myRooms if available, avoiding a redundant fetch
+      const roomData = myRooms.find(r => r.id === currentRoom.id);
+      if (roomData?.participants) {
+        setRoomParticipants(roomData.participants);
+      } else {
+        loadParticipants();
+      }
     }
   }, [currentRoom?.id]);
 
   // Subscribe to participant changes for the current room (any user joining/leaving)
+  // GUARDED: only the subscription owner creates per-room channels to prevent
+  // rooms.tsx's useRoom instances from creating/destroying channels on every visit.
   useEffect(() => {
     if (!currentRoom) return;
+    if (activeSubscriptionOwner !== instanceIdRef.current) return;
 
     const subId = `room-participants-room-${currentRoom.id}`;
     const cleanup = subscriptionManager.register(subId, () => {
@@ -371,16 +401,29 @@ export const useRoom = () => {
     if (isJoiningRoomRef.current) {
       return false;
     }
-    if (lastJoinedRoomIdRef.current === roomId && currentRoom?.id === roomId) {
-      // Already in this room, but refresh participants to ensure fresh data
-      await loadParticipants();
+
+    // Fast path: check local state first to avoid DB round-trips when switching between known rooms
+    const freshMyRooms = useAppStore.getState().myRooms;
+    const knownRoom = freshMyRooms.find(r => r.id === roomId);
+    const isKnownParticipant = knownRoom?.participants?.some((p: any) => p.user_id === currentUser.id);
+
+    if (isKnownParticipant && knownRoom) {
+      // Only update state if actually switching to a different room to avoid redundant re-renders
+      const state = useAppStore.getState();
+      if (state.currentRoom?.id !== roomId) {
+        setCurrentRoom(knownRoom);
+      }
+      if (knownRoom.participants) {
+        setRoomParticipants(knownRoom.participants);
+      }
+      lastJoinedRoomIdRef.current = roomId;
       return true;
     }
 
     isJoiningRoomRef.current = true;
     setLoading(true);
     try {
-      // Check if already in the room
+      // Check if already in the room via DB (for rooms not yet in local state)
       const { data: existing } = await supabase
         .from('room_participants')
         .select('*')
@@ -389,7 +432,7 @@ export const useRoom = () => {
         .maybeSingle();
 
       if (existing) {
-        // Already in room, just load it
+        // Already in room but not in local state yet, fetch it
         const { data: room } = await supabase
           .from('rooms')
           .select('*')
@@ -397,10 +440,10 @@ export const useRoom = () => {
           .single();
 
         if (room) {
-          // Load myRooms first to ensure we have fresh participant data
-          await loadMyRooms();
           setCurrentRoom(room);
           lastJoinedRoomIdRef.current = roomId;
+          // Refresh myRooms in background so next switch is instant
+          loadMyRooms();
           return true;
         }
       }
@@ -820,7 +863,6 @@ export const useRoom = () => {
 
       if (error) throw error;
 
-      Alert.alert('Success', 'Invite sent!');
       return true;
     } catch (error: any) {
       logger.error('Error inviting friend:', error);

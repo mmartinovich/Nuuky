@@ -47,7 +47,10 @@ export default function RoomsScreen() {
     // Wait for first-time room creation to complete before loading
     if (!firstTimeLoading && !hasLoadedRef.current) {
       hasLoadedRef.current = true;
-      loadData();
+      // Only fetch from network if myRooms is empty; otherwise Zustand already has data
+      if (myRooms.length === 0) {
+        loadData();
+      }
     }
   }, [firstTimeLoading]);
 
@@ -82,15 +85,14 @@ export default function RoomsScreen() {
     const room = await createRoom(name);
     if (room) {
       setShowCreateRoom(false);
-      await loadMyRooms();
-      await setAsDefaultRoom(room.id);
-      router.replace("/(main)");
+      setAsDefaultRoom(room.id);
+      router.back();
     }
   };
 
   const handleRoomPress = (roomId: string) => {
     setAsDefaultRoom(roomId);
-    router.replace("/(main)");
+    router.back();
   };
 
   const handleDeleteRoom = async (roomId: string): Promise<boolean> => {

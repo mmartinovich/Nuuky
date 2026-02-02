@@ -199,9 +199,6 @@ export default function FriendsScreen() {
       if (!inviteTarget) return;
       const friend = inviteTarget.friend as User;
       const success = await inviteFriendToRoom(roomId, friend.id);
-      if (success) {
-        Alert.alert("Sent", `Invite sent to ${friend.display_name}`);
-      }
       setInviteTarget(null);
     },
     [inviteTarget, inviteFriendToRoom],

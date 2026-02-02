@@ -82,7 +82,7 @@ function FriendParticleComponent({
     const startDirection = index % 2 === 0 ? 1 : -1;
 
     // Smooth oscillation loop - longer duration for battery optimization
-    Animated.loop(
+    const oscillation = Animated.loop(
       Animated.sequence([
         Animated.timing(localOrbitAnim, {
           toValue: oscillationAmplitude * startDirection,
@@ -103,10 +103,11 @@ function FriendParticleComponent({
           useNativeDriver: false,
         }),
       ])
-    ).start();
+    );
+    oscillation.start();
 
     return () => {
-      localOrbitAnim.stopAnimation();
+      oscillation.stop();
     };
   }, [index, lowPowerMode]);
 

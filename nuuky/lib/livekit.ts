@@ -35,6 +35,10 @@ export const initializeLiveKit = () => {
 let currentRoom: Room | null = null;
 let silenceTimer: ReturnType<typeof setTimeout> | null = null;
 
+// Generation counter — incremented on every connect/disconnect call.
+// Stale operations check this and bail if a newer operation has started.
+let connectionGeneration = 0;
+
 // Configurable silence timeout (default: 30 seconds)
 export let SILENCE_TIMEOUT_MS = 30000;
 
@@ -133,20 +137,31 @@ export const requestLiveKitToken = async (
 
 // Connect to LiveKit room
 export const connectToAudioRoom = async (roomId: string, enableMic: boolean = true): Promise<boolean> => {
+  const myGeneration = ++connectionGeneration;
+
   try {
     // Lazily initialize WebRTC globals on first connection
     initializeLiveKit();
 
+    // IMPORTANT: properly await old room disconnect to prevent orphaned PeerConnections.
+    // Fire-and-forget disconnect leaks WebRTC resources that accumulate per room switch.
+    if (currentRoom) {
+      try { await currentRoom.disconnect(); } catch {}
+      currentRoom = null;
+    }
+
+    // Bail if stale after awaiting disconnect
+    if (connectionGeneration !== myGeneration) return false;
+
     eventCallbacks?.onConnectionStatusChange('connecting');
 
     // Configure audio to use speaker output for louder playback
-    // This ensures audio routes to speaker instead of earpiece
     AudioSession.configureAudio({
       ios: { defaultOutput: 'speaker' },
       android: {
         audioTypeOptions: {
           focusMode: 'gain',
-          audioMode: 'inCommunication', // Proper mode for voice chat
+          audioMode: 'inCommunication',
         }
       },
     });
@@ -157,55 +172,57 @@ export const connectToAudioRoom = async (roomId: string, enableMic: boolean = tr
       requestLiveKitToken(roomId),
     ]);
 
+    // Bail if a newer connect/disconnect started while we were awaiting
+    if (connectionGeneration !== myGeneration) return false;
+
     if (!tokenData) {
       eventCallbacks?.onConnectionStatusChange('error');
       return false;
     }
 
-    // OPTIMIZATION: Reuse room instance if exists, create new one if not
-    if (!currentRoom) {
-      currentRoom = new Room({
-        adaptiveStream: true,
-        dynacast: true,
-        audioCaptureDefaults: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-        // Ensure remote audio is auto-subscribed for immediate playback
-        autoSubscribe: true,
-      });
+    currentRoom = new Room({
+      adaptiveStream: true,
+      dynacast: true,
+      audioCaptureDefaults: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+      autoSubscribe: true,
+    });
+    setupRoomEventListeners(currentRoom);
 
-      // Set up event listeners only once
-      setupRoomEventListeners(currentRoom);
-    }
-
-    // Connect
     await currentRoom.connect(tokenData.serverUrl, tokenData.token);
 
+    // Bail if stale — a newer switch happened during WebRTC handshake.
+    // The newer connectToAudioRoom call will see this room as currentRoom
+    // and properly await its disconnect — so just bail, don't disconnect here.
+    if (connectionGeneration !== myGeneration) {
+      return false;
+    }
+
     eventCallbacks?.onConnectionStatusChange('connected');
-
-    // Enable microphone only if requested
     await currentRoom.localParticipant.setMicrophoneEnabled(enableMic);
-
-    // Start silence timer
     resetSilenceTimer();
 
     return true;
   } catch (error) {
     logger.error('[LiveKit] Failed to connect:', error);
-    eventCallbacks?.onConnectionStatusChange('error');
-    eventCallbacks?.onError('Failed to connect to audio');
+    if (connectionGeneration === myGeneration) {
+      eventCallbacks?.onConnectionStatusChange('error');
+      eventCallbacks?.onError('Failed to connect to audio');
+    }
     return false;
   }
 };
 
 // Disconnect from LiveKit room
 export const disconnectFromAudioRoom = async (): Promise<void> => {
+  ++connectionGeneration; // invalidate any in-flight connect
   clearSilenceTimer();
 
   if (currentRoom) {
-    await currentRoom.disconnect();
+    try { await currentRoom.disconnect(); } catch {}
     currentRoom = null;
   }
 

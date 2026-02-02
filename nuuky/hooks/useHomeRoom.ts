@@ -44,6 +44,13 @@ export const useHomeRoom = () => {
       return;
     }
 
+    // Fast path: if homeRoomId already set in Zustand, skip AsyncStorage + Supabase queries.
+    // This prevents redundant IO on every rooms.tsx mount.
+    if (homeRoomId) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       // Step 1: Load from AsyncStorage for fast startup

@@ -27,6 +27,14 @@ export const useFirstTimeRoom = () => {
     try {
       setLoading(true);
 
+      // Fast path: if myRooms already has data in Zustand, skip the DB query entirely.
+      // This prevents a redundant Supabase call on every rooms.tsx mount.
+      const existingRooms = useAppStore.getState().myRooms;
+      if (existingRooms.length > 0) {
+        setIsFirstTime(false);
+        return;
+      }
+
       // Check if user has any rooms (as creator or participant)
       const { data: participantData, error: participantError } = await supabase
         .from('room_participants')
