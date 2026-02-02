@@ -122,9 +122,8 @@ export const useAudio = (roomId: string | null) => {
     };
   }, []);
 
-  // Handle room changes — disconnect old room, but DON'T auto-connect to new one.
-  // Audio will connect lazily when the user unmutes. This makes room switching instant
-  // instead of waiting 2-3s for LiveKit disconnect→token→WebRTC handshake.
+  // Handle room changes — disconnect old room, auto-connect to new one for listening (mic off).
+  // Connection runs in the background so it doesn't block UI/navigation.
   useEffect(() => {
     if (connectTimerRef.current) {
       clearTimeout(connectTimerRef.current);
@@ -132,15 +131,22 @@ export const useAudio = (roomId: string | null) => {
     }
 
     if (roomId && currentRoomId.current && currentRoomId.current !== roomId) {
-      // Switched to a different room — disconnect old one in background
+      // Switched to a different room — disconnect old one
       disconnectFromAudioRoom();
       currentRoomId.current = null;
       clearSpeakingParticipants();
     }
 
-    if (roomId) {
+    if (roomId && currentUser) {
       currentRoomId.current = roomId;
-    } else if (currentRoomId.current) {
+      // Auto-connect for listening (mic off) in background
+      connectToAudioRoom(roomId, false).then((success) => {
+        if (!success) {
+          currentRoomId.current = null;
+        }
+        setMicEnabled(false);
+      });
+    } else if (!roomId && currentRoomId.current) {
       // Room cleared (e.g. left all rooms) — disconnect
       disconnectFromAudioRoom();
       currentRoomId.current = null;

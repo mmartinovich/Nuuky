@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Alert } from "react-native";
-import { Animated as RNAnimated } from "react-native";
+import { Animated as RNAnimated, Easing } from "react-native";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
@@ -22,6 +22,8 @@ interface BottomNavBarProps {
   bottomInset: number;
 }
 
+const AnimatedIonicons = RNAnimated.createAnimatedComponent(Ionicons);
+
 export const BottomNavBar = React.memo(function BottomNavBar({
   accent,
   theme,
@@ -39,6 +41,23 @@ export const BottomNavBar = React.memo(function BottomNavBar({
   onSettingsPress,
   bottomInset,
 }: BottomNavBarProps) {
+  // Morph animation between mic states
+  const iconMorph = useRef(new RNAnimated.Value(1)).current;
+  const prevMuted = useRef(isMuted);
+
+  useEffect(() => {
+    if (prevMuted.current !== isMuted) {
+      prevMuted.current = isMuted;
+      iconMorph.setValue(0);
+      RNAnimated.timing(iconMorph, {
+        toValue: 1,
+        duration: 200,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [isMuted]);
+
   return (
     <View style={[styles.bottomNav, { paddingBottom: Math.max(bottomInset, 8) }]} pointerEvents="box-none">
       {/* Floating center button */}
@@ -90,22 +109,18 @@ export const BottomNavBar = React.memo(function BottomNavBar({
                     outputRange: [15, 30],
                   }),
             },
-            isAudioConnecting && { opacity: 0.7 },
           ]}
         >
           <TouchableOpacity
             onPress={onMicToggle}
             activeOpacity={0.85}
             style={styles.floatingButtonInner}
-            disabled={isAudioConnecting}
             accessibilityLabel={isMuted ? "Unmute microphone" : "Mute microphone"}
             accessibilityRole="button"
           >
-            {isAudioConnecting ? (
-              <Ionicons name="hourglass" size={28} color={isMuted ? accent.primary : accent.textOnPrimary} />
-            ) : (
+            <RNAnimated.View style={{ transform: [{ scale: iconMorph }], opacity: iconMorph }}>
               <Ionicons name={isMuted ? "mic-off" : "mic"} size={28} color={isMuted ? accent.primary : accent.textOnPrimary} />
-            )}
+            </RNAnimated.View>
           </TouchableOpacity>
         </RNAnimated.View>
       </View>
