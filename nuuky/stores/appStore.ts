@@ -234,6 +234,8 @@ export const useAppStore = create<AppState>()(
   }),
 
   addNotification: (notification) => set((state) => {
+    // Prevent duplicates
+    if (state.notifications.some(n => n.id === notification.id)) return state;
     const updated = [notification, ...state.notifications].slice(0, 200);
     return {
       notifications: updated,

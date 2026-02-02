@@ -4,7 +4,7 @@ import { Image as CachedImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { User, Streak } from '../types';
-import { getMoodColor } from '../lib/theme';
+import { getMoodColor, getCustomMoodColor } from '../lib/theme';
 import { useLowPowerMode } from '../stores/appStore';
 import { isUserTrulyOnline } from '../lib/utils';
 import { StreakBadge } from './StreakBadge';
@@ -46,6 +46,8 @@ function FriendParticleComponent({
   const lowPowerMode = useLowPowerMode();
   const { theme } = useTheme();
 
+
+
   // Check if user is truly online (handles stale is_online flags from force-closed apps)
   const isOnline = useMemo(
     () => isUserTrulyOnline(friend.is_online, friend.last_seen_at),
@@ -64,8 +66,11 @@ function FriendParticleComponent({
   const localOrbitAnim = useRef(new Animated.Value(0)).current;
   
   // Use Animated.Value for positions to avoid React re-renders
-  const translateXAnim = useRef(new Animated.Value(Math.cos(baseAngle) * radius)).current;
-  const translateYAnim = useRef(new Animated.Value(Math.sin(baseAngle) * radius)).current;
+  // Include current orbit rotation so particles appear at the correct position on first paint
+  const currentOrbitAngle = (orbitAngle as any)._value || 0;
+  const fullInitialAngle = baseAngle + currentOrbitAngle;
+  const translateXAnim = useRef(new Animated.Value(Math.cos(fullInitialAngle) * radius)).current;
+  const translateYAnim = useRef(new Animated.Value(Math.sin(fullInitialAngle) * radius)).current;
   const lastUpdateTime = useRef(Date.now());
   const localOffsetRef = useRef(0);
 
@@ -125,8 +130,11 @@ function FriendParticleComponent({
     }
 
     // Cache last computed values to skip unnecessary updates
-    let lastComputedX = Math.cos(baseAngle) * radius;
-    let lastComputedY = Math.sin(baseAngle) * radius;
+    const parentAngle = (orbitAngle as any)._value || 0;
+    const localOffset = lowPowerMode ? 0 : ((localOrbitAnim as any)._value || 0);
+    const currentAngle = baseAngle + parentAngle + localOffset;
+    let lastComputedX = Math.cos(currentAngle) * radius;
+    let lastComputedY = Math.sin(currentAngle) * radius;
     let pendingUpdate = false;
 
     const updatePosition = () => {
@@ -270,7 +278,9 @@ function FriendParticleComponent({
     onPress();
   };
 
-  const moodColors = getMoodColor(friend.mood || 'neutral');
+  const moodColors = friend.custom_mood?.color
+    ? getCustomMoodColor(friend.custom_mood.color)
+    : getMoodColor(friend.mood || 'neutral');
   
   // Get initials from display name
   const getInitials = (name: string) => {
@@ -342,11 +352,11 @@ function FriendParticleComponent({
             style={[
               styles.moodRing,
               {
-                borderColor: moodColors.base,
+                borderColor: hasActiveFlare ? '#EF4444' : moodColors.base,
                 borderWidth: 4,
                 opacity: 0.9,
-                shadowColor: moodColors.base,
-                shadowOpacity: 0.5,
+                shadowColor: hasActiveFlare ? '#EF4444' : moodColors.base,
+                shadowOpacity: hasActiveFlare ? 0.8 : 0.5,
                 shadowRadius: 8,
                 shadowOffset: { width: 0, height: 0 },
                 elevation: 8,
@@ -354,6 +364,26 @@ function FriendParticleComponent({
               }
             ]}
           />
+
+          {/* Red alert glow behind avatar */}
+          {hasActiveFlare && (
+            <Animated.View
+              style={[
+                styles.flareGlow,
+                {
+                  opacity: flareAnim1.interpolate({
+                    inputRange: [0, 0.5, 1],
+                    outputRange: [0.4, 0.7, 0.4],
+                  }),
+                  transform: [{ scale: flareAnim1.interpolate({
+                    inputRange: [0, 0.5, 1],
+                    outputRange: [0.9, 1.05, 0.9],
+                  }) }],
+                },
+              ]}
+              pointerEvents="none"
+            />
+          )}
 
           {/* Pulsating red rings for active flare */}
           {hasActiveFlare && [flareAnim1, flareAnim2, flareAnim3].map((anim, i) => (
@@ -365,11 +395,11 @@ function FriendParticleComponent({
                   borderColor: '#EF4444',
                   opacity: anim.interpolate({
                     inputRange: [0, 0.7, 1],
-                    outputRange: [0.8, 0.3, 0],
+                    outputRange: [0.9, 0.4, 0],
                   }),
                   transform: [{ scale: anim.interpolate({
                     inputRange: [0, 1],
-                    outputRange: [1.0, 1.35],
+                    outputRange: [1.0, 1.6],
                   }) }],
                 },
               ]}
@@ -445,6 +475,7 @@ export const FriendParticle = memo(FriendParticleComponent, (prevProps, nextProp
   return (
     prevProps.friend.id === nextProps.friend.id &&
     prevProps.friend.mood === nextProps.friend.mood &&
+    prevProps.friend.custom_mood_id === nextProps.friend.custom_mood_id &&
     prevProps.friend.avatar_url === nextProps.friend.avatar_url &&
     prevProps.friend.is_online === nextProps.friend.is_online &&
     prevProps.friend.last_seen_at === nextProps.friend.last_seen_at &&
@@ -553,7 +584,15 @@ const styles = StyleSheet.create({
     width: PARTICLE_SIZE + 8,
     height: PARTICLE_SIZE + 8,
     borderRadius: (PARTICLE_SIZE + 8) / 2,
-    borderWidth: 1.5,
+    borderWidth: 2.5,
     zIndex: 2,
+  },
+  flareGlow: {
+    position: 'absolute',
+    width: PARTICLE_SIZE + 24,
+    height: PARTICLE_SIZE + 24,
+    borderRadius: (PARTICLE_SIZE + 24) / 2,
+    backgroundColor: 'rgba(239, 68, 68, 0.25)',
+    zIndex: 0,
   },
 });

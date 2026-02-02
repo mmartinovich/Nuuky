@@ -198,6 +198,22 @@ export default function RootLayout() {
             onPress: () => handleNotificationNavigation(data),
           });
         }
+
+        // Immediately fetch latest notifications to update badge count
+        const userId = useAppStore.getState().currentUser?.id;
+        if (userId) {
+          supabase
+            .from('notifications')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .then(({ data: newNotifs }) => {
+              if (newNotifs?.[0]) {
+                useAppStore.getState().addNotification(newNotifs[0]);
+              }
+            });
+        }
       },
       // On notification response (tap)
       (response) => {

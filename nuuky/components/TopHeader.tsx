@@ -47,7 +47,7 @@ export const TopHeader = React.memo(function TopHeader({
         <Ionicons name="notifications-outline" size={22} color={accent.primary} />
         {totalBadgeCount > 0 && (
           <View style={[styles.notificationBadge, { backgroundColor: accent.primary }]}>
-            <Text style={[styles.notificationBadgeText, { color: theme.colors.text.primary }]}>
+            <Text style={[styles.notificationBadgeText, { color: '#000000' }]}>
               {totalBadgeCount > 99 ? "99+" : totalBadgeCount}
             </Text>
           </View>

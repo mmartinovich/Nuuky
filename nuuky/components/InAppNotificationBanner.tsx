@@ -46,7 +46,7 @@ export const InAppNotificationBanner: React.FC<Props> = ({ notification, onDismi
   // Pan responder for swipe-to-dismiss
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gestureState) => {
         // Only handle upward swipes
         return gestureState.dy < -5;

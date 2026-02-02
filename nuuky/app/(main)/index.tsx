@@ -125,7 +125,7 @@ export default function QuantumOrbitScreen() {
     disconnect: audioDisconnect,
   } = useAudio(defaultRoom?.id || null);
 
-  const { totalCount: notificationCount } = useNotifications();
+  const { unreadCount: notificationCount } = useNotifications();
   const totalBadgeCount = notificationCount + roomInvites.length;
 
   const [loading, setLoading] = useState(true);
@@ -572,7 +572,7 @@ export default function QuantumOrbitScreen() {
       {orbitUsers.length > 0 &&
         orbitUsers.map((user, index) => (
           <FriendParticle
-            key={user.id}
+            key={`${user.id}-${defaultRoomId || 'none'}`}
             friend={user}
             index={index}
             total={orbitUsers.length}

@@ -48,6 +48,22 @@ export const useFlare = () => {
     return () => clearTimeout(timer);
   }, [myActiveFlare?.id, myActiveFlare?.expires_at]);
 
+  // Auto-clear expired friend flares
+  useEffect(() => {
+    if (activeFlares.length === 0) return;
+    const now = Date.now();
+    const soonest = Math.min(...activeFlares.map(f => new Date(f.expires_at).getTime()));
+    const remaining = soonest - now;
+    if (remaining <= 0) {
+      setActiveFlares(prev => prev.filter(f => new Date(f.expires_at).getTime() > now));
+      return;
+    }
+    const timer = setTimeout(() => {
+      setActiveFlares(prev => prev.filter(f => new Date(f.expires_at).getTime() > Date.now()));
+    }, remaining);
+    return () => clearTimeout(timer);
+  }, [activeFlares]);
+
   // MOCK MODE FLAG - should match useRoom.ts
   const USE_MOCK_DATA = false;
 

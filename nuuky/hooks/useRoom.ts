@@ -92,6 +92,24 @@ export const useRoom = () => {
             loadMyRooms();
           }
         )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'users',
+          },
+          (payload) => {
+            // Reload if the changed user is a room participant
+            const participantIds = new Set(
+              useAppStore.getState().roomParticipants.map((p: any) => p.user_id)
+            );
+            if (payload.new && participantIds.has((payload.new as any).id)) {
+              loadParticipants();
+              loadMyRooms();
+            }
+          }
+        )
         .subscribe();
     });
 
@@ -167,9 +185,16 @@ export const useRoom = () => {
               display_name,
               avatar_url,
               mood,
+              custom_mood_id,
               is_online,
               last_seen_at,
-              default_room_id
+              default_room_id,
+              custom_mood:custom_mood_id (
+                id,
+                emoji,
+                text,
+                color
+              )
             )
           )
         `)
@@ -198,9 +223,16 @@ export const useRoom = () => {
             display_name,
             avatar_url,
             mood,
+            custom_mood_id,
             is_online,
             last_seen_at,
-            default_room_id
+            default_room_id,
+            custom_mood:custom_mood_id (
+              id,
+              emoji,
+              text,
+              color
+            )
           )
         `)
         .eq('room_id', currentRoom.id);
