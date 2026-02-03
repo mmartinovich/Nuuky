@@ -48,7 +48,7 @@ export const TopHeader = React.memo(function TopHeader({
           style={[
             styles.musicButton,
             { backgroundColor: accent.soft, borderColor: theme.colors.ui.borderLight },
-            isLofiPlaying && { borderColor: accent.primary, shadowColor: accent.glow, shadowOpacity: 0.5, shadowRadius: 8 },
+            isLofiPlaying && { borderColor: accent.primary, shadowColor: accent.glow, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 8 },
           ]}
           onPress={onMusicPress}
           activeOpacity={0.7}
@@ -56,9 +56,9 @@ export const TopHeader = React.memo(function TopHeader({
           accessibilityRole="button"
         >
           <Ionicons
-            name={isLofiPlaying ? "musical-note" : "musical-note-outline"}
+            name={isLofiPlaying ? "musical-notes" : "musical-notes-outline"}
             size={22}
-            color={isLofiPlaying ? accent.primary : accent.primary}
+            color={accent.primary}
           />
         </TouchableOpacity>
       )}
@@ -142,7 +142,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    shadowOffset: { width: 0, height: 0 },
   },
   notificationBadge: {
     position: "absolute",
