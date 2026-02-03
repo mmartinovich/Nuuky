@@ -10,7 +10,7 @@ import {
   Animated,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -184,72 +184,67 @@ export default function NotificationsScreen() {
   const hasNotifications = notifications.length > 0;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.bg.primary }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-
-      {/* Background - glass blur like Music page */}
-      <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFill}>
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} />
-      </BlurView>
-
-      {/* Content */}
-      <View style={[styles.content, { paddingTop: insets.top + 8 }]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={[styles.headerButton, { backgroundColor: theme.colors.glass.background }]}
-            onPress={selectionMode ? clearSelection : () => router.back()}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="close" size={22} color={theme.colors.text.primary} />
-          </TouchableOpacity>
-          {hasNotifications && !selectionMode && (
+      <LinearGradient colors={theme.gradients.background} style={styles.gradient}>
+        {/* Header - part of normal flow like Friends page */}
+        <View style={[styles.headerSection, { paddingTop: insets.top + 8 }]}>
+          <View style={styles.header}>
             <TouchableOpacity
               style={[styles.headerButton, { backgroundColor: theme.colors.glass.background }]}
-              onPress={() => enterSelectionMode()}
+              onPress={selectionMode ? clearSelection : () => router.back()}
               activeOpacity={0.7}
             >
-              <Text style={[styles.editButtonText, { color: accent.primary }]}>Edit</Text>
+              <Ionicons name="close" size={22} color={theme.colors.text.primary} />
             </TouchableOpacity>
+            {hasNotifications && !selectionMode && (
+              <TouchableOpacity
+                style={[styles.headerButton, { backgroundColor: theme.colors.glass.background }]}
+                onPress={() => enterSelectionMode()}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.editButtonText, { color: accent.primary }]}>Edit</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <Text style={[styles.title, { color: theme.colors.text.primary }]}>
+            {selectionMode ? `${selectedIds.size} Selected` : 'Notifications'}
+          </Text>
+          {selectionMode ? (
+            <TouchableOpacity onPress={allSelected ? deselectAll : selectAll} activeOpacity={0.7}>
+              <Text style={[styles.subtitleLink, { color: accent.primary }]}>
+                {allSelected ? 'Deselect All' : 'Select All'}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <Text style={[styles.subtitle, { color: theme.colors.text.tertiary }]}>
+              {hasNotifications
+                ? `${notifications.length} notification${notifications.length !== 1 ? 's' : ''}${hasInvites ? `, ${roomInvites.length} invite${roomInvites.length !== 1 ? 's' : ''}` : ''}`
+                : hasInvites
+                  ? `${roomInvites.length} invite${roomInvites.length !== 1 ? 's' : ''}`
+                  : 'Stay connected with your friends'}
+            </Text>
           )}
         </View>
-
-        {/* Title */}
-        <Text style={[styles.title, { color: theme.colors.text.primary }]}>
-          {selectionMode ? `${selectedIds.size} Selected` : 'Notifications'}
-        </Text>
-        {selectionMode ? (
-          <TouchableOpacity onPress={allSelected ? deselectAll : selectAll} activeOpacity={0.7}>
-            <Text style={[styles.subtitleLink, { color: accent.primary }]}>
-              {allSelected ? 'Deselect All' : 'Select All'}
-            </Text>
-          </TouchableOpacity>
-        ) : (
-          <Text style={[styles.subtitle, { color: theme.colors.text.tertiary }]}>
-            {hasNotifications
-              ? `${notifications.length} notification${notifications.length !== 1 ? 's' : ''}${hasInvites ? `, ${roomInvites.length} invite${roomInvites.length !== 1 ? 's' : ''}` : ''}`
-              : hasInvites
-                ? `${roomInvites.length} invite${roomInvites.length !== 1 ? 's' : ''}`
-                : 'Stay connected with your friends'}
-          </Text>
-        )}
 
         {/* Scrollable Content */}
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingBottom: insets.bottom + 24 + (selectionMode ? 70 : 0) },
+            {
+              paddingBottom: insets.bottom + (selectionMode ? 80 : 24),
+            },
           ]}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={refreshNotifications}
-              tintColor={theme.colors.text.secondary}
-            />
-          }
-        >
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={refreshNotifications}
+                tintColor={theme.colors.text.secondary}
+              />
+            }
+          >
           {/* Room Invites Section */}
           {hasInvites && (
             <View style={styles.section}>
@@ -364,7 +359,7 @@ export default function NotificationsScreen() {
             </Text>
           </TouchableOpacity>
         </Animated.View>
-      </View>
+      </LinearGradient>
     </View>
   );
 }
@@ -373,9 +368,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  content: {
+  gradient: {
     flex: 1,
+  },
+  headerSection: {
     paddingHorizontal: 24,
+    paddingBottom: 16,
   },
   header: {
     flexDirection: 'row',
@@ -403,21 +401,21 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    marginBottom: 24,
+    marginBottom: 8,
   },
   subtitleLink: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 24,
+    marginBottom: 8,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 32,
+    paddingHorizontal: 24,
   },
   section: {
-    marginBottom: 24,
+    marginTop: 8,
   },
   sectionHeader: {
     flexDirection: 'row',

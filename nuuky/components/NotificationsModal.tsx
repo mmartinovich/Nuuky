@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useSharedValue,
@@ -338,54 +339,18 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
         <Animated.View
           style={[
             styles.fullScreenContent,
-            { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 8 },
             contentStyle,
           ]}
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={[styles.closeButton, { backgroundColor: theme.colors.glass.background }]}
-              onPress={handleClose}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="close" size={22} color={theme.colors.text.primary} />
-            </TouchableOpacity>
-            {hasNotifications && !selectionMode && (
-              <TouchableOpacity
-                style={[styles.editButton, { backgroundColor: theme.colors.glass.background }]}
-                onPress={() => enterSelectionMode()}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.editButtonText, { color: accent.primary }]}>Edit</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
-            {selectionMode ? `${selectedIds.size} Selected` : 'Notifications'}
-          </Text>
-          {selectionMode ? (
-            <TouchableOpacity onPress={allSelected ? deselectAll : selectAll} activeOpacity={0.7}>
-              <Text style={[styles.subtitleLink, { color: accent.primary }]}>
-                {allSelected ? 'Deselect All' : 'Select All'}
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <Text style={[styles.subtitle, { color: theme.colors.text.tertiary }]}>
-              {hasNotifications
-                ? `${notifications.length} notification${notifications.length !== 1 ? 's' : ''}${hasInvites ? `, ${roomInvites.length} invite${roomInvites.length !== 1 ? 's' : ''}` : ''}`
-                : hasInvites
-                  ? `${roomInvites.length} invite${roomInvites.length !== 1 ? 's' : ''}`
-                  : 'Stay connected with your friends'}
-            </Text>
-          )}
-
+          {/* ScrollView - underneath header */}
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={[
               styles.contentContainer,
-              { paddingBottom: selectionMode ? 70 : 32 },
+              {
+                paddingTop: insets.top + 150,
+                paddingBottom: insets.bottom + (selectionMode ? 80 : 24),
+              },
             ]}
             showsVerticalScrollIndicator={false}
             refreshControl={
@@ -474,6 +439,52 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
             )}
           </ScrollView>
 
+          {/* Header with gradient fade - absolute positioned on top */}
+          <LinearGradient
+            colors={['rgba(0,0,0,0.95)', 'rgba(0,0,0,0.85)', 'rgba(0,0,0,0.5)', 'transparent']}
+            locations={[0, 0.4, 0.7, 1]}
+            style={[styles.headerOverlay, { paddingTop: insets.top + 8 }]}
+            pointerEvents="box-none"
+          >
+            <View style={styles.header} pointerEvents="box-none">
+              <TouchableOpacity
+                style={[styles.closeButton, { backgroundColor: theme.colors.glass.background }]}
+                onPress={handleClose}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close" size={22} color={theme.colors.text.primary} />
+              </TouchableOpacity>
+              {hasNotifications && !selectionMode && (
+                <TouchableOpacity
+                  style={[styles.editButton, { backgroundColor: theme.colors.glass.background }]}
+                  onPress={() => enterSelectionMode()}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.editButtonText, { color: accent.primary }]}>Edit</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
+              {selectionMode ? `${selectedIds.size} Selected` : 'Notifications'}
+            </Text>
+            {selectionMode ? (
+              <TouchableOpacity onPress={allSelected ? deselectAll : selectAll} activeOpacity={0.7}>
+                <Text style={[styles.subtitleLink, { color: accent.primary }]}>
+                  {allSelected ? 'Deselect All' : 'Select All'}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={[styles.subtitle, { color: theme.colors.text.tertiary }]}>
+                {hasNotifications
+                  ? `${notifications.length} notification${notifications.length !== 1 ? 's' : ''}${hasInvites ? `, ${roomInvites.length} invite${roomInvites.length !== 1 ? 's' : ''}` : ''}`
+                  : hasInvites
+                    ? `${roomInvites.length} invite${roomInvites.length !== 1 ? 's' : ''}`
+                    : 'Stay connected with your friends'}
+              </Text>
+            )}
+          </LinearGradient>
+
           {/* Bottom action bar for selection mode */}
           <RNAnimated.View
             style={[
@@ -519,10 +530,18 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
 const styles = StyleSheet.create({
   fullScreen: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
   fullScreenContent: {
     flex: 1,
+  },
+  headerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: 24,
+    paddingBottom: 20,
   },
   header: {
     flexDirection: 'row',
@@ -567,7 +586,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingBottom: 32,
+    paddingHorizontal: 24,
   },
   section: {
     marginBottom: 24,

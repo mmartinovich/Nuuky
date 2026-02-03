@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import { Image as CachedImage } from 'expo-image';
 import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { getMoodColor, interactionStates } from "../lib/theme";
 import { useTheme } from "../hooks/useTheme";
@@ -412,23 +413,17 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
           </BlurView>
         </Animated.View>
 
-        <Animated.View style={[styles.fullScreenContent, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 8 }, animatedStyle]}>
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={[styles.closeButton, { backgroundColor: theme.colors.glass.background }]}
-              onPress={handleClose}
-              activeOpacity={interactionStates.pressed}
-            >
-              <Ionicons name="close" size={22} color={theme.colors.text.primary} />
-            </TouchableOpacity>
-          </View>
-
-          <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>Room Settings</Text>
-
+        <Animated.View style={[styles.fullScreenContent, animatedStyle]}>
+          {/* ScrollView - underneath header */}
           <ScrollView
             style={styles.scrollView}
-            contentContainerStyle={styles.contentContainer}
+            contentContainerStyle={[
+              styles.contentContainer,
+              {
+                paddingTop: insets.top + 120,
+                paddingBottom: insets.bottom + 24,
+              },
+            ]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
@@ -730,6 +725,26 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                 </View>
               )}
           </ScrollView>
+
+          {/* Header with gradient fade - absolute positioned on top */}
+          <LinearGradient
+            colors={['rgba(0,0,0,0.95)', 'rgba(0,0,0,0.85)', 'rgba(0,0,0,0.5)', 'transparent']}
+            locations={[0, 0.4, 0.7, 1]}
+            style={[styles.headerOverlay, { paddingTop: insets.top + 8 }]}
+            pointerEvents="box-none"
+          >
+            <View style={styles.header} pointerEvents="box-none">
+              <TouchableOpacity
+                style={[styles.closeButton, { backgroundColor: theme.colors.glass.background }]}
+                onPress={handleClose}
+                activeOpacity={interactionStates.pressed}
+              >
+                <Ionicons name="close" size={22} color={theme.colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>Room Settings</Text>
+          </LinearGradient>
         </Animated.View>
       </View>
     </Modal>
@@ -742,7 +757,14 @@ const styles = StyleSheet.create({
   },
   fullScreenContent: {
     flex: 1,
+  },
+  headerOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: 24,
+    paddingBottom: 20,
   },
   // Header
   header: {
@@ -754,7 +776,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "700",
     letterSpacing: -0.5,
-    marginBottom: 24,
+    marginBottom: 4,
   },
   closeButton: {
     width: 40,
@@ -767,7 +789,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingBottom: 32,
+    paddingHorizontal: 24,
   },
   section: {
     marginBottom: 20,

@@ -12,6 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, {
@@ -139,7 +140,7 @@ export const LofiMusicMenu: React.FC<LofiMusicMenuProps> = ({
 }) => {
   const { theme, accent } = useTheme();
   const insets = useSafeAreaInsets();
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [showTracks, setShowTracks] = useState(false);
 
   const progress = useSharedValue(0);
 
@@ -154,7 +155,6 @@ export const LofiMusicMenu: React.FC<LofiMusicMenuProps> = ({
   useEffect(() => {
     if (visible) {
       progress.value = withTiming(1, { duration: 250, easing: Easing.out(Easing.cubic) });
-      setShowDropdown(false);
     } else {
       progress.value = 0;
     }
@@ -223,62 +223,31 @@ export const LofiMusicMenu: React.FC<LofiMusicMenuProps> = ({
         <Animated.View
           style={[
             styles.fullScreenContent,
-            { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 8 },
             contentStyle,
           ]}
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={[styles.closeButton, { backgroundColor: theme.colors.glass.background }]}
-              onPress={handleClose}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="close" size={22} color={theme.colors.text.primary} />
-            </TouchableOpacity>
-          </View>
-
-          <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
-            Lo-Fi Music
-          </Text>
-          <Text style={[styles.subtitle, { color: theme.colors.text.tertiary }]}>
-            Relaxing beats for your vibe
-          </Text>
-
+          {/* ScrollView - underneath header */}
           <ScrollView
             style={styles.scrollView}
-            contentContainerStyle={styles.contentContainer}
+            contentContainerStyle={[
+              styles.contentContainer,
+              {
+                paddingTop: insets.top + 130,
+                paddingBottom: insets.bottom + 24,
+              },
+            ]}
             showsVerticalScrollIndicator={false}
           >
-            {/* Now Playing / Play Button */}
+            {/* Combined Player & Track Selection */}
             <View style={styles.section}>
               <View
                 style={[
-                  styles.nowPlayingCard,
-                  {
-                    backgroundColor: theme.colors.glass.background,
-                    borderColor: isPlaying ? accent.primary : theme.colors.glass.border,
-                    borderWidth: isPlaying ? 2 : 1,
-                  },
+                  styles.playerCard,
+                  { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border },
                 ]}
               >
-                {/* Track indicator */}
-                <View style={[styles.trackIndicator, { backgroundColor: displayMeta.moodColor }]} />
-
-                <View style={styles.nowPlayingContent}>
-                  <View style={styles.nowPlayingInfo}>
-                    <Text style={[styles.nowPlayingLabel, { color: theme.colors.text.tertiary }]}>
-                      {isPlaying ? 'NOW PLAYING' : 'SELECTED'}
-                    </Text>
-                    <Text style={[styles.nowPlayingTrack, { color: theme.colors.text.primary }]}>
-                      {displayMeta.label}
-                    </Text>
-                    <Text style={[styles.nowPlayingDescription, { color: theme.colors.text.tertiary }]}>
-                      {displayMeta.description}
-                    </Text>
-                  </View>
-
-                  {/* Play/Pause Button */}
+                {/* Now Playing Header */}
+                <View style={styles.playerHeader}>
                   <TouchableOpacity
                     style={[
                       styles.playPauseButton,
@@ -289,11 +258,98 @@ export const LofiMusicMenu: React.FC<LofiMusicMenuProps> = ({
                   >
                     <Ionicons
                       name={isPlaying ? 'pause' : 'play'}
-                      size={28}
+                      size={24}
                       color={isPlaying ? accent.primary : accent.textOnPrimary}
                     />
                   </TouchableOpacity>
+                  <View style={styles.playerInfo}>
+                    <Text style={[styles.playerStatus, { color: isPlaying ? accent.primary : theme.colors.text.tertiary }]}>
+                      {isPlaying ? 'NOW PLAYING' : 'PAUSED'}
+                    </Text>
+                    <Text style={[styles.playerTrackName, { color: theme.colors.text.primary }]}>
+                      {displayMeta.label}
+                    </Text>
+                  </View>
                 </View>
+
+                {/* Track Selector Toggle */}
+                <TouchableOpacity
+                  style={[styles.trackSelectorToggle, { borderTopColor: theme.colors.glass.border }]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setShowTracks(!showTracks);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.trackColorDot, { backgroundColor: displayMeta.moodColor }]} />
+                  <Text style={[styles.trackSelectorText, { color: theme.colors.text.secondary }]}>
+                    {selectedTrack === null ? 'Auto (Based on mood)' : displayMeta.label}
+                  </Text>
+                  <Ionicons
+                    name={showTracks ? 'chevron-up' : 'chevron-down'}
+                    size={18}
+                    color={theme.colors.text.tertiary}
+                  />
+                </TouchableOpacity>
+
+                {/* Track List (Collapsible) */}
+                {showTracks && (
+                  <View style={styles.trackList}>
+                  {/* Auto (mood-based) option */}
+                  <TouchableOpacity
+                    style={[
+                      styles.trackItem,
+                      selectedTrack === null && { backgroundColor: moodTrackMeta.moodColor + '12' },
+                    ]}
+                    onPress={() => handleTrackSelect(null)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.trackColorDot, { backgroundColor: moodTrackMeta.moodColor }]} />
+                    <View style={styles.trackItemText}>
+                      <Text style={[styles.trackItemLabel, { color: theme.colors.text.primary }]}>
+                        Auto
+                      </Text>
+                      <Text style={[styles.trackItemSubtext, { color: theme.colors.text.tertiary }]}>
+                        Based on mood
+                      </Text>
+                    </View>
+                    {selectedTrack === null && (
+                      <Ionicons name="checkmark-circle" size={20} color={moodTrackMeta.moodColor} />
+                    )}
+                  </TouchableOpacity>
+
+                  {/* Individual tracks */}
+                  {LOFI_TRACKS.map((track) => {
+                    const meta = LOFI_TRACK_METADATA[track];
+                    const isSelected = selectedTrack === track;
+
+                    return (
+                      <TouchableOpacity
+                        key={track}
+                        style={[
+                          styles.trackItem,
+                          isSelected && { backgroundColor: meta.moodColor + '12' },
+                        ]}
+                        onPress={() => handleTrackSelect(track)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={[styles.trackColorDot, { backgroundColor: meta.moodColor }]} />
+                        <View style={styles.trackItemText}>
+                          <Text style={[styles.trackItemLabel, { color: theme.colors.text.primary }]}>
+                            {meta.label}
+                          </Text>
+                          <Text style={[styles.trackItemSubtext, { color: theme.colors.text.tertiary }]}>
+                            {meta.description}
+                          </Text>
+                        </View>
+                        {isSelected && (
+                          <Ionicons name="checkmark-circle" size={20} color={meta.moodColor} />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                  </View>
+                )}
               </View>
             </View>
 
@@ -316,111 +372,6 @@ export const LofiMusicMenu: React.FC<LofiMusicMenuProps> = ({
                   iconColor={theme.colors.text.tertiary}
                 />
               </View>
-            </View>
-
-            {/* Track Selection Dropdown */}
-            <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.text.tertiary }]}>
-                TRACK
-              </Text>
-
-              {/* Dropdown Button */}
-              <TouchableOpacity
-                style={[
-                  styles.dropdownButton,
-                  {
-                    backgroundColor: theme.colors.glass.background,
-                    borderColor: showDropdown ? accent.primary : theme.colors.glass.border,
-                  },
-                ]}
-                onPress={() => setShowDropdown(!showDropdown)}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.dropdownIndicator, { backgroundColor: displayMeta.moodColor }]} />
-                <View style={styles.dropdownText}>
-                  <Text style={[styles.dropdownLabel, { color: theme.colors.text.primary }]}>
-                    {selectedTrack ? displayMeta.label : `${moodTrackMeta.label} (Auto)`}
-                  </Text>
-                  <Text style={[styles.dropdownSubtext, { color: theme.colors.text.tertiary }]}>
-                    {selectedTrack ? displayMeta.description : 'Based on your mood'}
-                  </Text>
-                </View>
-                <Ionicons
-                  name={showDropdown ? 'chevron-up' : 'chevron-down'}
-                  size={20}
-                  color={theme.colors.text.tertiary}
-                />
-              </TouchableOpacity>
-
-              {/* Dropdown Options */}
-              {showDropdown && (
-                <View
-                  style={[
-                    styles.dropdownList,
-                    { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border },
-                  ]}
-                >
-                  {/* Auto (mood-based) option */}
-                  <TouchableOpacity
-                    style={[
-                      styles.dropdownItem,
-                      selectedTrack === null && { backgroundColor: moodTrackMeta.moodColor + '15' },
-                    ]}
-                    onPress={() => {
-                      handleTrackSelect(null);
-                      setShowDropdown(false);
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.trackColorDot, { backgroundColor: moodTrackMeta.moodColor }]} />
-                    <View style={styles.dropdownItemText}>
-                      <Text style={[styles.dropdownItemLabel, { color: theme.colors.text.primary }]}>
-                        Auto ({moodTrackMeta.label})
-                      </Text>
-                      <Text style={[styles.dropdownItemSubtext, { color: theme.colors.text.tertiary }]}>
-                        Changes with your mood
-                      </Text>
-                    </View>
-                    {selectedTrack === null && (
-                      <Ionicons name="checkmark" size={18} color={moodTrackMeta.moodColor} />
-                    )}
-                  </TouchableOpacity>
-
-                  {/* Individual tracks */}
-                  {LOFI_TRACKS.map((track) => {
-                    const meta = LOFI_TRACK_METADATA[track];
-                    const isSelected = selectedTrack === track;
-
-                    return (
-                      <TouchableOpacity
-                        key={track}
-                        style={[
-                          styles.dropdownItem,
-                          isSelected && { backgroundColor: meta.moodColor + '15' },
-                        ]}
-                        onPress={() => {
-                          handleTrackSelect(track);
-                          setShowDropdown(false);
-                        }}
-                        activeOpacity={0.7}
-                      >
-                        <View style={[styles.trackColorDot, { backgroundColor: meta.moodColor }]} />
-                        <View style={styles.dropdownItemText}>
-                          <Text style={[styles.dropdownItemLabel, { color: theme.colors.text.primary }]}>
-                            {meta.label}
-                          </Text>
-                          <Text style={[styles.dropdownItemSubtext, { color: theme.colors.text.tertiary }]}>
-                            {meta.description}
-                          </Text>
-                        </View>
-                        {isSelected && (
-                          <Ionicons name="checkmark" size={18} color={meta.moodColor} />
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              )}
             </View>
 
             {/* Settings */}
@@ -468,6 +419,31 @@ export const LofiMusicMenu: React.FC<LofiMusicMenuProps> = ({
               </View>
             )}
           </ScrollView>
+
+          {/* Header with gradient fade - absolute positioned on top */}
+          <LinearGradient
+            colors={['rgba(0,0,0,0.95)', 'rgba(0,0,0,0.85)', 'rgba(0,0,0,0.5)', 'transparent']}
+            locations={[0, 0.4, 0.7, 1]}
+            style={[styles.headerOverlay, { paddingTop: insets.top + 8 }]}
+            pointerEvents="box-none"
+          >
+            <View style={styles.header} pointerEvents="box-none">
+              <TouchableOpacity
+                style={[styles.closeButton, { backgroundColor: theme.colors.glass.background }]}
+                onPress={handleClose}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close" size={22} color={theme.colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
+              Lo-Fi Music
+            </Text>
+            <Text style={[styles.subtitle, { color: theme.colors.text.tertiary }]}>
+              Relaxing beats for your vibe
+            </Text>
+          </LinearGradient>
         </Animated.View>
       </View>
     </Modal>
@@ -480,7 +456,14 @@ const styles = StyleSheet.create({
   },
   fullScreenContent: {
     flex: 1,
+  },
+  headerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: 24,
+    paddingBottom: 20,
   },
   header: {
     flexDirection: 'row',
@@ -508,7 +491,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingBottom: 32,
+    paddingHorizontal: 24,
   },
   section: {
     marginBottom: 24,
@@ -519,45 +502,71 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     marginBottom: 12,
   },
-  // Now Playing Card
-  nowPlayingCard: {
+  // Combined Player Card
+  playerCard: {
     borderRadius: 16,
+    borderWidth: 1,
     overflow: 'hidden',
-    flexDirection: 'row',
   },
-  trackIndicator: {
-    width: 6,
-  },
-  nowPlayingContent: {
-    flex: 1,
+  playerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    gap: 16,
-  },
-  nowPlayingInfo: {
-    flex: 1,
-  },
-  nowPlayingLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  nowPlayingTrack: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  nowPlayingDescription: {
-    fontSize: 13,
+    gap: 14,
   },
   playPauseButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  playerInfo: {
+    flex: 1,
+  },
+  playerStatus: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
+  playerTrackName: {
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  trackSelectorToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
+    gap: 10,
+  },
+  trackSelectorText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  trackList: {
+    paddingVertical: 4,
+  },
+  trackItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  trackItemText: {
+    flex: 1,
+  },
+  trackItemLabel: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  trackItemSubtext: {
+    fontSize: 12,
+    marginTop: 2,
   },
   // Volume Card
   volumeCard: {
@@ -599,54 +608,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 4,
-  },
-  // Dropdown styles
-  dropdownButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 12,
-  },
-  dropdownIndicator: {
-    width: 4,
-    height: 36,
-    borderRadius: 2,
-  },
-  dropdownText: {
-    flex: 1,
-  },
-  dropdownLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  dropdownSubtext: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  dropdownList: {
-    marginTop: 8,
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  dropdownItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    gap: 12,
-  },
-  dropdownItemText: {
-    flex: 1,
-  },
-  dropdownItemLabel: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  dropdownItemSubtext: {
-    fontSize: 12,
-    marginTop: 1,
   },
   trackColorDot: {
     width: 12,
