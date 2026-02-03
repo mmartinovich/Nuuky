@@ -89,6 +89,7 @@ import { LofiMusicMenu } from "../../components/LofiMusicMenu";
 import { useLofiMusic } from "../../hooks/useLofiMusic";
 import { OrbitEmptyState } from "../../components/OrbitEmptyState";
 import { useInvite } from "../../hooks/useInvite";
+import { useMoodSelfie } from "../../hooks/useMoodSelfie";
 
 const { width, height } = Dimensions.get("window");
 const CENTER_X = width / 2;
@@ -161,10 +162,20 @@ export default function QuantumOrbitScreen() {
   // Invite for empty state
   const { shareInvite } = useInvite();
 
+  // Mood selfie
+  const { activeSelfie, captureSelfie, deleteSelfie, fetchActiveSelfie, loading: selfieLoading } = useMoodSelfie();
+
   // Store ref for the audio callback
   useEffect(() => {
     soundReactionsRef.current = soundReactions;
   }, [soundReactions]);
+
+  // Fetch active selfie on mount
+  useEffect(() => {
+    if (currentUser) {
+      fetchActiveSelfie();
+    }
+  }, [currentUser?.id]);
 
   const { unreadCount: notificationCount } = useNotifications();
   const totalBadgeCount = notificationCount + roomInvites.length;
@@ -641,6 +652,7 @@ export default function QuantumOrbitScreen() {
         hasActiveFlare={!!myActiveFlare}
         mood={currentUser?.mood}
         customMood={activeCustomMood}
+        moodSelfie={activeSelfie}
         showHint={showHint}
         statusText={activeCustomMood?.text || currentVibe}
       />
@@ -736,6 +748,10 @@ export default function QuantumOrbitScreen() {
         onSaveCustomMood={async (emoji, text, color) => {
           await createCustomMood(emoji, text, color);
         }}
+        moodSelfie={activeSelfie}
+        onCaptureSelfie={captureSelfie}
+        onDeleteSelfie={deleteSelfie}
+        selfieLoading={selfieLoading}
       />
 
       <RoomListModal

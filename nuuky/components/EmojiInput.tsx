@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, ScrollView, TextInput, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Image as CachedImage } from 'expo-image';
 import { spacing, radius } from '../lib/theme';
 import { useTheme } from '../hooks/useTheme';
 
@@ -14,15 +15,26 @@ interface EmojiInputProps {
   value: string;
   onChangeEmoji: (emoji: string) => void;
   placeholder?: string;
+  // Selfie props
+  onCameraPress?: () => void;
+  selfieUrl?: string | null;
+  onDeleteSelfie?: () => void;
+  selfieLoading?: boolean;
 }
 
 export const EmojiInput: React.FC<EmojiInputProps> = ({
   value,
   onChangeEmoji,
+  onCameraPress,
+  selfieUrl,
+  onDeleteSelfie,
+  selfieLoading,
 }) => {
   const { theme } = useTheme();
   const inputRef = useRef<TextInput>(null);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+
+  const hasSelfie = !!selfieUrl;
 
   const handleChangeText = (text: string) => {
     if (text.length > 0) {
@@ -51,6 +63,41 @@ export const EmojiInput: React.FC<EmojiInputProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.row}>
+        {/* Camera button - same style as selected box */}
+        {onCameraPress && (
+          <TouchableOpacity
+            style={[
+              styles.selectedBox,
+              { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border },
+              hasSelfie && { borderColor: '#EC4899', borderWidth: 2, backgroundColor: '#EC4899' },
+            ]}
+            onPress={hasSelfie ? onDeleteSelfie : onCameraPress}
+            activeOpacity={0.7}
+            disabled={selfieLoading}
+          >
+            {hasSelfie ? (
+              <View style={styles.selfieContainer}>
+                <CachedImage
+                  source={{ uri: selfieUrl! }}
+                  style={styles.selfiePreview}
+                  contentFit="cover"
+                />
+                {/* Small delete hint */}
+                <View style={styles.selfieDeleteHint}>
+                  <Ionicons name="close" size={10} color="#FFF" />
+                </View>
+              </View>
+            ) : (
+              <Ionicons
+                name={selfieLoading ? 'hourglass-outline' : 'camera'}
+                size={24}
+                color={theme.colors.text.primary}
+              />
+            )}
+          </TouchableOpacity>
+        )}
+
+        {/* Selected emoji box */}
         <TouchableOpacity
           style={[
             styles.selectedBox,
@@ -79,7 +126,7 @@ export const EmojiInput: React.FC<EmojiInputProps> = ({
               style={[
                 styles.emojiButton,
                 { backgroundColor: theme.colors.glass.background },
-                value === emoji && {
+                value === emoji && !hasSelfie && {
                   backgroundColor: theme.colors.accent.primary + '4D',
                   borderWidth: 2,
                   borderColor: theme.colors.accent.primary,
@@ -150,5 +197,26 @@ const styles = StyleSheet.create({
   },
   emojiText: {
     fontSize: 24,
+  },
+  selfieContainer: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+  },
+  selfiePreview: {
+    width: '100%',
+    height: '100%',
+    borderRadius: radius.md - 2,
+  },
+  selfieDeleteHint: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

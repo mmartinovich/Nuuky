@@ -3,7 +3,8 @@ import { View, StyleSheet, Dimensions, TouchableOpacity, Animated, Easing, Text,
 import { Image as CachedImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { User, Streak } from '../types';
+import { Ionicons } from '@expo/vector-icons';
+import { User, Streak, MoodSelfie } from '../types';
 import { getMoodColor, getCustomMoodColor } from '../lib/theme';
 import { useLowPowerMode } from '../stores/appStore';
 import { isUserTrulyOnline } from '../lib/utils';
@@ -283,7 +284,13 @@ function FriendParticleComponent({
   const moodColors = friend.custom_mood?.color
     ? getCustomMoodColor(friend.custom_mood.color)
     : getMoodColor(friend.mood || 'neutral');
-  
+
+  // Check if friend has an active mood selfie (not expired)
+  const hasSelfie = useMemo(() => {
+    if (!friend.mood_selfie) return false;
+    return new Date(friend.mood_selfie.expires_at) > new Date();
+  }, [friend.mood_selfie]);
+
   // Get initials from display name
   const getInitials = (name: string) => {
     return name
@@ -411,9 +418,24 @@ function FriendParticleComponent({
             />
           ))}
           
-          {/* Avatar circle - on top */}
+          {/* Avatar circle - on top (shows selfie when active) */}
           <View style={styles.avatarContainer}>
-            {friend.avatar_url ? (
+            {hasSelfie && friend.mood_selfie ? (
+              <>
+                <CachedImage
+                  source={{ uri: friend.mood_selfie.image_url }}
+                  style={styles.avatar}
+                  cachePolicy="memory-disk"
+                  contentFit="cover"
+                  transition={0}
+                  recyclingKey={`selfie-${friend.id}`}
+                />
+                {/* Initials behind image as instant fallback while image loads from disk */}
+                <View style={[styles.avatarPlaceholder, { backgroundColor: `${moodColors.base}30`, position: 'absolute', width: '100%', height: '100%', zIndex: 0 }]}>
+                  <Text style={[styles.initialsText, { color: theme.colors.text.primary }]}>{getInitials(friend.display_name)}</Text>
+                </View>
+              </>
+            ) : friend.avatar_url ? (
               <>
                 <CachedImage
                   source={{ uri: friend.avatar_url }}
@@ -434,6 +456,13 @@ function FriendParticleComponent({
               </View>
             )}
           </View>
+
+          {/* Camera badge for active selfie */}
+          {hasSelfie && (
+            <View style={styles.selfieBadge}>
+              <Ionicons name="camera" size={10} color="#FFFFFF" />
+            </View>
+          )}
 
           {/* Streak Badge */}
           {streak && streak.state !== 'broken' && (
@@ -484,6 +513,8 @@ export const FriendParticle = memo(FriendParticleComponent, (prevProps, nextProp
     prevProps.friend.avatar_url === nextProps.friend.avatar_url &&
     prevProps.friend.is_online === nextProps.friend.is_online &&
     prevProps.friend.last_seen_at === nextProps.friend.last_seen_at &&
+    prevProps.friend.mood_selfie?.id === nextProps.friend.mood_selfie?.id &&
+    prevProps.friend.mood_selfie?.expires_at === nextProps.friend.mood_selfie?.expires_at &&
     prevProps.position.x === nextProps.position.x &&
     prevProps.position.y === nextProps.position.y &&
     prevProps.hasActiveFlare === nextProps.hasActiveFlare &&
@@ -599,5 +630,24 @@ const styles = StyleSheet.create({
     borderRadius: (PARTICLE_SIZE + 24) / 2,
     backgroundColor: 'rgba(239, 68, 68, 0.25)',
     zIndex: 0,
+  },
+  selfieBadge: {
+    position: 'absolute',
+    top: -2,
+    left: -2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#EC4899',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#1a1a2e',
+    shadowColor: '#EC4899',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 8,
+    zIndex: 200,
   },
 });

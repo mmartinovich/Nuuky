@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Pressable, Modal, Image, Scro
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { PresetMood, CustomMood } from '../types';
+import { PresetMood, CustomMood, MoodSelfie } from '../types';
 import { getMoodImage, getMoodColor, getCustomMoodColor, radius, CUSTOM_MOOD_NEUTRAL_COLOR } from '../lib/theme';
 import { useTheme } from '../hooks/useTheme';
 import { EmojiInput } from './EmojiInput';
@@ -35,6 +35,10 @@ interface MoodPickerProps {
   onSelectCustomMood?: () => void;
   onSaveCustomMood?: (emoji: string, text: string, color: string) => void;
   originPoint?: { x: number; y: number };
+  moodSelfie?: MoodSelfie | null;
+  onCaptureSelfie?: () => void;
+  onDeleteSelfie?: () => void;
+  selfieLoading?: boolean;
 }
 
 export const MoodPicker: React.FC<MoodPickerProps> = ({
@@ -47,6 +51,10 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
   onSelectCustomMood,
   onSaveCustomMood,
   originPoint,
+  moodSelfie,
+  onCaptureSelfie,
+  onDeleteSelfie,
+  selfieLoading,
 }) => {
   const { theme, accent } = useTheme();
   const insets = useSafeAreaInsets();
@@ -101,6 +109,20 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
   }, [editEmoji, editText, onSaveCustomMood, handleClose]);
 
   const canSave = editEmoji.trim().length > 0 && editText.trim().length > 0;
+
+  // Check if selfie is active (not expired)
+  const isSelfieActive = moodSelfie && new Date(moodSelfie.expires_at) > new Date();
+
+  const handleCaptureSelfie = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onCaptureSelfie?.();
+    handleClose();
+  }, [onCaptureSelfie, handleClose]);
+
+  const handleDeleteSelfie = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onDeleteSelfie?.();
+  }, [onDeleteSelfie]);
 
   const animatedStyle = useAnimatedStyle(() => {
     const p = progress.value;
@@ -257,7 +279,14 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                       <View style={[styles.dividerLine, { backgroundColor: theme.colors.glass.border }]} />
                     </View>
 
-                    <EmojiInput value={editEmoji} onChangeEmoji={setEditEmoji} />
+                    <EmojiInput
+                      value={editEmoji}
+                      onChangeEmoji={setEditEmoji}
+                      onCameraPress={handleCaptureSelfie}
+                      selfieUrl={isSelfieActive ? moodSelfie?.image_url : null}
+                      onDeleteSelfie={handleDeleteSelfie}
+                      selfieLoading={selfieLoading}
+                    />
 
                     <View style={[styles.textInputCard, { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border }]}>
                       <TextInput

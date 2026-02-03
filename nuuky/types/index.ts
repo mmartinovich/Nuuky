@@ -11,6 +11,14 @@ export interface CustomMood {
   last_used_at: string;
 }
 
+export interface MoodSelfie {
+  id: string;
+  user_id: string;
+  image_url: string;
+  expires_at: string;
+  created_at: string;
+}
+
 // User types
 export interface User {
   id: string;
@@ -31,6 +39,8 @@ export interface User {
   default_room_id?: string;
   home_room_id?: string; // Permanently pinned "My Nuuky" room from first login
   profile_completed?: boolean; // Whether user has completed onboarding
+  mood_selfie_id?: string; // Reference to active mood selfie
+  mood_selfie?: MoodSelfie; // Joined mood selfie data
   created_at: string;
 }
 

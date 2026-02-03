@@ -5,7 +5,7 @@ import { BlurView } from "expo-blur";
 import Svg, { Defs, RadialGradient, Stop, Circle } from "react-native-svg";
 import * as Haptics from "expo-haptics";
 import { getMoodImage } from "../lib/theme";
-import { CustomMood } from "../types";
+import { CustomMood, MoodSelfie } from "../types";
 import { useTheme } from "../hooks/useTheme";
 import { useLowPowerMode } from "../stores/appStore";
 
@@ -21,6 +21,7 @@ interface CentralOrbProps {
   hasActiveFlare: boolean;
   mood?: "good" | "neutral" | "not_great" | "reach_out";
   customMood?: CustomMood | null;
+  moodSelfie?: MoodSelfie | null;
   showHint?: boolean;
   statusText?: string;
 }
@@ -32,6 +33,7 @@ function CentralOrbComponent({
   hasActiveFlare,
   mood = "neutral",
   customMood,
+  moodSelfie,
   showHint = false,
   statusText,
 }: CentralOrbProps) {
@@ -344,6 +346,12 @@ function CentralOrbComponent({
 
   const moodImage = getMoodImage(mood);
 
+  // Check if mood selfie is active (not expired)
+  const isSelfieActive = useMemo(() => {
+    if (!moodSelfie) return false;
+    return new Date(moodSelfie.expires_at) > new Date();
+  }, [moodSelfie]);
+
   return (
     <Animated.View
       style={[
@@ -570,8 +578,10 @@ function CentralOrbComponent({
                 style={styles.highlight}
               />
 
-              {/* Show emoji for custom mood, creature image for preset mood */}
-              {customMood ? (
+              {/* Priority: selfie > customMood > presetMood */}
+              {isSelfieActive && moodSelfie ? (
+                <Image source={{ uri: moodSelfie.image_url }} style={styles.selfieImage} />
+              ) : customMood ? (
                 <Text style={styles.customMoodEmoji}>{customMood.emoji}</Text>
               ) : (
                 <Image source={moodImage} style={styles.moodImage} />
@@ -594,6 +604,8 @@ export const CentralOrb = memo(CentralOrbComponent, (prevProps, nextProps) => {
     prevProps.hasActiveFlare === nextProps.hasActiveFlare &&
     prevProps.showHint === nextProps.showHint &&
     prevProps.customMood?.id === nextProps.customMood?.id &&
+    prevProps.moodSelfie?.id === nextProps.moodSelfie?.id &&
+    prevProps.moodSelfie?.expires_at === nextProps.moodSelfie?.expires_at &&
     prevProps.statusText === nextProps.statusText
   );
 });
@@ -647,6 +659,13 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     resizeMode: "contain",
+    zIndex: 10,
+  },
+  selfieImage: {
+    width: ORB_SIZE,
+    height: ORB_SIZE,
+    borderRadius: ORB_SIZE / 2,
+    resizeMode: "cover",
     zIndex: 10,
   },
   customMoodEmoji: {

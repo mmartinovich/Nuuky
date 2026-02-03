@@ -46,6 +46,7 @@ export const useFriends = () => {
             display_name,
             mood,
             custom_mood_id,
+            mood_selfie_id,
             is_online,
             last_seen_at,
             avatar_url,
@@ -54,6 +55,11 @@ export const useFriends = () => {
               emoji,
               text,
               color
+            ),
+            mood_selfie:mood_selfie_id (
+              id,
+              image_url,
+              expires_at
             )
           )
         `)
@@ -104,6 +110,7 @@ export const useFriends = () => {
               display_name,
               mood,
               custom_mood_id,
+              mood_selfie_id,
               is_online,
               last_seen_at,
               avatar_url,
@@ -112,6 +119,11 @@ export const useFriends = () => {
                 emoji,
                 text,
                 color
+              ),
+              mood_selfie:mood_selfie_id (
+                id,
+                image_url,
+                expires_at
               )
             )
           `)
