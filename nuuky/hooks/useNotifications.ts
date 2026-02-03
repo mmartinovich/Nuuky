@@ -156,6 +156,7 @@ export const useNotifications = () => {
     switch (notification.type) {
       case 'nudge':
       case 'flare':
+      case 'streak_fading':
         // Navigate to home (Quantum Orbit) - friend context is in the data
         router.push('/(main)');
         break;

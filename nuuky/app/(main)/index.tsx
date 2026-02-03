@@ -87,6 +87,8 @@ import { playPreview, stopPreview } from "../../lib/soundPlayer";
 import { SoundReactionType } from "../../types";
 import { LofiMusicMenu } from "../../components/LofiMusicMenu";
 import { useLofiMusic } from "../../hooks/useLofiMusic";
+import { OrbitEmptyState } from "../../components/OrbitEmptyState";
+import { useInvite } from "../../hooks/useInvite";
 
 const { width, height } = Dimensions.get("window");
 const CENTER_X = width / 2;
@@ -155,6 +157,9 @@ export default function QuantumOrbitScreen() {
 
   // Lo-fi music
   const lofiMusic = useLofiMusic();
+
+  // Invite for empty state
+  const { shareInvite } = useInvite();
 
   // Store ref for the audio callback
   useEffect(() => {
@@ -658,6 +663,16 @@ export default function QuantumOrbitScreen() {
             panHandlers={showSoundPicker ? undefined : panResponder.panHandlers}
           />
         ))}
+
+      {/* Empty Orbit State */}
+      {orbitUsers.length === 0 && orbitSettled && !loading && (
+        <OrbitEmptyState
+          onAddFriends={() => router.push("/(main)/friends")}
+          onShareInvite={shareInvite}
+          theme={theme}
+          accent={accent}
+        />
+      )}
 
       {/* Friend Action Bubble */}
       {selectedFriend && (

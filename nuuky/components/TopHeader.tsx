@@ -56,9 +56,9 @@ export const TopHeader = React.memo(function TopHeader({
           accessibilityRole="button"
         >
           <Ionicons
-            name={isLofiPlaying ? "musical-notes" : "musical-notes-outline"}
+            name={isLofiPlaying ? "musical-note" : "musical-note-outline"}
             size={22}
-            color={isLofiPlaying ? accent.primary : theme.colors.text.secondary}
+            color={isLofiPlaying ? accent.primary : accent.primary}
           />
         </TouchableOpacity>
       )}

@@ -240,7 +240,7 @@ export default function OnboardingScreen() {
 
     const completed = await completeProfile();
     if (completed) {
-      router.replace("/(main)");
+      router.replace("/(auth)/onboarding-invite");
     }
   };
 
