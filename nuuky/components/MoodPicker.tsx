@@ -36,7 +36,7 @@ interface MoodPickerProps {
   onSaveCustomMood?: (emoji: string, text: string, color: string) => void;
   originPoint?: { x: number; y: number };
   moodSelfie?: MoodSelfie | null;
-  onCaptureSelfie?: () => void;
+  onCaptureSelfie?: () => Promise<boolean>;
   onDeleteSelfie?: () => void;
   selfieLoading?: boolean;
 }
@@ -113,10 +113,12 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
   // Check if selfie is active (not expired)
   const isSelfieActive = moodSelfie && new Date(moodSelfie.expires_at) > new Date();
 
-  const handleCaptureSelfie = useCallback(() => {
+  const handleCaptureSelfie = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onCaptureSelfie?.();
-    handleClose();
+    const success = await onCaptureSelfie?.();
+    if (success) {
+      handleClose();
+    }
   }, [onCaptureSelfie, handleClose]);
 
   const handleDeleteSelfie = useCallback(() => {

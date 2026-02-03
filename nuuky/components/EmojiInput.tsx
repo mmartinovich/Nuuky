@@ -16,7 +16,7 @@ interface EmojiInputProps {
   onChangeEmoji: (emoji: string) => void;
   placeholder?: string;
   // Selfie props
-  onCameraPress?: () => void;
+  onCameraPress?: () => Promise<boolean> | void;
   selfieUrl?: string | null;
   onDeleteSelfie?: () => void;
   selfieLoading?: boolean;

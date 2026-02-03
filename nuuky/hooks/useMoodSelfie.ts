@@ -1,7 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system/legacy';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../stores/appStore';
 import { MoodSelfie } from '../types';
@@ -75,7 +74,6 @@ export const useMoodSelfie = () => {
 
       // Launch front-facing camera with compression
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.7, // Compress to ~70% quality for smaller file size
@@ -88,12 +86,6 @@ export const useMoodSelfie = () => {
 
       setLoading(true);
       const imageUri = result.assets[0].uri;
-
-      // Check if file exists
-      const fileInfo = await FileSystem.getInfoAsync(imageUri);
-      if (!fileInfo.exists) {
-        throw new Error('Captured image file not found');
-      }
 
       // Create file path
       const fileName = `${currentUser.id}/${Date.now()}.jpg`;
