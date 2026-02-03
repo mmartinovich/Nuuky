@@ -55,6 +55,11 @@ interface AppState {
   lastActivityTimestamp: number;
   sessionWarningShown: boolean;
 
+  // Lo-fi music state
+  lofiAutoPlay: boolean;
+  lofiVolume: number;
+  lofiSelectedTrack: string | null; // null = use mood-based default
+
   // Actions
   setCurrentUser: (user: User | null) => void;
   setFriends: (friends: Friendship[]) => void;
@@ -95,6 +100,9 @@ interface AppState {
   setLastActivity: () => void;
   setSessionTimeoutMinutes: (minutes: number) => void;
   showSessionWarning: (shown: boolean) => void;
+  setLofiAutoPlay: (enabled: boolean) => void;
+  setLofiVolume: (volume: number) => void;
+  setLofiSelectedTrack: (track: string | null) => void;
   logout: () => void;
 }
 
@@ -145,6 +153,11 @@ export const useAppStore = create<AppState>()(
   sessionTimeoutMinutes: 43200, // 30 days - Instagram/Snapchat style (essentially no timeout)
   lastActivityTimestamp: Date.now(),
   sessionWarningShown: false,
+
+  // Lo-fi music state
+  lofiAutoPlay: true, // ON by default
+  lofiVolume: 0.5, // Medium volume
+  lofiSelectedTrack: null, // null = use mood-based default
 
   // Actions
   setCurrentUser: (user) => set({ currentUser: user, isAuthenticated: !!user }),
@@ -303,6 +316,12 @@ export const useAppStore = create<AppState>()(
 
   showSessionWarning: (shown) => set({ sessionWarningShown: shown }),
 
+  setLofiAutoPlay: (enabled) => set({ lofiAutoPlay: enabled }),
+
+  setLofiVolume: (volume) => set({ lofiVolume: Math.max(0, Math.min(1, volume)) }),
+
+  setLofiSelectedTrack: (track) => set({ lofiSelectedTrack: track }),
+
   logout: () => set((state) => ({
     currentUser: null,
     isAuthenticated: false,
@@ -338,6 +357,9 @@ export const useAppStore = create<AppState>()(
         defaultRoomId: state.defaultRoomId,
         homeRoomId: state.homeRoomId,
         lowPowerMode: state.lowPowerMode,
+        lofiAutoPlay: state.lofiAutoPlay,
+        lofiVolume: state.lofiVolume,
+        lofiSelectedTrack: state.lofiSelectedTrack,
       }),
     }
   )

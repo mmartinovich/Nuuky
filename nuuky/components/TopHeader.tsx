@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { spacing, radius, typography } from "../lib/theme";
 import { AudioConnectionBadge } from "./AudioConnectionBadge";
+import { AudioConnectionStatus } from "../types";
 
 interface TopHeaderProps {
   accent: { primary: string; soft: string; glow: string; gradient: [string, string] };
@@ -11,9 +12,11 @@ interface TopHeaderProps {
   defaultRoom: any | null;
   currentUserId?: string;
   currentVibe: string;
-  audioConnectionStatus: string;
+  audioConnectionStatus: AudioConnectionStatus;
+  isLofiPlaying?: boolean;
   onNotificationPress: () => void;
   onRoomPillPress: () => void;
+  onMusicPress?: () => void;
 }
 
 export const TopHeader = React.memo(function TopHeader({
@@ -24,8 +27,10 @@ export const TopHeader = React.memo(function TopHeader({
   currentUserId,
   currentVibe,
   audioConnectionStatus,
+  isLofiPlaying,
   onNotificationPress,
   onRoomPillPress,
+  onMusicPress,
 }: TopHeaderProps) {
   const isCreator = defaultRoom?.creator_id === currentUserId;
   const isHomeRoom = defaultRoom?.name === 'My Nūūky';
@@ -36,6 +41,27 @@ export const TopHeader = React.memo(function TopHeader({
   return (
     <View style={styles.topHeader} pointerEvents="box-none">
       <Image source={require("../assets/wordmark.png")} style={styles.wordmarkSmall} resizeMode="contain" />
+
+      {/* Music Button - Left side */}
+      {onMusicPress && (
+        <TouchableOpacity
+          style={[
+            styles.musicButton,
+            { backgroundColor: accent.soft, borderColor: theme.colors.ui.borderLight },
+            isLofiPlaying && { borderColor: accent.primary, shadowColor: accent.glow, shadowOpacity: 0.5, shadowRadius: 8 },
+          ]}
+          onPress={onMusicPress}
+          activeOpacity={0.7}
+          accessibilityLabel={isLofiPlaying ? "Lo-fi music playing, tap to open menu" : "Lo-fi music, tap to open menu"}
+          accessibilityRole="button"
+        >
+          <Ionicons
+            name={isLofiPlaying ? "musical-notes" : "musical-notes-outline"}
+            size={22}
+            color={isLofiPlaying ? accent.primary : theme.colors.text.secondary}
+          />
+        </TouchableOpacity>
+      )}
 
       <TouchableOpacity
         style={[styles.notificationBell, { backgroundColor: accent.soft, borderColor: theme.colors.ui.borderLight }]}
@@ -105,6 +131,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
+  },
+  musicButton: {
+    position: "absolute",
+    top: 0,
+    left: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 0 },
   },
   notificationBadge: {
     position: "absolute",

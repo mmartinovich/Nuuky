@@ -85,6 +85,8 @@ import { SoundReactionToast } from "../../components/SoundReactionToast";
 import { useSoundReactions } from "../../hooks/useSoundReactions";
 import { playPreview, stopPreview } from "../../lib/soundPlayer";
 import { SoundReactionType } from "../../types";
+import { LofiMusicMenu } from "../../components/LofiMusicMenu";
+import { useLofiMusic } from "../../hooks/useLofiMusic";
 
 const { width, height } = Dimensions.get("window");
 const CENTER_X = width / 2;
@@ -151,6 +153,9 @@ export default function QuantumOrbitScreen() {
     isAudioConnected,
   });
 
+  // Lo-fi music
+  const lofiMusic = useLofiMusic();
+
   // Store ref for the audio callback
   useEffect(() => {
     soundReactionsRef.current = soundReactions;
@@ -169,6 +174,7 @@ export default function QuantumOrbitScreen() {
   const [showCreateRoom, setShowCreateRoom] = useState(false);
   const [showRoomSettings, setShowRoomSettings] = useState(false);
   const [showSoundPicker, setShowSoundPicker] = useState(false);
+  const [showLofiMenu, setShowLofiMenu] = useState(false);
 
 
   // Extracted hooks
@@ -674,8 +680,10 @@ export default function QuantumOrbitScreen() {
         currentUserId={currentUser?.id}
         currentVibe={currentVibe}
         audioConnectionStatus={audioConnectionStatus}
+        isLofiPlaying={lofiMusic.isPlaying}
         onNotificationPress={() => router.push("/(main)/notifications")}
         onRoomPillPress={() => setShowRoomSettings(true)}
+        onMusicPress={() => setShowLofiMenu(true)}
       />
 
       <BottomNavBar
@@ -784,6 +792,23 @@ export default function QuantumOrbitScreen() {
         reactions={soundReactions.receivedReactions}
         topInset={insets.top}
         theme={theme}
+      />
+
+      <LofiMusicMenu
+        visible={showLofiMenu}
+        onClose={() => setShowLofiMenu(false)}
+        isPlaying={lofiMusic.isPlaying}
+        currentTrack={lofiMusic.currentTrack}
+        selectedTrack={lofiMusic.selectedTrack}
+        currentMood={lofiMusic.currentMood}
+        autoPlayEnabled={lofiMusic.autoPlayEnabled}
+        volume={lofiMusic.volume}
+        isAlone={lofiMusic.isAlone}
+        onPlay={lofiMusic.play}
+        onPause={lofiMusic.pause}
+        onToggleAutoPlay={lofiMusic.toggleAutoPlay}
+        onVolumeChange={lofiMusic.setVolume}
+        onSelectTrack={lofiMusic.selectTrack}
       />
     </>
   );
