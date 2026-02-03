@@ -9,6 +9,7 @@ import {
   ConnectionState,
   LocalParticipant,
   Participant,
+  DataPacket_Kind,
 } from 'livekit-client';
 import { supabase } from './supabase';
 import Constants from 'expo-constants';
@@ -74,6 +75,7 @@ type AudioEventCallbacks = {
   onParticipantSpeaking: (participantId: string, isSpeaking: boolean) => void;
   onError: (error: string) => void;
   onAllMuted: () => void;
+  onDataReceived?: (data: Uint8Array, participant: RemoteParticipant | undefined) => void;
 };
 
 let eventCallbacks: AudioEventCallbacks | null = null;
@@ -350,6 +352,11 @@ const setupRoomEventListeners = (room: Room) => {
   room.on(RoomEvent.Disconnected, () => {
     eventCallbacks?.onConnectionStatusChange('disconnected');
   });
+
+  // Handle data channel messages (for sound reactions, etc.)
+  room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant?: RemoteParticipant) => {
+    eventCallbacks?.onDataReceived?.(payload, participant);
+  });
 };
 
 // Silence timer management
@@ -387,4 +394,28 @@ export const isConnected = (): boolean => {
 // Get current microphone state
 export const isMicrophoneEnabled = (): boolean => {
   return currentRoom?.localParticipant?.isMicrophoneEnabled || false;
+};
+
+// Send data to all participants in the room via data channel
+export const sendRoomData = async (data: Uint8Array): Promise<boolean> => {
+  if (!currentRoom || currentRoom.state !== ConnectionState.Connected) {
+    logger.warn('[LiveKit] Cannot send data: not connected to room');
+    return false;
+  }
+
+  try {
+    await currentRoom.localParticipant.publishData(data, {
+      reliable: true,
+    });
+    logger.log('[LiveKit] Data sent successfully');
+    return true;
+  } catch (error) {
+    logger.error('[LiveKit] Failed to send data:', error);
+    return false;
+  }
+};
+
+// Get local participant identity (user ID)
+export const getLocalParticipantId = (): string | null => {
+  return currentRoom?.localParticipant?.identity || null;
 };

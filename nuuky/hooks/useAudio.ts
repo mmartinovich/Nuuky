@@ -11,10 +11,17 @@ import {
   isConnected,
   isMicrophoneEnabled,
   getCurrentRoom,
+  sendRoomData,
 } from '../lib/livekit';
+import type { RemoteParticipant } from 'livekit-client';
 import { AudioConnectionStatus } from '../types';
 
-export const useAudio = (roomId: string | null) => {
+type DataReceivedCallback = (data: Uint8Array, participant: RemoteParticipant | undefined) => void;
+
+export const useAudio = (
+  roomId: string | null,
+  onDataReceived?: DataReceivedCallback
+) => {
   const {
     currentUser,
     audioConnectionStatus,
@@ -73,6 +80,12 @@ export const useAudio = (roomId: string | null) => {
     clearSpeakingParticipants();
   }, [clearSpeakingParticipants]);
 
+  // Store the data callback in a ref so we don't need to recreate callbacks when it changes
+  const dataCallbackRef = useRef<DataReceivedCallback | undefined>(onDataReceived);
+  useEffect(() => {
+    dataCallbackRef.current = onDataReceived;
+  }, [onDataReceived]);
+
   // Set up event callbacks with proper cleanup
   useEffect(() => {
     const callbacks = {
@@ -92,6 +105,9 @@ export const useAudio = (roomId: string | null) => {
       },
       onAllMuted: () => {
         handleDisconnect();
+      },
+      onDataReceived: (data: Uint8Array, participant: RemoteParticipant | undefined) => {
+        dataCallbackRef.current?.(data, participant);
       },
     };
 
@@ -254,6 +270,15 @@ export const useAudio = (roomId: string | null) => {
     [speakingParticipants]
   );
 
+  // Send data to all participants in the room
+  const sendData = useCallback(async (data: Uint8Array): Promise<boolean> => {
+    if (audioConnectionStatus !== 'connected') {
+      logger.warn('[useAudio] Cannot send data: not connected');
+      return false;
+    }
+    return sendRoomData(data);
+  }, [audioConnectionStatus]);
+
   return {
     connectionStatus: audioConnectionStatus,
     isConnected: audioConnectionStatus === 'connected',
@@ -265,5 +290,6 @@ export const useAudio = (roomId: string | null) => {
     disconnect: handleDisconnect,
     mute: handleMute,
     unmute: handleUnmute,
+    sendData,
   };
 };

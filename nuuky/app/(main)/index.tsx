@@ -80,6 +80,11 @@ import { CreateRoomModal } from "../../components/CreateRoomModal";
 import { RoomSettingsModal } from "../../components/RoomSettingsModal";
 import { TopHeader } from "../../components/TopHeader";
 import { BottomNavBar } from "../../components/BottomNavBar";
+import { SoundReactionPicker } from "../../components/SoundReactionPicker";
+import { SoundReactionToast } from "../../components/SoundReactionToast";
+import { useSoundReactions } from "../../hooks/useSoundReactions";
+import { playPreview, stopPreview } from "../../lib/soundPlayer";
+import { SoundReactionType } from "../../types";
 
 const { width, height } = Dimensions.get("window");
 const CENTER_X = width / 2;
@@ -117,13 +122,39 @@ export default function QuantumOrbitScreen() {
 
   const { loading: firstTimeLoading } = useFirstTimeRoom();
 
+  // Check if user is in ghost mode
+  const isGhostMode = useMemo(() => {
+    if (!currentUser?.ghost_mode_until) return false;
+    return new Date(currentUser.ghost_mode_until) > new Date();
+  }, [currentUser?.ghost_mode_until]);
+
+  // Sound reactions hook - needs to be declared before useAudio so we can pass handleDataReceived
+  const soundReactionsRef = useRef<ReturnType<typeof useSoundReactions> | null>(null);
+
   const {
     connectionStatus: audioConnectionStatus,
     isConnecting: isAudioConnecting,
     unmute: audioUnmute,
     mute: audioMute,
     disconnect: audioDisconnect,
-  } = useAudio(defaultRoom?.id || null);
+    isConnected: isAudioConnected,
+  } = useAudio(defaultRoom?.id || null, (data, participant) => {
+    soundReactionsRef.current?.handleDataReceived(data, participant);
+  });
+
+  // Sound reactions
+  const soundReactions = useSoundReactions({
+    currentUserId: currentUser?.id || null,
+    currentUserName: currentUser?.display_name || 'Unknown',
+    currentUserAvatarUrl: currentUser?.avatar_url,
+    isGhostMode,
+    isAudioConnected,
+  });
+
+  // Store ref for the audio callback
+  useEffect(() => {
+    soundReactionsRef.current = soundReactions;
+  }, [soundReactions]);
 
   const { unreadCount: notificationCount } = useNotifications();
   const totalBadgeCount = notificationCount + roomInvites.length;
@@ -137,6 +168,7 @@ export default function QuantumOrbitScreen() {
   const [showRoomList, setShowRoomList] = useState(false);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
   const [showRoomSettings, setShowRoomSettings] = useState(false);
+  const [showSoundPicker, setShowSoundPicker] = useState(false);
 
 
   // Extracted hooks
@@ -507,6 +539,40 @@ export default function QuantumOrbitScreen() {
     }
   }, [defaultRoom, isMuted, audioUnmute, audioMute]);
 
+  // Sound reaction handlers
+  const handleSwipeUpMic = useCallback(async () => {
+    if (!defaultRoom) {
+      Alert.alert("No Room", "Join a room to send sound reactions.");
+      return;
+    }
+
+    // Auto-reconnect if disconnected due to silence timeout
+    if (!isAudioConnected) {
+      // Reconnect in background - picker will enable once connected
+      audioUnmute().then((success) => {
+        if (success) {
+          // Immediately mute again - we just needed to reconnect
+          audioMute();
+        }
+      });
+    }
+
+    setShowSoundPicker(true);
+  }, [defaultRoom, isAudioConnected, audioUnmute, audioMute]);
+
+  const handleSoundSelect = useCallback(async (soundId: SoundReactionType) => {
+    const result = await soundReactions.sendReaction(soundId);
+    if (!result.success && result.error) {
+      Alert.alert("Cannot Send", result.error);
+    }
+  }, [soundReactions]);
+
+  // Calculate mic button position for picker anchor
+  const micButtonPosition = useMemo(() => ({
+    x: width / 2,
+    y: height - insets.bottom - 70, // Approximate position above bottom nav
+  }), [insets.bottom]);
+
   // Safety timeout: never stay on black screen for more than 5 seconds
   const [safetyTimeout, setSafetyTimeout] = useState(false);
   useEffect(() => {
@@ -542,6 +608,7 @@ export default function QuantumOrbitScreen() {
     : getMoodColor(currentUser?.mood || "neutral");
 
   return (
+    <>
     <RNAnimated.View style={[styles.container, { backgroundColor: theme.colors.bg.primary, opacity: fadeAnim }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
@@ -550,8 +617,10 @@ export default function QuantumOrbitScreen() {
       <StarField />
       <View style={[styles.grain, { backgroundColor: theme.colors.grain }]} pointerEvents="none" />
 
-      {/* Gesture handler for drag-to-spin */}
-      <View style={StyleSheet.absoluteFill} {...panResponder.panHandlers} pointerEvents="auto" />
+      {/* Gesture handler for drag-to-spin - disabled when sound picker is open */}
+      {!showSoundPicker && (
+        <View style={StyleSheet.absoluteFill} {...panResponder.panHandlers} pointerEvents="auto" />
+      )}
 
       {/* Central Orb */}
       <CentralOrb
@@ -626,6 +695,7 @@ export default function QuantumOrbitScreen() {
         onFriendsPress={() => router.push("/(main)/friends")}
         onRoomsPress={handleOpenRooms}
         onSettingsPress={() => router.push("/(main)/settings")}
+        onSwipeUpMic={handleSwipeUpMic}
         bottomInset={insets.bottom}
       />
 
@@ -692,7 +762,32 @@ export default function QuantumOrbitScreen() {
           }}
         />
       )}
+
     </RNAnimated.View>
+
+      {/* Sound Reactions - outside animated container for proper z-index */}
+      <SoundReactionPicker
+        visible={showSoundPicker}
+        onSelect={handleSoundSelect}
+        onClose={() => setShowSoundPicker(false)}
+        canSend={soundReactions.canSend}
+        cooldownProgress={soundReactions.cooldownProgress}
+        lastSentSound={soundReactions.lastSentSound}
+        isGhostModeBlocked={soundReactions.isGhostModeBlocked}
+        isReconnecting={isAudioConnecting}
+        anchorPosition={micButtonPosition}
+        accent={accent}
+        theme={theme}
+        onPreview={playPreview}
+        onPreviewEnd={stopPreview}
+      />
+
+      <SoundReactionToast
+        reactions={soundReactions.receivedReactions}
+        topInset={insets.top}
+        theme={theme}
+      />
+    </>
   );
 }
 

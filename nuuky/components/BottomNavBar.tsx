@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Alert } from "react-native";
+import React, { useEffect, useRef, useMemo } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, PanResponder } from "react-native";
 import { Animated as RNAnimated, Easing } from "react-native";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -19,10 +19,14 @@ interface BottomNavBarProps {
   onFriendsPress: () => void;
   onRoomsPress: () => void;
   onSettingsPress: () => void;
+  onSwipeUpMic?: () => void;
   bottomInset: number;
 }
 
 const AnimatedIonicons = RNAnimated.createAnimatedComponent(Ionicons);
+
+// Swipe threshold for triggering sound reactions picker
+const SWIPE_UP_THRESHOLD = -30;
 
 export const BottomNavBar = React.memo(function BottomNavBar({
   accent,
@@ -39,6 +43,7 @@ export const BottomNavBar = React.memo(function BottomNavBar({
   onFriendsPress,
   onRoomsPress,
   onSettingsPress,
+  onSwipeUpMic,
   bottomInset,
 }: BottomNavBarProps) {
   // Morph animation between mic states
@@ -57,6 +62,38 @@ export const BottomNavBar = React.memo(function BottomNavBar({
       }).start();
     }
   }, [isMuted]);
+
+  // PanResponder for detecting swipe-up gesture on mic button
+  const micPanResponder = useMemo(() => {
+    let startY = 0;
+    let didSwipe = false;
+
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        // Only capture if vertical movement is significant
+        return Math.abs(gestureState.dy) > 10;
+      },
+      onPanResponderGrant: (_, gestureState) => {
+        startY = gestureState.y0;
+        didSwipe = false;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        // Check for swipe up
+        if (!didSwipe && gestureState.dy < SWIPE_UP_THRESHOLD) {
+          didSwipe = true;
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          onSwipeUpMic?.();
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        // If no swipe detected and it was a tap, trigger mic toggle
+        if (!didSwipe && Math.abs(gestureState.dy) < 10 && Math.abs(gestureState.dx) < 10) {
+          onMicToggle();
+        }
+      },
+    });
+  }, [onMicToggle, onSwipeUpMic]);
 
   return (
     <View style={[styles.bottomNav, { paddingBottom: Math.max(bottomInset, 8) }]} pointerEvents="box-none">
@@ -110,18 +147,17 @@ export const BottomNavBar = React.memo(function BottomNavBar({
                   }),
             },
           ]}
+          {...micPanResponder.panHandlers}
         >
-          <TouchableOpacity
-            onPress={onMicToggle}
-            activeOpacity={0.85}
+          <View
             style={styles.floatingButtonInner}
-            accessibilityLabel={isMuted ? "Unmute microphone" : "Mute microphone"}
+            accessibilityLabel={isMuted ? "Unmute microphone. Swipe up for sound reactions" : "Mute microphone. Swipe up for sound reactions"}
             accessibilityRole="button"
           >
             <RNAnimated.View style={{ transform: [{ scale: iconMorph }], opacity: iconMorph }}>
               <Ionicons name={isMuted ? "mic-off" : "mic"} size={28} color={isMuted ? accent.primary : accent.textOnPrimary} />
             </RNAnimated.View>
-          </TouchableOpacity>
+          </View>
         </RNAnimated.View>
       </View>
 

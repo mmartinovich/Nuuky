@@ -83,6 +83,7 @@ export default {
     plugins: [
       "expo-font",
       "expo-router",
+      "expo-av",
       "expo-apple-authentication",
       [
         "expo-contacts",

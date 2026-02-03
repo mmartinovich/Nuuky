@@ -245,3 +245,15 @@ export interface UserPreferences {
   created_at: string;
   updated_at: string;
 }
+
+// Sound reaction types
+export type SoundReactionType = 'laugh' | 'wow' | 'applause' | 'aww' | 'party';
+
+export interface SoundReactionPayload {
+  type: 'sound_reaction';
+  soundId: SoundReactionType;
+  senderId: string;
+  senderName: string;
+  senderAvatarUrl?: string;
+  timestamp: number;
+}
