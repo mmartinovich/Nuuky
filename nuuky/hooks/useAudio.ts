@@ -20,7 +20,8 @@ type DataReceivedCallback = (data: Uint8Array, participant: RemoteParticipant | 
 
 export const useAudio = (
   roomId: string | null,
-  onDataReceived?: DataReceivedCallback
+  onDataReceived?: DataReceivedCallback,
+  otherParticipantCount: number = 0
 ) => {
   const {
     currentUser,
@@ -36,6 +37,7 @@ export const useAudio = (
   const isInitialized = useRef(false);
   const currentRoomId = useRef<string | null>(null);
   const [micEnabled, setMicEnabled] = useState(false);
+  const isManualConnection = useRef(false); // Track if user manually connected (don't auto-disconnect)
 
   // Initialize LiveKit on first use
   useEffect(() => {
@@ -76,6 +78,7 @@ export const useAudio = (
   const handleDisconnect = useCallback(async (): Promise<void> => {
     await disconnectFromAudioRoom();
     currentRoomId.current = null;
+    isManualConnection.current = false;
     setMicEnabled(false);
     clearSpeakingParticipants();
   }, [clearSpeakingParticipants]);
@@ -140,6 +143,8 @@ export const useAudio = (
 
   // Handle room changes — disconnect old room, auto-connect to new one for listening (mic off).
   // Connection runs in the background so it doesn't block UI/navigation.
+  // OPTIMIZATION: Only auto-connect when there are other participants in the room.
+  // Manual connections (user initiated) are preserved even when alone.
   useEffect(() => {
     if (connectTimerRef.current) {
       clearTimeout(connectTimerRef.current);
@@ -147,28 +152,40 @@ export const useAudio = (
     }
 
     if (roomId && currentRoomId.current && currentRoomId.current !== roomId) {
-      // Switched to a different room — disconnect old one
+      // Switched to a different room — disconnect old one and reset manual flag
       disconnectFromAudioRoom();
       currentRoomId.current = null;
+      isManualConnection.current = false;
       clearSpeakingParticipants();
     }
 
-    if (roomId && currentUser) {
-      currentRoomId.current = roomId;
-      // Auto-connect for listening (mic off) in background
-      connectToAudioRoom(roomId, false).then((success) => {
-        if (!success) {
-          currentRoomId.current = null;
-        }
-        setMicEnabled(false);
-      });
+    if (roomId && currentUser && otherParticipantCount > 0) {
+      // Others in room — auto-connect if not already connected
+      if (!isConnected()) {
+        currentRoomId.current = roomId;
+        // Auto-connect for listening (mic off) in background
+        connectToAudioRoom(roomId, false).then((success) => {
+          if (!success) {
+            currentRoomId.current = null;
+          }
+          setMicEnabled(false);
+        });
+      }
+    } else if (roomId && currentUser && otherParticipantCount === 0 && isConnected() && !isManualConnection.current) {
+      // Alone in the room AND it was an auto-connection — disconnect to save resources
+      // Don't disconnect if user manually connected (e.g., to play music)
+      disconnectFromAudioRoom();
+      currentRoomId.current = null;
+      clearSpeakingParticipants();
+      setMicEnabled(false);
     } else if (!roomId && currentRoomId.current) {
       // Room cleared (e.g. left all rooms) — disconnect
       disconnectFromAudioRoom();
       currentRoomId.current = null;
+      isManualConnection.current = false;
       clearSpeakingParticipants();
     }
-  }, [roomId, currentUser?.id]);
+  }, [roomId, currentUser?.id, otherParticipantCount]);
 
   // Request microphone permission — always check fresh (user may toggle in Settings)
   const requestMicrophonePermission = async (): Promise<boolean> => {
@@ -215,12 +232,15 @@ export const useAudio = (
     return true;
   }, [roomId, currentUser]);
 
-  // Connect to audio when unmuting
+  // Connect to audio when unmuting (user-initiated = manual connection)
   const handleUnmute = useCallback(async (): Promise<boolean> => {
     if (!roomId || !currentUser) {
       logger.warn('[useAudio] Cannot unmute: no room or user');
       return false;
     }
+
+    // Mark as manual connection so we don't auto-disconnect when alone
+    isManualConnection.current = true;
 
     // OPTIMIZATION: Check if already connected FIRST (before permission check)
     if (isConnected()) {
@@ -236,6 +256,7 @@ export const useAudio = (
         'Microphone Permission Required',
         'Please enable microphone access in your device settings to use voice chat.'
       );
+      isManualConnection.current = false;
       return false;
     }
 

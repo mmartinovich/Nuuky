@@ -136,6 +136,14 @@ export default function QuantumOrbitScreen() {
   // Sound reactions hook - needs to be declared before useAudio so we can pass handleDataReceived
   const soundReactionsRef = useRef<ReturnType<typeof useSoundReactions> | null>(null);
 
+  // Count other participants in the room (excluding self) for audio connection optimization
+  const otherParticipantCount = useMemo(() => {
+    if (!defaultRoom?.id) return 0;
+    const roomData = myRooms.find((r) => r.id === defaultRoom.id);
+    const participants = roomData?.participants || [];
+    return participants.filter(p => p.user_id !== currentUser?.id).length;
+  }, [defaultRoom?.id, myRooms, currentUser?.id]);
+
   const {
     connectionStatus: audioConnectionStatus,
     isConnecting: isAudioConnecting,
@@ -145,7 +153,7 @@ export default function QuantumOrbitScreen() {
     isConnected: isAudioConnected,
   } = useAudio(defaultRoom?.id || null, (data, participant) => {
     soundReactionsRef.current?.handleDataReceived(data, participant);
-  });
+  }, otherParticipantCount);
 
   // Sound reactions
   const soundReactions = useSoundReactions({
@@ -653,6 +661,7 @@ export default function QuantumOrbitScreen() {
         mood={currentUser?.mood}
         customMood={activeCustomMood}
         moodSelfie={activeSelfie}
+        isCustomMoodActive={!!activeCustomMood}
         showHint={showHint}
         statusText={activeCustomMood?.text || currentVibe}
       />

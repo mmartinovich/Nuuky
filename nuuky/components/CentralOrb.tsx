@@ -22,6 +22,7 @@ interface CentralOrbProps {
   mood?: "good" | "neutral" | "not_great" | "reach_out";
   customMood?: CustomMood | null;
   moodSelfie?: MoodSelfie | null;
+  isCustomMoodActive?: boolean;
   showHint?: boolean;
   statusText?: string;
 }
@@ -34,6 +35,7 @@ function CentralOrbComponent({
   mood = "neutral",
   customMood,
   moodSelfie,
+  isCustomMoodActive = false,
   showHint = false,
   statusText,
 }: CentralOrbProps) {
@@ -346,11 +348,11 @@ function CentralOrbComponent({
 
   const moodImage = getMoodImage(mood);
 
-  // Check if mood selfie is active (not expired)
-  const isSelfieActive = useMemo(() => {
-    if (!moodSelfie) return false;
+  // Check if mood selfie should be shown (active, not expired, AND custom mood is selected)
+  const showSelfie = useMemo(() => {
+    if (!moodSelfie || !isCustomMoodActive) return false;
     return new Date(moodSelfie.expires_at) > new Date();
-  }, [moodSelfie]);
+  }, [moodSelfie, isCustomMoodActive]);
 
   return (
     <Animated.View
@@ -578,8 +580,8 @@ function CentralOrbComponent({
                 style={styles.highlight}
               />
 
-              {/* Priority: selfie > customMood > presetMood */}
-              {isSelfieActive && moodSelfie ? (
+              {/* Priority: selfie (only with custom mood) > customMood > presetMood */}
+              {showSelfie && moodSelfie ? (
                 <Image source={{ uri: moodSelfie.image_url }} style={styles.selfieImage} />
               ) : customMood ? (
                 <Text style={styles.customMoodEmoji}>{customMood.emoji}</Text>
@@ -606,6 +608,7 @@ export const CentralOrb = memo(CentralOrbComponent, (prevProps, nextProps) => {
     prevProps.customMood?.id === nextProps.customMood?.id &&
     prevProps.moodSelfie?.id === nextProps.moodSelfie?.id &&
     prevProps.moodSelfie?.expires_at === nextProps.moodSelfie?.expires_at &&
+    prevProps.isCustomMoodActive === nextProps.isCustomMoodActive &&
     prevProps.statusText === nextProps.statusText
   );
 });
