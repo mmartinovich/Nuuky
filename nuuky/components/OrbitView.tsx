@@ -45,7 +45,12 @@ export const OrbitView: React.FC<OrbitViewProps> = ({
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
+      onStartShouldSetPanResponderCapture: () => false,
       onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return Math.abs(gestureState.dx) > 15 || Math.abs(gestureState.dy) > 15;
+      },
+      // Use capture phase to intercept gesture before TouchableOpacity claims it
+      onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
         return Math.abs(gestureState.dx) > 15 || Math.abs(gestureState.dy) > 15;
       },
       onPanResponderTerminationRequest: () => true,
@@ -217,9 +222,6 @@ export const OrbitView: React.FC<OrbitViewProps> = ({
 
       {/* Orbit Container */}
       <View style={styles.orbitContainer}>
-        {/* Gesture handler for drag-to-spin */}
-        <View style={StyleSheet.absoluteFill} {...panResponder.panHandlers} pointerEvents="auto" />
-
         {/* Central Orb - Current User */}
         <CentralOrb
           moodColor={userMoodColors.base}
@@ -243,6 +245,7 @@ export const OrbitView: React.FC<OrbitViewProps> = ({
             baseAngle={participantBaseAngles[index] || 0}
             radius={participantRadii[index] || 150}
             orbitAngle={orbitAngle}
+            panHandlers={panResponder.panHandlers}
           />
         ))}
       </View>

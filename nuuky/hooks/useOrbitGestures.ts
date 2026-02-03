@@ -30,7 +30,12 @@ export function useOrbitGestures() {
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
+      onStartShouldSetPanResponderCapture: () => false,
       onMoveShouldSetPanResponder: (_evt, gestureState) => {
+        return Math.abs(gestureState.dx) > 15 || Math.abs(gestureState.dy) > 15;
+      },
+      // Use capture phase to intercept gesture before TouchableOpacity claims it
+      onMoveShouldSetPanResponderCapture: (_evt, gestureState) => {
         return Math.abs(gestureState.dx) > 15 || Math.abs(gestureState.dy) > 15;
       },
       onPanResponderTerminationRequest: () => true,

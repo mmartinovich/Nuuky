@@ -617,10 +617,7 @@ export default function QuantumOrbitScreen() {
       <StarField />
       <View style={[styles.grain, { backgroundColor: theme.colors.grain }]} pointerEvents="none" />
 
-      {/* Gesture handler for drag-to-spin - disabled when sound picker is open */}
-      {!showSoundPicker && (
-        <View style={StyleSheet.absoluteFill} {...panResponder.panHandlers} pointerEvents="auto" />
-      )}
+      {/* Drag-to-spin is now handled by individual FriendParticle components */}
 
       {/* Central Orb */}
       <CentralOrb
@@ -652,6 +649,7 @@ export default function QuantumOrbitScreen() {
             radius={orbitRadii[index] || 150}
             orbitAngle={orbitAngle}
             streak={streakMap.get(user.id)}
+            panHandlers={showSoundPicker ? undefined : panResponder.panHandlers}
           />
         ))}
 

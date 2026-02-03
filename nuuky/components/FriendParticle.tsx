@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useMemo, memo } from 'react';
-import { View, StyleSheet, Dimensions, TouchableOpacity, Animated, Easing, Text } from 'react-native';
+import { View, StyleSheet, Dimensions, TouchableOpacity, Animated, Easing, Text, GestureResponderHandlers } from 'react-native';
 import { Image as CachedImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -29,6 +29,7 @@ interface FriendParticleProps {
   radius: number;
   orbitAngle: Animated.Value;
   streak?: Streak;
+  panHandlers?: GestureResponderHandlers;
 }
 
 function FriendParticleComponent({
@@ -42,6 +43,7 @@ function FriendParticleComponent({
   radius,
   orbitAngle,
   streak,
+  panHandlers,
 }: FriendParticleProps) {
   const lowPowerMode = useLowPowerMode();
   const { theme } = useTheme();
@@ -326,6 +328,8 @@ function FriendParticleComponent({
         }}
         pointerEvents="box-none"
       >
+        {/* Drag handler wrapper - enables drag-to-spin on avatar */}
+        <View {...panHandlers} pointerEvents="auto">
 
       {/* Main Particle with Avatar */}
       <TouchableOpacity activeOpacity={0.8} onPress={handlePress} style={{ zIndex: 100 }}>
@@ -459,6 +463,7 @@ function FriendParticleComponent({
           )}
         </View>
       </TouchableOpacity>
+        </View>
 
       {/* Name label - show first name only */}
       <Text style={[styles.nameLabel, { color: theme.colors.text.secondary }]} numberOfLines={1}>
