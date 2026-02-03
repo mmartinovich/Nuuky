@@ -81,6 +81,13 @@ export default function MainLayout() {
         }}
       />
       <Stack.Screen
+        name="photo-nudge-camera"
+        options={{
+          headerShown: false,
+          animation: "slide_from_bottom",
+        }}
+      />
+      <Stack.Screen
         name="privacy-policy"
         options={{
           headerShown: false,

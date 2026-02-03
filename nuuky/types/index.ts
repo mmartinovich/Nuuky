@@ -138,6 +138,20 @@ export interface Nudge {
   created_at: string;
 }
 
+// Photo Nudge types (ephemeral photos with 24h expiration)
+export interface PhotoNudge {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  image_url: string;
+  caption?: string;
+  expires_at: string;
+  viewed_at?: string;
+  reaction?: 'heart';
+  created_at: string;
+  sender?: User;
+}
+
 // Anchor types
 export interface Anchor {
   id: string;
@@ -217,7 +231,7 @@ export interface LiveKitTokenResponse {
 }
 
 // Notification types
-export type NotificationType = "nudge" | "flare" | "friend_request" | "friend_accepted" | "room_invite" | "call_me" | "heart" | "streak_fading";
+export type NotificationType = "nudge" | "flare" | "friend_request" | "friend_accepted" | "room_invite" | "call_me" | "heart" | "photo_nudge" | "photo_like" | "streak_fading";
 
 export interface NotificationData {
   sender_id?: string;
@@ -230,6 +244,7 @@ export interface NotificationData {
   room_id?: string;
   room_name?: string;
   invite_id?: string;
+  photo_nudge_id?: string;
 }
 
 export interface AppNotification {

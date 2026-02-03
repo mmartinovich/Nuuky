@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo, useCallback, useRef } from "react"
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Alert, StatusBar, Image, Animated as RNAnimated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import * as SplashScreen from "expo-splash-screen";
@@ -86,10 +86,14 @@ import { useSoundReactions } from "../../hooks/useSoundReactions";
 import { playPreview, stopPreview } from "../../lib/soundPlayer";
 import { SoundReactionType } from "../../types";
 import { LofiMusicMenu } from "../../components/LofiMusicMenu";
+import { NotificationsModal } from "../../components/NotificationsModal";
 import { useLofiMusic } from "../../hooks/useLofiMusic";
 import { OrbitEmptyState } from "../../components/OrbitEmptyState";
 import { useInvite } from "../../hooks/useInvite";
 import { useMoodSelfie } from "../../hooks/useMoodSelfie";
+import { usePhotoNudge } from "../../hooks/usePhotoNudge";
+import { PhotoNudgeViewer } from "../../components/PhotoNudgeViewer";
+import { PhotoNudge } from "../../types";
 
 const { width, height } = Dimensions.get("window");
 const CENTER_X = width / 2;
@@ -97,6 +101,7 @@ const CENTER_Y = height / 2 - 20;
 
 export default function QuantumOrbitScreen() {
   const router = useRouter();
+  const { photo_nudge_id } = useLocalSearchParams<{ photo_nudge_id?: string }>();
   const insets = useSafeAreaInsets();
   const { theme, isDark, accent } = useTheme();
   const currentUser = useCurrentUser();
@@ -136,17 +141,20 @@ export default function QuantumOrbitScreen() {
   // Sound reactions hook - needs to be declared before useAudio so we can pass handleDataReceived
   const soundReactionsRef = useRef<ReturnType<typeof useSoundReactions> | null>(null);
 
-  // Count other participants in the room (excluding self) for audio connection optimization
-  const otherParticipantCount = useMemo(() => {
-    if (!defaultRoom?.id) return 0;
+  // Count other participants in the room (excluding self) for audio/lofi optimization
+  // Returns undefined when room data hasn't loaded yet (to avoid premature auto-play)
+  const otherParticipantCount = useMemo((): number | undefined => {
+    if (!defaultRoom?.id) return undefined; // No room yet - don't assume alone
     const roomData = myRooms.find((r) => r.id === defaultRoom.id);
-    const participants = roomData?.participants || [];
+    if (!roomData) return undefined; // Room data not loaded yet
+    const participants = roomData.participants || [];
     return participants.filter(p => p.user_id !== currentUser?.id).length;
   }, [defaultRoom?.id, myRooms, currentUser?.id]);
 
   const {
     connectionStatus: audioConnectionStatus,
     isConnecting: isAudioConnecting,
+    connect: audioConnect,
     unmute: audioUnmute,
     mute: audioMute,
     disconnect: audioDisconnect,
@@ -164,14 +172,34 @@ export default function QuantumOrbitScreen() {
     isAudioConnected,
   });
 
-  // Lo-fi music
-  const lofiMusic = useLofiMusic();
+  // Lo-fi music (pass participant count so it doesn't auto-play before room data loads)
+  const lofiMusic = useLofiMusic(otherParticipantCount);
 
   // Invite for empty state
   const { shareInvite } = useInvite();
 
   // Mood selfie
   const { activeSelfie, captureSelfie, deleteSelfie, fetchActiveSelfie, loading: selfieLoading } = useMoodSelfie();
+
+  // Photo nudge
+  const { fetchReceivedPhotoNudges, fetchPhotoNudge } = usePhotoNudge();
+  const [showPhotoNudge, setShowPhotoNudge] = useState(false);
+  const [activePhotoNudge, setActivePhotoNudge] = useState<PhotoNudge | null>(null);
+
+  // Open photo nudge viewer when navigated with photo_nudge_id param (from notification tap)
+  useEffect(() => {
+    if (photo_nudge_id && currentUser) {
+      (async () => {
+        const nudge = await fetchPhotoNudge(photo_nudge_id);
+        if (nudge) {
+          setActivePhotoNudge(nudge);
+          setShowPhotoNudge(true);
+        }
+        // Clear the param to prevent re-opening on re-render
+        router.setParams({ photo_nudge_id: undefined });
+      })();
+    }
+  }, [photo_nudge_id, currentUser?.id]);
 
   // Store ref for the audio callback
   useEffect(() => {
@@ -199,6 +227,7 @@ export default function QuantumOrbitScreen() {
   const [showRoomSettings, setShowRoomSettings] = useState(false);
   const [showSoundPicker, setShowSoundPicker] = useState(false);
   const [showLofiMenu, setShowLofiMenu] = useState(false);
+  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
 
 
   // Extracted hooks
@@ -515,6 +544,21 @@ export default function QuantumOrbitScreen() {
     await sendHeart(selectedFriend.id, selectedFriend.display_name);
   }, [selectedFriend, sendHeart]);
 
+  const handlePhotoNudge = useCallback(() => {
+    if (!selectedFriend) return;
+    // Navigate to photo nudge camera with friend info
+    router.push({
+      pathname: "/(main)/photo-nudge-camera",
+      params: {
+        friendId: selectedFriend.id,
+        friendName: selectedFriend.display_name,
+        friendAvatarUrl: selectedFriend.avatar_url || "",
+      },
+    });
+    // Dismiss the action bubble
+    setSelectedFriend(null);
+  }, [selectedFriend, router]);
+
   const handleOrbPress = useCallback(() => {
     if (showHint) {
       saveInteractionState();
@@ -576,19 +620,13 @@ export default function QuantumOrbitScreen() {
       return;
     }
 
-    // Auto-reconnect if disconnected due to silence timeout
+    // Connect without enabling mic if not already connected
     if (!isAudioConnected) {
-      // Reconnect in background - picker will enable once connected
-      audioUnmute().then((success) => {
-        if (success) {
-          // Immediately mute again - we just needed to reconnect
-          audioMute();
-        }
-      });
+      audioConnect();
     }
 
     setShowSoundPicker(true);
-  }, [defaultRoom, isAudioConnected, audioUnmute, audioMute]);
+  }, [defaultRoom, isAudioConnected, audioConnect]);
 
   const handleSoundSelect = useCallback(async (soundId: SoundReactionType) => {
     const result = await soundReactions.sendReaction(soundId);
@@ -704,6 +742,7 @@ export default function QuantumOrbitScreen() {
           onNudge={handleNudge}
           onCallMe={handleCallMe}
           onHeart={handleHeart}
+          onPhotoNudge={handlePhotoNudge}
           onInteraction={handleStreakInteraction}
         />
       )}
@@ -717,7 +756,7 @@ export default function QuantumOrbitScreen() {
         currentVibe={currentVibe}
         audioConnectionStatus={audioConnectionStatus}
         isLofiPlaying={lofiMusic.isPlaying}
-        onNotificationPress={() => router.push("/(main)/notifications")}
+        onNotificationPress={() => setShowNotificationsModal(true)}
         onRoomPillPress={() => setShowRoomSettings(true)}
         onMusicPress={() => setShowLofiMenu(true)}
       />
@@ -849,6 +888,24 @@ export default function QuantumOrbitScreen() {
         onToggleAutoPlay={lofiMusic.toggleAutoPlay}
         onVolumeChange={lofiMusic.setVolume}
         onSelectTrack={lofiMusic.selectTrack}
+      />
+
+      <NotificationsModal
+        visible={showNotificationsModal}
+        onClose={() => setShowNotificationsModal(false)}
+        onOpenPhotoNudge={(photoNudge) => {
+          setActivePhotoNudge(photoNudge);
+          setShowPhotoNudge(true);
+        }}
+      />
+
+      <PhotoNudgeViewer
+        visible={showPhotoNudge}
+        photoNudge={activePhotoNudge}
+        onClose={() => {
+          setShowPhotoNudge(false);
+          setActivePhotoNudge(null);
+        }}
       />
     </>
   );

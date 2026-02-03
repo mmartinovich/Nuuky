@@ -21,7 +21,7 @@ type DataReceivedCallback = (data: Uint8Array, participant: RemoteParticipant | 
 export const useAudio = (
   roomId: string | null,
   onDataReceived?: DataReceivedCallback,
-  otherParticipantCount: number = 0
+  otherParticipantCount?: number
 ) => {
   const {
     currentUser,
@@ -159,7 +159,7 @@ export const useAudio = (
       clearSpeakingParticipants();
     }
 
-    if (roomId && currentUser && otherParticipantCount > 0) {
+    if (roomId && currentUser && otherParticipantCount !== undefined && otherParticipantCount > 0) {
       // Others in room — auto-connect if not already connected
       if (!isConnected()) {
         currentRoomId.current = roomId;
@@ -174,6 +174,7 @@ export const useAudio = (
     } else if (roomId && currentUser && otherParticipantCount === 0 && isConnected() && !isManualConnection.current) {
       // Alone in the room AND it was an auto-connection — disconnect to save resources
       // Don't disconnect if user manually connected (e.g., to play music)
+      // Note: otherParticipantCount === 0 means we confirmed no one else is here (not undefined/loading)
       disconnectFromAudioRoom();
       currentRoomId.current = null;
       clearSpeakingParticipants();
@@ -216,15 +217,20 @@ export const useAudio = (
   };
 
   // Connect to audio room for listening (mic off)
+  // Connect to audio room for listening (mic off) - user-initiated = manual connection
   const handleConnect = useCallback(async (): Promise<boolean> => {
     if (!roomId || !currentUser) return false;
     if (isConnected()) return true;
+
+    // Mark as manual connection so we don't auto-disconnect when alone
+    isManualConnection.current = true;
 
     currentRoomId.current = roomId;
     const success = await connectToAudioRoom(roomId, false);
 
     if (!success) {
       currentRoomId.current = null;
+      isManualConnection.current = false;
       return false;
     }
 
@@ -307,7 +313,7 @@ export const useAudio = (
     isMicrophoneEnabled: micEnabled,
     speakingParticipants,
     isParticipantSpeaking,
-    connect: handleUnmute,
+    connect: handleConnect, // Connect without enabling mic
     disconnect: handleDisconnect,
     mute: handleMute,
     unmute: handleUnmute,

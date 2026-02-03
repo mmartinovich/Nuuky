@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useAppStore, useCurrentUser, useRoomParticipants } from '../stores/appStore';
+import { useAppStore, useCurrentUser } from '../stores/appStore';
 import { PresetMood } from '../types';
 import {
   initLofiPlayer,
@@ -35,9 +35,8 @@ interface UseLofiMusicReturn {
   selectTrack: (track: LofiTrack | null) => void; // null = use mood default
 }
 
-export const useLofiMusic = (): UseLofiMusicReturn => {
+export const useLofiMusic = (otherParticipantCount?: number): UseLofiMusicReturn => {
   const currentUser = useCurrentUser();
-  const roomParticipants = useRoomParticipants();
 
   // Lofi state from store
   const lofiAutoPlay = useAppStore((s) => s.lofiAutoPlay);
@@ -54,6 +53,7 @@ export const useLofiMusic = (): UseLofiMusicReturn => {
 
   // Track initialization
   const isInitialized = useRef(false);
+  const isManualPlay = useRef(false); // Track if user manually started playback
 
   // Get current mood
   const currentMood: PresetMood = currentUser?.mood || 'neutral';
@@ -67,8 +67,8 @@ export const useLofiMusic = (): UseLofiMusicReturn => {
     return moodToTrack[currentMood];
   }, [selectedTrack, currentMood]);
 
-  // Check if user is alone in the room
-  const isAlone = roomParticipants.length <= 1;
+  // Check if user is alone in the room (use passed count, default to not alone until we know)
+  const isAlone = otherParticipantCount !== undefined ? otherParticipantCount === 0 : false;
 
   // Initialize player on mount
   useEffect(() => {
@@ -96,28 +96,41 @@ export const useLofiMusic = (): UseLofiMusicReturn => {
     setCurrentTrack(state.currentTrack);
   }, []);
 
-  // Auto-play/stop based on alone status
+  // Auto-play/stop based on alone status (only for auto-started playback)
   useEffect(() => {
     if (!isAvailable || !lofiAutoPlay) return;
 
     const targetTrack = getEffectiveTrack();
+    let autoPlayTimer: ReturnType<typeof setTimeout> | null = null;
 
     if (isAlone && !isPlaying) {
-      // Start playing when alone
-      logger.log('[useLofiMusic] Auto-playing (alone in room)');
-      playLofi(targetTrack, true).then((success) => {
-        if (success) {
-          setIsPlaying(true);
-          setCurrentTrack(targetTrack);
-        }
-      });
-    } else if (!isAlone && isPlaying) {
-      // Stop when someone joins
+      // Start playing when alone (auto-play) with 5 second delay
+      logger.log('[useLofiMusic] Will auto-play in 5 seconds (alone in room)');
+      autoPlayTimer = setTimeout(() => {
+        isManualPlay.current = false; // Mark as auto-started
+        playLofi(targetTrack, true).then((success) => {
+          if (success) {
+            setIsPlaying(true);
+            setCurrentTrack(targetTrack);
+            logger.log('[useLofiMusic] Auto-play started');
+          }
+        });
+      }, 5000);
+    } else if (!isAlone && isPlaying && !isManualPlay.current) {
+      // Stop when someone joins, but ONLY if it was auto-started
+      // Don't stop manually started music
       logger.log('[useLofiMusic] Auto-stopping (friend joined)');
       pauseLofi(true).then(() => {
         setIsPlaying(false);
       });
     }
+
+    // Cleanup: cancel timer if conditions change before 5 seconds
+    return () => {
+      if (autoPlayTimer) {
+        clearTimeout(autoPlayTimer);
+      }
+    };
   }, [isAlone, isAvailable, lofiAutoPlay, getEffectiveTrack, isPlaying]);
 
   // Update track when mood changes (only if using mood-based default)
@@ -142,8 +155,11 @@ export const useLofiMusic = (): UseLofiMusicReturn => {
     }
   }, [lofiVolume, isAvailable]);
 
-  // Play action
+  // Play action (user-initiated = manual play)
   const play = useCallback(async () => {
+    // Mark as manual play so auto-stop doesn't interrupt
+    isManualPlay.current = true;
+
     // Try to initialize if not available yet
     let available = isAvailable;
     if (!available) {
@@ -154,27 +170,32 @@ export const useLofiMusic = (): UseLofiMusicReturn => {
 
     if (!available) {
       logger.warn('[useLofiMusic] Cannot play - audio not available');
+      isManualPlay.current = false;
       return;
     }
 
     const targetTrack = getEffectiveTrack();
-    logger.log(`[useLofiMusic] Playing track: ${targetTrack}`);
+    logger.log(`[useLofiMusic] Playing track: ${targetTrack} (manual)`);
     const success = await playLofi(targetTrack, true);
     logger.log(`[useLofiMusic] Play result: ${success}`);
     if (success) {
       setIsPlaying(true);
       setCurrentTrack(targetTrack);
+    } else {
+      isManualPlay.current = false;
     }
   }, [isAvailable, getEffectiveTrack]);
 
   // Pause action
   const pause = useCallback(async () => {
+    isManualPlay.current = false; // Reset manual flag
     await pauseLofi(true);
     setIsPlaying(false);
   }, []);
 
   // Stop action
   const stop = useCallback(async () => {
+    isManualPlay.current = false; // Reset manual flag
     await stopLofi(true);
     setIsPlaying(false);
     setCurrentTrack(null);

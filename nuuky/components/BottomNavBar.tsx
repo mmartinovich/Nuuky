@@ -65,20 +65,24 @@ export const BottomNavBar = React.memo(function BottomNavBar({
 
   // PanResponder for detecting swipe-up gesture on mic button
   const micPanResponder = useMemo(() => {
-    let startY = 0;
     let didSwipe = false;
+    let didMove = false; // Track if any significant movement occurred
 
     return PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, gestureState) => {
         // Only capture if vertical movement is significant
-        return Math.abs(gestureState.dy) > 10;
+        return Math.abs(gestureState.dy) > 5 || Math.abs(gestureState.dx) > 5;
       },
-      onPanResponderGrant: (_, gestureState) => {
-        startY = gestureState.y0;
+      onPanResponderGrant: () => {
         didSwipe = false;
+        didMove = false;
       },
       onPanResponderMove: (_, gestureState) => {
+        // Track if user moved their finger at all
+        if (Math.abs(gestureState.dy) > 5 || Math.abs(gestureState.dx) > 5) {
+          didMove = true;
+        }
         // Check for swipe up
         if (!didSwipe && gestureState.dy < SWIPE_UP_THRESHOLD) {
           didSwipe = true;
@@ -86,9 +90,9 @@ export const BottomNavBar = React.memo(function BottomNavBar({
           onSwipeUpMic?.();
         }
       },
-      onPanResponderRelease: (_, gestureState) => {
-        // If no swipe detected and it was a tap, trigger mic toggle
-        if (!didSwipe && Math.abs(gestureState.dy) < 10 && Math.abs(gestureState.dx) < 10) {
+      onPanResponderRelease: () => {
+        // Only trigger mic toggle if it was a clean tap (no movement, no swipe)
+        if (!didSwipe && !didMove) {
           onMicToggle();
         }
       },

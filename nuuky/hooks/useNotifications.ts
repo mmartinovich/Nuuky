@@ -146,7 +146,8 @@ export const useNotifications = () => {
   };
 
   // Handle notification tap - navigate based on type
-  const handleNotificationTap = useCallback(async (notification: AppNotification) => {
+  // Returns the notification data for special handling (e.g., photo_nudge)
+  const handleNotificationTap = useCallback(async (notification: AppNotification): Promise<AppNotification> => {
     // Mark as read first
     if (!notification.is_read) {
       await markAsRead(notification.id);
@@ -160,6 +161,17 @@ export const useNotifications = () => {
         // Navigate to home (Quantum Orbit) - friend context is in the data
         router.push('/(main)');
         break;
+      case 'photo_nudge':
+        // Navigate to home with photo_nudge_id param to open the viewer
+        if (notification.data?.photo_nudge_id) {
+          router.push({
+            pathname: '/(main)',
+            params: { photo_nudge_id: notification.data.photo_nudge_id },
+          });
+        } else {
+          router.push('/(main)');
+        }
+        break;
       case 'friend_request':
       case 'friend_accepted':
         router.push('/(main)/friends');
@@ -170,6 +182,7 @@ export const useNotifications = () => {
       default:
         router.push('/(main)');
     }
+    return notification;
   }, [router]);
 
   // Setup realtime subscription for new notifications

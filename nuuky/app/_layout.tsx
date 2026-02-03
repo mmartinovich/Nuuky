@@ -128,6 +128,17 @@ export default function RootLayout() {
       case "flare":
         router.push("/(main)");
         break;
+      case "photo_nudge":
+        // Navigate to main with photo_nudge_id param to open the viewer
+        if (data?.photo_nudge_id) {
+          router.push({
+            pathname: "/(main)",
+            params: { photo_nudge_id: data.photo_nudge_id },
+          });
+        } else {
+          router.push("/(main)");
+        }
+        break;
       case "friend_request":
       case "friend_accepted":
         router.push("/(main)/friends");

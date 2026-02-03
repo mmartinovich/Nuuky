@@ -32,6 +32,7 @@ interface NotificationCardProps {
   isSelected?: boolean;
   onToggleSelect?: () => void;
   onEnterSelectionMode?: () => void;
+  cardStyle?: boolean; // When true, renders inline without card wrapper
 }
 
 // Get icon and color based on notification type
@@ -79,6 +80,18 @@ const getNotificationStyle = (type: NotificationType) => {
         iconSet: 'ionicons' as const,
         color: '#EF4444',
       };
+    case 'photo_nudge':
+      return {
+        icon: 'camera' as const,
+        iconSet: 'ionicons' as const,
+        color: '#A855F7',
+      };
+    case 'photo_like':
+      return {
+        icon: 'heart' as const,
+        iconSet: 'ionicons' as const,
+        color: '#EC4899', // Pink to distinguish from regular heart
+      };
     default:
       return {
         icon: 'notifications' as const,
@@ -97,6 +110,7 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
   isSelected = false,
   onToggleSelect,
   onEnterSelectionMode,
+  cardStyle = false,
 }) => {
   const { theme, accent } = useTheme();
   const swipeableRef = useRef<any>(null);
@@ -166,6 +180,8 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
   const handlePress = () => {
     if (selectionMode) {
       onToggleSelect?.();
+    } else {
+      onPress();
     }
   };
 
@@ -179,7 +195,7 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
   return (
     <Animated.View
       style={[
-        styles.animatedContainer,
+        !cardStyle && styles.animatedContainer,
         {
           opacity: fadeAnim,
           transform: [{ translateY: slideAnim }],
@@ -206,8 +222,8 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
         >
           <View
             style={[
-              styles.card,
-              {
+              cardStyle ? styles.cardInline : styles.card,
+              !cardStyle && {
                 backgroundColor: theme.colors.glass.background,
                 borderColor: theme.colors.glass.border,
               },
@@ -302,12 +318,28 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
                 >
                   {cleanTitle}
                 </Text>
+                {/* Photo nudge hint */}
+                {notification.type === 'photo_nudge' && (
+                  <Text style={[styles.photoHint, { color: notificationStyle.color }]}>
+                    Tap to view photo
+                  </Text>
+                )}
               </View>
 
-              {/* Time */}
-              <Text style={[styles.time, { color: theme.colors.text.tertiary }]}>
-                {formatRelativeTime(notification.created_at)}
-              </Text>
+              {/* Time + chevron for photo nudge */}
+              <View style={styles.rightContent}>
+                <Text style={[styles.time, { color: theme.colors.text.tertiary }]}>
+                  {formatRelativeTime(notification.created_at)}
+                </Text>
+                {notification.type === 'photo_nudge' && (
+                  <Ionicons
+                    name="chevron-forward"
+                    size={16}
+                    color={theme.colors.text.tertiary}
+                    style={styles.chevron}
+                  />
+                )}
+              </View>
             </View>
           </View>
         </TouchableOpacity>
@@ -367,6 +399,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 14,
   },
+  cardInline: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -412,6 +448,19 @@ const styles = StyleSheet.create({
   time: {
     fontSize: typography.size.xs,
     flexShrink: 0,
+  },
+  photoHint: {
+    fontSize: typography.size.xs,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  rightContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  chevron: {
+    marginLeft: 2,
   },
   actionWrapper: {
     width: ACTION_WIDTH + ACTION_GAP,

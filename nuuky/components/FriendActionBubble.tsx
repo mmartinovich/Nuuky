@@ -14,6 +14,7 @@ interface FriendActionBubbleProps {
   onNudge: () => void;
   onCallMe: () => void;
   onHeart: () => void;
+  onPhotoNudge: () => void;
   onInteraction?: () => void;
 }
 
@@ -101,6 +102,44 @@ const RippleRing = ({ delay, color }: { delay: number; color: string }) => {
   );
 };
 
+// Camera flash effect
+const CameraFlash = ({ delay }: { delay: number }) => {
+  const progress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(progress, {
+      toValue: 1,
+      duration: 400,
+      delay,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  const scale = progress.interpolate({
+    inputRange: [0, 0.3, 1],
+    outputRange: [0.5, 2, 2.5],
+  });
+  const opacity = progress.interpolate({
+    inputRange: [0, 0.15, 0.3, 1],
+    outputRange: [0, 0.8, 0.4, 0],
+  });
+
+  return (
+    <Animated.View
+      style={{
+        position: 'absolute',
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#A855F7',
+        transform: [{ scale }],
+        opacity,
+      }}
+    />
+  );
+};
+
 // Sound wave arc for call
 const SoundWave = ({ delay, side }: { delay: number; side: 'left' | 'right' }) => {
   const progress = useRef(new Animated.Value(0)).current;
@@ -154,18 +193,20 @@ export function FriendActionBubble({
   onNudge,
   onCallMe,
   onHeart,
+  onPhotoNudge,
   onInteraction,
 }: FriendActionBubbleProps) {
   const scaleAnim = useRef(new Animated.Value(0.3)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
   // Track which button was sent for checkmark feedback
-  const [sentAction, setSentAction] = useState<'nudge' | 'call' | 'heart' | null>(null);
+  const [sentAction, setSentAction] = useState<'nudge' | 'call' | 'heart' | 'photo' | null>(null);
 
   // Show particle/ripple effects
   const [showNudgeRipples, setShowNudgeRipples] = useState(false);
   const [showCallWaves, setShowCallWaves] = useState(false);
   const [showHeartParticles, setShowHeartParticles] = useState(false);
+  const [showCameraFlash, setShowCameraFlash] = useState(false);
 
   // Button animation values
   const nudgeScale = useRef(new Animated.Value(1)).current;
@@ -178,6 +219,9 @@ export function FriendActionBubble({
 
   const heartScale = useRef(new Animated.Value(1)).current;
   const heartRotate = useRef(new Animated.Value(0)).current;
+
+  const photoScale = useRef(new Animated.Value(1)).current;
+  const photoRotate = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Snappy Apple-style spring animation
@@ -197,7 +241,7 @@ export function FriendActionBubble({
   }, []);
 
   // Calculate bubble position - center above friend, clear of avatar
-  const bubbleWidth = 190;
+  const bubbleWidth = 240; // Wider to fit 4 buttons
   const avatarRadius = 35; // Approximate avatar radius
   const bubbleX = Math.max(
     16,
@@ -360,6 +404,35 @@ export function FriendActionBubble({
       Animated.spring(heartScale, { toValue: 1, tension: 300, friction: 10, useNativeDriver: true }).start(() => {
         resetAfterSent(heartScale);
       });
+    });
+  };
+
+  const handlePhotoPress = () => {
+    if (sentAction) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+
+    // Show camera flash effect
+    setShowCameraFlash(true);
+    setTimeout(() => setShowCameraFlash(false), 600);
+
+    // Camera shutter animation: quick scale pulse + slight rotation
+    Animated.parallel([
+      // Scale punch like shutter click
+      Animated.sequence([
+        Animated.timing(photoScale, { toValue: 0.8, duration: 50, easing: Easing.in(Easing.ease), useNativeDriver: true }),
+        Animated.timing(photoScale, { toValue: 1.3, duration: 100, easing: Easing.out(Easing.back(2)), useNativeDriver: true }),
+        Animated.timing(photoScale, { toValue: 1, duration: 150, useNativeDriver: true }),
+      ]),
+      // Slight tilt
+      Animated.sequence([
+        Animated.timing(photoRotate, { toValue: 1, duration: 80, useNativeDriver: true }),
+        Animated.timing(photoRotate, { toValue: -1, duration: 120, useNativeDriver: true }),
+        Animated.timing(photoRotate, { toValue: 0, duration: 80, useNativeDriver: true }),
+      ]),
+    ]).start(() => {
+      // Navigate to camera screen instead of showing sent state
+      onPhotoNudge();
+      onInteraction?.();
     });
   };
 
@@ -526,6 +599,45 @@ export function FriendActionBubble({
               </View>
               <Text style={styles.actionLabel}>{sentAction === 'heart' ? 'Sent!' : 'Heart'}</Text>
             </TouchableOpacity>
+
+            {/* Photo button */}
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handlePhotoPress}
+              activeOpacity={0.6}
+              accessibilityLabel="Send photo"
+              accessibilityRole="button"
+            >
+              <View style={styles.iconWrapper}>
+                {/* Camera flash effect */}
+                {showCameraFlash && (
+                  <>
+                    <CameraFlash delay={0} />
+                    <CameraFlash delay={100} />
+                  </>
+                )}
+                <Animated.View
+                  style={{
+                    transform: [
+                      { scale: photoScale },
+                      {
+                        rotate: photoRotate.interpolate({
+                          inputRange: [-1, 1],
+                          outputRange: ['-8deg', '8deg'],
+                        }),
+                      },
+                    ],
+                  }}
+                >
+                  {sentAction === 'photo' ? (
+                    <MaterialCommunityIcons name="camera-enhance" size={26} color="#A855F7" />
+                  ) : (
+                    <Ionicons name="camera" size={20} color="#A855F7" />
+                  )}
+                </Animated.View>
+              </View>
+              <Text style={styles.actionLabel}>{sentAction === 'photo' ? 'Sent!' : 'Photo'}</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -552,7 +664,7 @@ const styles = StyleSheet.create({
   bubbleContainer: {
     position: 'absolute',
     zIndex: 1001,
-    width: 190,
+    width: 240,
   },
   bubble: {
     backgroundColor: '#FFFFFF',
