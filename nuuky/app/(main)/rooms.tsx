@@ -114,31 +114,10 @@ export default function RoomsScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.bg.primary }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       <LinearGradient colors={theme.gradients.background} style={styles.gradient}>
-        {/* Header - Clean Loóna style */}
-        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-          <TouchableOpacity 
-            style={styles.backButton} 
-            onPress={() => router.back()} 
-            activeOpacity={interactionStates?.pressed || 0.7}
-          >
-            <Ionicons name="chevron-back" size={28} color={theme.colors.text.primary} />
-          </TouchableOpacity>
-
-          <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>Rooms</Text>
-
-          <TouchableOpacity
-            style={[styles.createButton, { backgroundColor: accent.soft }]}
-            onPress={handleCreateRoom}
-            activeOpacity={interactionStates?.pressed || 0.7}
-          >
-            <Ionicons name="add" size={28} color={accent.primary} />
-          </TouchableOpacity>
-        </View>
-
         {/* Content */}
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + spacing.xl }]}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 100, paddingBottom: insets.bottom + spacing.xl }]}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.colors.text.secondary} />
@@ -210,6 +189,34 @@ export default function RoomsScreen() {
           )}
         </ScrollView>
 
+        {/* Header with gradient fade */}
+        <LinearGradient
+          colors={[theme.colors.bg.primary, theme.colors.bg.primary, `${theme.colors.bg.primary}00`]}
+          locations={[0, 0.6, 1]}
+          style={[styles.headerOverlay, { paddingTop: insets.top + spacing.md }]}
+          pointerEvents="box-none"
+        >
+          <View style={styles.header} pointerEvents="box-none">
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+              activeOpacity={interactionStates?.pressed || 0.7}
+            >
+              <Ionicons name="chevron-back" size={28} color={theme.colors.text.primary} />
+            </TouchableOpacity>
+
+            <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>Rooms</Text>
+
+            <TouchableOpacity
+              style={[styles.createButton, { backgroundColor: accent.soft }]}
+              onPress={handleCreateRoom}
+              activeOpacity={interactionStates?.pressed || 0.7}
+            >
+              <Ionicons name="add" size={28} color={accent.primary} />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+
         {/* Create Room Modal */}
         <CreateRoomModal
           visible={showCreateRoom}
@@ -227,6 +234,13 @@ const styles = StyleSheet.create({
   },
   gradient: {
     flex: 1,
+  },
+  headerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingBottom: 20,
   },
   header: {
     flexDirection: "row",

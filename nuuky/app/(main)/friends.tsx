@@ -225,33 +225,9 @@ export default function FriendsScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.bg.primary }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       <LinearGradient colors={theme.gradients.background} style={styles.gradient}>
-        {/* Header - Loóna style */}
-        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            activeOpacity={interactionStates.pressed}
-          >
-            <Ionicons name="chevron-back" size={28} color={theme.colors.text.primary} />
-          </TouchableOpacity>
-
-          <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>Friends</Text>
-
-          <TouchableOpacity
-            style={[styles.refreshButton, { backgroundColor: accent.soft }]}
-            onPress={async () => {
-              setFriends([]);
-              await refreshFriends();
-            }}
-            activeOpacity={interactionStates.pressed}
-          >
-            <Ionicons name="refresh" size={24} color={accent.primary} />
-          </TouchableOpacity>
-        </View>
-
         <FlatList
           style={styles.scrollView}
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + spacing["3xl"] }]}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 100, paddingBottom: insets.bottom + spacing["3xl"] }]}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.colors.text.secondary} />
@@ -551,6 +527,37 @@ export default function FriendsScreen() {
             ) : null
           }
         />
+
+        {/* Header with gradient fade */}
+        <LinearGradient
+          colors={[theme.colors.bg.primary, theme.colors.bg.primary, `${theme.colors.bg.primary}00`]}
+          locations={[0, 0.6, 1]}
+          style={[styles.headerOverlay, { paddingTop: insets.top + spacing.md }]}
+          pointerEvents="box-none"
+        >
+          <View style={styles.header} pointerEvents="box-none">
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+              activeOpacity={interactionStates.pressed}
+            >
+              <Ionicons name="chevron-back" size={28} color={theme.colors.text.primary} />
+            </TouchableOpacity>
+
+            <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>Friends</Text>
+
+            <TouchableOpacity
+              style={[styles.refreshButton, { backgroundColor: accent.soft }]}
+              onPress={async () => {
+                setFriends([]);
+                await refreshFriends();
+              }}
+              activeOpacity={interactionStates.pressed}
+            >
+              <Ionicons name="refresh" size={24} color={accent.primary} />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
       </LinearGradient>
 
       {/* Pick Room to Invite Modal */}
@@ -571,6 +578,13 @@ const styles = StyleSheet.create({
   },
   gradient: {
     flex: 1,
+  },
+  headerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingBottom: 20,
   },
   header: {
     flexDirection: "row",

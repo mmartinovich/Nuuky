@@ -242,28 +242,11 @@ export default function SafetyScreen() {
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Header - Loóna style */}
-      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          activeOpacity={interactionStates.pressed}
-        >
-          <Ionicons name="chevron-back" size={28} color={theme.colors.text.primary} />
-        </TouchableOpacity>
-        
-        <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
-          Safety & Privacy
-        </Text>
-        
-        <View style={styles.headerSpacer} />
-      </View>
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + 32 },
+          { paddingTop: insets.top + 100, paddingBottom: insets.bottom + 32 },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -404,6 +387,30 @@ export default function SafetyScreen() {
           </View>
         </SafetySection>
       </ScrollView>
+
+      {/* Header with gradient fade */}
+      <LinearGradient
+        colors={[theme.colors.bg.primary, theme.colors.bg.primary, `${theme.colors.bg.primary}00`]}
+        locations={[0, 0.6, 1]}
+        style={[styles.headerOverlay, { paddingTop: insets.top + spacing.md }]}
+        pointerEvents="box-none"
+      >
+        <View style={styles.header} pointerEvents="box-none">
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            activeOpacity={interactionStates.pressed}
+          >
+            <Ionicons name="chevron-back" size={28} color={theme.colors.text.primary} />
+          </TouchableOpacity>
+
+          <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
+            Safety & Privacy
+          </Text>
+
+          <View style={styles.headerSpacer} />
+        </View>
+      </LinearGradient>
     </View>
   );
 }
@@ -411,6 +418,13 @@ export default function SafetyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  headerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingBottom: 20,
   },
   header: {
     flexDirection: "row",
