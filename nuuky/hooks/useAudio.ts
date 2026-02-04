@@ -63,8 +63,8 @@ export const useAudio = (
       try {
         await AudioSession.setAppleAudioConfiguration({
           audioCategory: 'playAndRecord',
-          audioCategoryOptions: ['defaultToSpeaker', 'allowBluetooth', 'allowBluetoothA2DP'],
-          audioMode: 'videoChat',
+          audioCategoryOptions: ['defaultToSpeaker', 'allowBluetooth', 'allowBluetoothA2DP', 'duckOthers'],
+          audioMode: 'voiceChat',
         });
       } catch (error) {
         logger.error('[useAudio] Failed to configure iOS audio:', error);

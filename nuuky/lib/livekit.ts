@@ -89,6 +89,23 @@ const getLiveKitUrl = (): string => {
   return Constants.expoConfig?.extra?.livekitUrl || '';
 };
 
+// Configure audio focus based on mic state
+// - Mic off (listening): 'gainTransientMayDuck' - other apps duck but keep playing
+// - Mic on (talking): 'gain' - full focus for clear voice communication
+const configureAudioFocus = async (micEnabled: boolean): Promise<void> => {
+  const focusMode = micEnabled ? 'gain' : 'gainTransientMayDuck';
+
+  await AudioSession.configureAudio({
+    ios: { defaultOutput: 'speaker' },
+    android: {
+      audioTypeOptions: {
+        audioFocusMode: focusMode,
+        audioMode: 'inCommunication',
+      }
+    },
+  });
+};
+
 // Request token from Edge Function
 export const requestLiveKitToken = async (
   roomId: string
@@ -157,16 +174,9 @@ export const connectToAudioRoom = async (roomId: string, enableMic: boolean = tr
 
     eventCallbacks?.onConnectionStatusChange('connecting');
 
-    // Configure audio to use speaker output for louder playback
-    AudioSession.configureAudio({
-      ios: { defaultOutput: 'speaker' },
-      android: {
-        audioTypeOptions: {
-          focusMode: 'gain',
-          audioMode: 'inCommunication',
-        }
-      },
-    });
+    // Configure audio focus based on whether mic will be enabled
+    // Mic off = duck other apps, Mic on = full focus
+    await configureAudioFocus(enableMic);
 
     // OPTIMIZATION: Run audio session and token request in parallel
     const [, tokenData] = await Promise.all([
@@ -240,6 +250,9 @@ export const setLocalMicrophoneEnabled = async (
     logger.warn('[LiveKit] No local participant to toggle mic');
     return;
   }
+
+  // Reconfigure audio focus: full focus when talking, duck when just listening
+  await configureAudioFocus(enabled);
 
   await currentRoom.localParticipant.setMicrophoneEnabled(enabled);
 
