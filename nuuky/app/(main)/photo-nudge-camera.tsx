@@ -288,6 +288,7 @@ export default function PhotoNudgeCameraScreen() {
           style={StyleSheet.absoluteFill}
           facing={facing}
           mirror={facing === "front"}
+          flash="off"
         />
       )}
 

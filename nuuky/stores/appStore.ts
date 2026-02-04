@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { encryptedStorage } from '../lib/secureStorage';
-import { User, Friendship, Room, RoomParticipant, RoomInvite, AudioConnectionStatus, CustomMood, PresetMood, AppNotification } from '../types';
+import { User, Friendship, Room, RoomParticipant, RoomInvite, AudioConnectionStatus, CustomMood, PresetMood, AppNotification, Anchor } from '../types';
 import { ThemeMode } from '../lib/theme';
 
 interface AppState {
@@ -12,6 +12,9 @@ interface AppState {
 
   // Friends state
   friends: Friendship[];
+
+  // Anchors state
+  anchors: Anchor[];
 
   // Rooms state
   activeRooms: Room[];
@@ -68,6 +71,7 @@ interface AppState {
   setFriends: (friends: Friendship[]) => void;
   addFriend: (friend: Friendship) => void;
   removeFriend: (friendId: string) => void;
+  setAnchors: (anchors: Anchor[]) => void;
   setActiveRooms: (rooms: Room[]) => void;
   setMyRooms: (rooms: Room[]) => void;
   addMyRoom: (room: Room) => void;
@@ -113,6 +117,7 @@ interface AppState {
 // Memoized selectors for performance - prevents re-renders on unrelated state changes
 export const useCurrentUser = () => useAppStore((state) => state.currentUser);
 export const useFriendsStore = () => useAppStore(useShallow((state) => state.friends));
+export const useAnchorsStore = () => useAppStore(useShallow((state) => state.anchors));
 export const useActiveRooms = () => useAppStore(useShallow((state) => state.activeRooms));
 export const useMyRooms = () => useAppStore(useShallow((state) => state.myRooms));
 export const useCurrentRoom = () => useAppStore((state) => state.currentRoom);
@@ -137,6 +142,7 @@ export const useAppStore = create<AppState>()(
   currentUser: null,
   isAuthenticated: false,
   friends: [],
+  anchors: [],
   activeRooms: [],
   myRooms: [],
   currentRoom: null,
@@ -161,7 +167,7 @@ export const useAppStore = create<AppState>()(
 
   // Lo-fi music state
   lofiAutoPlay: true, // ON by default
-  lofiVolume: 0.5, // Medium volume
+  lofiVolume: 0.7, // Default volume (70%)
   lofiSelectedTrack: null, // null = use mood-based default
 
   // Favorite friends
@@ -181,6 +187,8 @@ export const useAppStore = create<AppState>()(
   removeFriend: (friendId) => set((state) => ({
     friends: state.friends.filter(f => f.id !== friendId)
   })),
+
+  setAnchors: (anchors) => set({ anchors }),
 
   setActiveRooms: (rooms) => set({ activeRooms: rooms }),
 
@@ -340,6 +348,7 @@ export const useAppStore = create<AppState>()(
     currentUser: null,
     isAuthenticated: false,
     friends: [],
+    anchors: [],
     activeRooms: [],
     myRooms: [],
     currentRoom: null,

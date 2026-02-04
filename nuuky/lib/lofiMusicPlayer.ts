@@ -75,7 +75,7 @@ let currentSound: any = null;
 let currentTrack: LofiTrack | null = null;
 let isAudioAvailable = false;
 let isPlaying = false;
-let targetVolume = 0.5; // Default volume
+let targetVolume = 0.7; // Default volume (70%)
 let isFading = false;
 
 const FADE_DURATION = 500; // ms

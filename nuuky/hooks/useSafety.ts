@@ -8,8 +8,7 @@ import { Anchor } from '../types';
 type Visibility = 'full' | 'limited' | 'minimal' | 'hidden';
 
 export const useSafety = () => {
-  const { currentUser, setCurrentUser } = useAppStore();
-  const [anchors, setAnchors] = useState<Anchor[]>([]);
+  const { currentUser, setCurrentUser, anchors, setAnchors } = useAppStore();
   const [isInGhostMode, setIsInGhostMode] = useState(false);
   const [isOnBreak, setIsOnBreak] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -119,7 +118,6 @@ export const useSafety = () => {
       setCurrentUser({ ...currentUser, ghost_mode_until: ghostUntil.toISOString() });
 
       setIsInGhostMode(true);
-      Alert.alert('Ghost Mode Enabled', `You're invisible for ${durationMinutes} minutes`);
       return true;
     } catch (error: any) {
       logger.error('Error enabling ghost mode:', error);
@@ -177,7 +175,6 @@ export const useSafety = () => {
       setCurrentUser({ ...currentUser, take_break_until: breakUntil.toISOString() });
 
       setIsOnBreak(true);
-      Alert.alert('Break Mode Enabled', `Taking a break for ${durationHours} hours`);
       return true;
     } catch (error: any) {
       logger.error('Error enabling break mode:', error);
@@ -286,7 +283,6 @@ export const useSafety = () => {
       if (error) throw error;
 
       await loadAnchors();
-      Alert.alert('Anchor Added', 'This person is now your safety anchor');
       return true;
     } catch (error: any) {
       logger.error('Error adding anchor:', error);

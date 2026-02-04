@@ -153,7 +153,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
-  const { theme, isDark, themeMode, setThemeMode } = useTheme();
+  const { theme, isDark, themeMode, setThemeMode, accent } = useTheme();
   const {
     nudgesEnabled,
     flaresEnabled,
@@ -240,7 +240,7 @@ export default function SettingsScreen() {
               disabled={prefsLoading}
               trackColor={{
                 false: isDark ? "rgba(120,120,128,0.32)" : "rgba(120,120,128,0.16)",
-                true: "#34C759",
+                true: accent.primary,
               }}
               thumbColor="#FFFFFF"
               ios_backgroundColor={
@@ -261,7 +261,7 @@ export default function SettingsScreen() {
               disabled={prefsLoading}
               trackColor={{
                 false: isDark ? "rgba(120,120,128,0.32)" : "rgba(120,120,128,0.16)",
-                true: "#FF3B30",
+                true: accent.primary,
               }}
               thumbColor="#FFFFFF"
               ios_backgroundColor={

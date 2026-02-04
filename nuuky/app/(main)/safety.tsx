@@ -10,6 +10,7 @@ import {
   StatusBar,
   Platform,
 } from "react-native";
+import { Image as CachedImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { spacing, interactionStates } from "../../lib/theme";
 import { useTheme } from "../../hooks/useTheme";
 import { useSafety } from "../../hooks/useSafety";
+import { SwipeableAnchorRow } from "../../components/SwipeableAnchorRow";
 
 // iOS-style icon backgrounds
 const ICON_BACKGROUNDS = {
@@ -29,6 +31,7 @@ const ICON_BACKGROUNDS = {
 interface SafetyRowProps {
   icon?: string;
   emoji?: string;
+  avatarUrl?: string;
   iconBg: string;
   label: string;
   description?: string;
@@ -47,6 +50,7 @@ interface SafetyRowProps {
 const SafetyRow: React.FC<SafetyRowProps> = ({
   icon,
   emoji,
+  avatarUrl,
   iconBg,
   label,
   description,
@@ -74,7 +78,14 @@ const SafetyRow: React.FC<SafetyRowProps> = ({
       ]}
     >
       <View style={styles.rowContent}>
-        {emoji ? (
+        {avatarUrl ? (
+          <CachedImage
+            source={{ uri: avatarUrl }}
+            style={styles.avatarImage}
+            cachePolicy="memory-disk"
+            contentFit="cover"
+          />
+        ) : emoji ? (
           <View style={styles.emojiWrapper}>
             <Text style={styles.emojiText}>{emoji}</Text>
           </View>
@@ -182,7 +193,7 @@ const SafetySection: React.FC<SafetySectionProps> = ({
 export default function SafetyScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { theme, isDark } = useTheme();
+  const { theme, isDark, accent } = useTheme();
   const {
     anchors,
     isInGhostMode,
@@ -223,15 +234,16 @@ export default function SafetyScreen() {
     }
   };
 
-  const handleRemoveAnchor = (userId: string, userName: string) => {
-    Alert.alert("Remove Anchor", `Remove ${userName} as your anchor?`, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Remove", onPress: () => removeAnchor(userId), style: "destructive" },
-    ]);
+  const handleRemoveAnchor = (anchorId: string, _name: string) => {
+    removeAnchor(anchorId);
   };
 
   const getAnchorName = (anchor: any) => {
     return anchor.anchor?.display_name || "Unknown";
+  };
+
+  const getAnchorAvatar = (anchor: any) => {
+    return anchor.anchor?.avatar_url || undefined;
   };
 
   return (
@@ -262,7 +274,6 @@ export default function SafetyScreen() {
             label="Ghost Mode"
             description="Disappear from everyone temporarily"
             isFirst
-            isActive={isInGhostMode}
             theme={theme}
             isDark={isDark}
           >
@@ -271,7 +282,7 @@ export default function SafetyScreen() {
               onValueChange={handleGhostModeToggle}
               trackColor={{
                 false: isDark ? "rgba(120,120,128,0.32)" : "rgba(120,120,128,0.16)",
-                true: "#AF52DE",
+                true: ICON_BACKGROUNDS.ghost,
               }}
               thumbColor="#FFFFFF"
               ios_backgroundColor={
@@ -285,7 +296,6 @@ export default function SafetyScreen() {
             label="Take a Break"
             description="Pause all presence and notifications"
             isLast
-            isActive={isOnBreak}
             theme={theme}
             isDark={isDark}
           >
@@ -294,7 +304,7 @@ export default function SafetyScreen() {
               onValueChange={handleBreakToggle}
               trackColor={{
                 false: isDark ? "rgba(120,120,128,0.32)" : "rgba(120,120,128,0.16)",
-                true: "#5856D6",
+                true: ICON_BACKGROUNDS.break,
               }}
               thumbColor="#FFFFFF"
               ios_backgroundColor={
@@ -305,46 +315,76 @@ export default function SafetyScreen() {
         </SafetySection>
 
         {/* Safety Anchors Section */}
-        <SafetySection
-          title="SAFETY ANCHORS"
-          footer="Anchors are trusted contacts who get notified when you're inactive for 48+ hours. You can set up to 2 anchors."
-          theme={theme}
-        >
-          {anchors.length === 0 ? (
-            <View
-              style={[
-                styles.emptyCard,
-                { backgroundColor: theme.colors.glass.background },
-              ]}
-            >
-              <Ionicons
-                name="shield-checkmark"
-                size={32}
-                color={theme.colors.text.tertiary}
-                style={styles.emptyIcon}
-              />
-              <Text style={[styles.emptyText, { color: theme.colors.text.tertiary }]}>
-                No anchors set
-              </Text>
-            </View>
-          ) : (
-            anchors.map((anchor, index) => (
-              <SafetyRow
-                key={anchor.id}
-                icon="shield-checkmark"
-                iconBg={ICON_BACKGROUNDS.anchor}
-                label={getAnchorName(anchor)}
-                description="Safety Anchor"
-                onPress={() => handleRemoveAnchor(anchor.anchor_id, getAnchorName(anchor))}
-                showChevron
-                isFirst={index === 0}
-                isLast={index === anchors.length - 1}
-                theme={theme}
-                isDark={isDark}
-              />
-            ))
-          )}
-        </SafetySection>
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text.tertiary }]}>
+            SAFETY ANCHORS
+          </Text>
+          <View style={styles.anchorsContainer}>
+            {anchors.length === 0 ? (
+              <TouchableOpacity
+                style={[
+                  styles.emptyCard,
+                  { backgroundColor: theme.colors.glass.background },
+                ]}
+                onPress={() => router.push("/add-anchor")}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="shield-checkmark"
+                  size={32}
+                  color={theme.colors.text.tertiary}
+                  style={styles.emptyIcon}
+                />
+                <Text style={[styles.emptyText, { color: theme.colors.text.tertiary }]}>
+                  No anchors set
+                </Text>
+                <Text style={[styles.addAnchorHint, { color: ICON_BACKGROUNDS.anchor }]}>
+                  Tap to add an anchor
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <>
+                {anchors.map((anchor) => (
+                  <SwipeableAnchorRow
+                    key={anchor.id}
+                    anchorId={anchor.anchor_id}
+                    name={getAnchorName(anchor)}
+                    avatarUrl={getAnchorAvatar(anchor)}
+                    onRemove={handleRemoveAnchor}
+                  />
+                ))}
+                {anchors.length < 2 && (
+                  <TouchableOpacity
+                    style={[
+                      styles.addAnchorCard,
+                      {
+                        backgroundColor: theme.colors.glass.background,
+                        borderColor: theme.colors.glass.border,
+                      },
+                    ]}
+                    onPress={() => router.push("/add-anchor")}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.addIconWrapper, { backgroundColor: ICON_BACKGROUNDS.anchor }]}>
+                      <Ionicons name="add" size={20} color="#FFFFFF" />
+                    </View>
+                    <View style={styles.addTextContainer}>
+                      <Text style={[styles.addLabel, { color: theme.colors.text.primary }]}>
+                        Add Anchor
+                      </Text>
+                      <Text style={[styles.addDescription, { color: theme.colors.text.tertiary }]}>
+                        Set another trusted contact
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </View>
+          <Text style={[styles.sectionFooter, { color: theme.colors.text.tertiary }]}>
+            Anchors are trusted contacts who get notified when you're inactive for 48+ hours. You can set up to 2 anchors.
+          </Text>
+        </View>
 
         {/* About Section */}
         <SafetySection title="ABOUT" theme={theme}>
@@ -374,16 +414,6 @@ export default function SafetyScreen() {
                 Anchors help watch out for you
               </Text>
             </View>
-            <View style={styles.infoRow}>
-              <Ionicons
-                name="checkmark-circle"
-                size={16}
-                color={theme.colors.text.tertiary}
-              />
-              <Text style={[styles.infoText, { color: theme.colors.text.secondary }]}>
-                Visibility settings are per-friend
-              </Text>
-            </View>
           </View>
         </SafetySection>
       </ScrollView>
@@ -411,6 +441,7 @@ export default function SafetyScreen() {
           <View style={styles.headerSpacer} />
         </View>
       </LinearGradient>
+
     </View>
   );
 }
@@ -487,6 +518,35 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     marginHorizontal: spacing.md,
   },
+  anchorsContainer: {
+    gap: 10,
+  },
+  addAnchorCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  addIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  addTextContainer: {
+    flex: 1,
+  },
+  addLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  addDescription: {
+    fontSize: 13,
+    marginTop: 2,
+  },
   rowContainer: {
     minHeight: 44,
   },
@@ -504,6 +564,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
+  },
+  avatarImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: 10,
   },
   emojiWrapper: {
     width: 36,
@@ -571,6 +637,11 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 15,
     fontWeight: "400",
+  },
+  addAnchorHint: {
+    fontSize: 13,
+    fontWeight: "500",
+    marginTop: spacing.sm,
   },
   infoCard: {
     borderRadius: 12,
