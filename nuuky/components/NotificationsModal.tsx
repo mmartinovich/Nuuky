@@ -261,6 +261,11 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                   if (notification.type === 'photo_nudge' && notification.data?.photo_nudge_id && onOpenPhotoNudge) {
                     const cachedNudge = photoNudgeCache[notification.data.photo_nudge_id];
                     if (cachedNudge) {
+                      // Check if expired
+                      const isExpired = new Date(cachedNudge.expires_at) < new Date();
+                      if (isExpired) {
+                        return; // Don't open expired photos
+                      }
                       if (!notification.is_read) {
                         markAsRead(notification.id);
                       }
@@ -272,6 +277,11 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                     // Fallback: fetch if not cached (shouldn't happen normally)
                     fetchPhotoNudge(notification.data.photo_nudge_id).then((nudge) => {
                       if (nudge && onOpenPhotoNudge) {
+                        // Check if expired
+                        const isExpired = new Date(nudge.expires_at) < new Date();
+                        if (isExpired) {
+                          return; // Don't open expired photos
+                        }
                         if (!notification.is_read) {
                           markAsRead(notification.id);
                         }
@@ -293,6 +303,13 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                 onToggleSelect={() => toggleSelect(notification.id)}
                 onEnterSelectionMode={() => enterSelectionMode(notification.id)}
                 cardStyle={true}
+                isExpired={
+                  notification.type === 'photo_nudge' &&
+                  notification.data?.photo_nudge_id &&
+                  photoNudgeCache[notification.data.photo_nudge_id]
+                    ? new Date(photoNudgeCache[notification.data.photo_nudge_id].expires_at) < new Date()
+                    : false
+                }
               />
             </React.Fragment>
           ))}

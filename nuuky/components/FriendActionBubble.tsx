@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, Platform, Easing } from 'react-native';
 import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { User } from '../types';
 import { typography } from '../lib/theme';
@@ -478,9 +479,10 @@ export function FriendActionBubble({
         pointerEvents="box-none"
       >
         {/* Main bubble body */}
-        <View style={styles.bubble}>
-          {/* Action icons with labels */}
-          <View style={styles.actionsRow}>
+        <BlurView intensity={60} tint="dark" style={styles.blurWrapper}>
+          <View style={styles.bubble}>
+            {/* Action icons with labels */}
+            <View style={styles.actionsRow}>
             {/* Nudge button */}
             <TouchableOpacity
               style={styles.actionButton}
@@ -638,19 +640,9 @@ export function FriendActionBubble({
               </View>
               <Text style={styles.actionLabel}>{sentAction === 'photo' ? 'Sent!' : 'Photo'}</Text>
             </TouchableOpacity>
+            </View>
           </View>
-        </View>
-
-        {/* Bubble tail - positioned to point at avatar */}
-        {isAbove ? (
-          <View style={[styles.tailContainer, { left: tailOffset - 9 }]}>
-            <View style={styles.tailDown} />
-          </View>
-        ) : (
-          <View style={[styles.tailContainerUp, { left: tailOffset - 9 }]}>
-            <View style={styles.tailUp} />
-          </View>
-        )}
+        </BlurView>
       </Animated.View>
     </>
   );
@@ -666,23 +658,27 @@ const styles = StyleSheet.create({
     zIndex: 1001,
     width: 240,
   },
-  bubble: {
-    backgroundColor: '#FFFFFF',
+  blurWrapper: {
     borderRadius: 18,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    overflow: 'visible',
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: 'rgba(100, 180, 255, 0.35)',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
+        shadowColor: '#3B82F6',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.4,
         shadowRadius: 12,
       },
       android: {
-        elevation: 8,
+        elevation: 12,
       },
     }),
+  },
+  bubble: {
+    backgroundColor: 'rgba(20, 20, 35, 0.55)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   actionsRow: {
     flexDirection: 'row',
@@ -704,54 +700,40 @@ const styles = StyleSheet.create({
     overflow: 'visible',
   },
   actionLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: 'Outfit_600SemiBold',
-    color: 'rgba(0, 0, 0, 0.7)',
+    color: 'rgba(255, 255, 255, 0.75)',
     marginTop: 2,
     letterSpacing: 0.2,
   },
   tailContainer: {
     position: 'absolute',
-    bottom: -9,
+    bottom: -10,
     alignItems: 'center',
   },
   tailDown: {
-    width: 18,
-    height: 18,
-    backgroundColor: '#FFFFFF',
-    transform: [{ rotate: '45deg' }],
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 1, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
+    width: 0,
+    height: 0,
+    borderLeftWidth: 10,
+    borderRightWidth: 10,
+    borderTopWidth: 10,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: 'rgba(20, 20, 35, 0.85)',
   },
   tailContainerUp: {
     position: 'absolute',
-    top: -9,
+    top: -10,
     alignItems: 'center',
   },
   tailUp: {
-    width: 18,
-    height: 18,
-    backgroundColor: '#FFFFFF',
-    transform: [{ rotate: '45deg' }],
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: -1, height: -1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
+    width: 0,
+    height: 0,
+    borderLeftWidth: 10,
+    borderRightWidth: 10,
+    borderBottomWidth: 10,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: 'rgba(20, 20, 35, 0.85)',
   },
 });

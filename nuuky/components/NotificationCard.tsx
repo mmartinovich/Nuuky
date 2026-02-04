@@ -33,6 +33,7 @@ interface NotificationCardProps {
   onToggleSelect?: () => void;
   onEnterSelectionMode?: () => void;
   cardStyle?: boolean; // When true, renders inline without card wrapper
+  isExpired?: boolean; // For photo nudge notifications - shows "Expired" and disables tap
 }
 
 // Get icon and color based on notification type
@@ -111,6 +112,7 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
   onToggleSelect,
   onEnterSelectionMode,
   cardStyle = false,
+  isExpired = false,
 }) => {
   const { theme, accent } = useTheme();
   const swipeableRef = useRef<any>(null);
@@ -180,6 +182,9 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
   const handlePress = () => {
     if (selectionMode) {
       onToggleSelect?.();
+    } else if (isExpired && notification.type === 'photo_nudge') {
+      // Don't navigate for expired photo nudges
+      return;
     } else {
       onPress();
     }
@@ -320,18 +325,18 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
                 </Text>
                 {/* Photo nudge hint */}
                 {notification.type === 'photo_nudge' && (
-                  <Text style={[styles.photoHint, { color: notificationStyle.color }]}>
-                    Tap to view photo
+                  <Text style={[styles.photoHint, { color: isExpired ? theme.colors.text.tertiary : notificationStyle.color }]}>
+                    {isExpired ? 'Expired' : 'Tap to view photo'}
                   </Text>
                 )}
               </View>
 
-              {/* Time + chevron for photo nudge */}
+              {/* Time + chevron for photo nudge (hide chevron if expired) */}
               <View style={styles.rightContent}>
                 <Text style={[styles.time, { color: theme.colors.text.tertiary }]}>
                   {formatRelativeTime(notification.created_at)}
                 </Text>
-                {notification.type === 'photo_nudge' && (
+                {notification.type === 'photo_nudge' && !isExpired && (
                   <Ionicons
                     name="chevron-forward"
                     size={16}
