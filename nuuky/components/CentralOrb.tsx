@@ -613,6 +613,8 @@ function CentralOrbComponent({
 export const CentralOrb = memo(CentralOrbComponent, (prevProps, nextProps) => {
   return (
     prevProps.mood === nextProps.mood &&
+    prevProps.moodColor === nextProps.moodColor &&
+    prevProps.glowColor === nextProps.glowColor &&
     prevProps.hasActiveFlare === nextProps.hasActiveFlare &&
     prevProps.showHint === nextProps.showHint &&
     prevProps.customMood?.id === nextProps.customMood?.id &&

@@ -1,8 +1,6 @@
 import React, { memo, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Image as CachedImage } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
 import { Room, User } from '../types';
 import { spacing, radius, typography, getMoodColor, interactionStates } from '../lib/theme';
 import { useTheme } from '../hooks/useTheme';
@@ -34,7 +32,6 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, isCreator =
     separator: { backgroundColor: theme.colors.ui.borderLight },
     remaining: { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.ui.borderLight },
     dimText: { color: theme.colors.text.tertiary },
-    chevron: theme.colors.text.tertiary,
   }), [theme]);
 
   // Sort participants: active-in-room first → online-elsewhere (dimmed) → offline
@@ -99,10 +96,10 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, isCreator =
           </View>
           
           <View style={styles.headerRight}>
-            {isDefault && (
-              <View style={[styles.activeBadge, { backgroundColor: accent.soft }]}>
-                <Text style={[styles.activeBadgeText, { color: accent.primary }]}>Active</Text>
-              </View>
+            {participantCount > 0 && (
+              <Text style={[styles.memberCount, dynamicStyles.dimText]}>
+                {participantCount}{participantCount >= 8 ? '/' + maxMembers : ''}
+              </Text>
             )}
           </View>
         </View>
@@ -191,20 +188,10 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, isCreator =
             </View>
           )}
 
-          {participantCount > 0 && (
-            <Text style={[styles.memberCountInline, dynamicStyles.dimText]}>
-              {participantCount}{participantCount >= 8 ? '/' + maxMembers : ''}
-            </Text>
-          )}
-
           {participantCount === 0 && (
             <Text style={[styles.emptyText, dynamicStyles.dimText]}>No members yet</Text>
           )}
         </View>
-      </View>
-
-      <View style={styles.chevronContainer}>
-        <Ionicons name="chevron-forward" size={20} color={dynamicStyles.chevron} />
       </View>
     </TouchableOpacity>
   );
@@ -244,7 +231,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: spacing.md,
     paddingLeft: spacing.md + 4,
-    gap: spacing.sm + 4,
+    gap: spacing.sm,
   },
   header: {
     flexDirection: 'row',
@@ -274,16 +261,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  activeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  activeBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  memberCount: {
+    fontSize: 13,
+    fontWeight: '500',
   },
   avatarRow: {
     flexDirection: 'row',
@@ -343,16 +323,8 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '600',
   },
-  memberCountInline: {
-    fontSize: 13,
-    fontWeight: '500',
-    marginLeft: 8,
-  },
   emptyText: {
     fontSize: 14,
-  },
-  chevronContainer: {
-    paddingRight: spacing.md,
   },
 });
 
