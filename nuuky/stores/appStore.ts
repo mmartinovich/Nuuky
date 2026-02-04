@@ -60,6 +60,9 @@ interface AppState {
   lofiVolume: number;
   lofiSelectedTrack: string | null; // null = use mood-based default
 
+  // Favorite friends state
+  favoriteFriends: string[]; // Array of friend user IDs
+
   // Actions
   setCurrentUser: (user: User | null) => void;
   setFriends: (friends: Friendship[]) => void;
@@ -103,6 +106,7 @@ interface AppState {
   setLofiAutoPlay: (enabled: boolean) => void;
   setLofiVolume: (volume: number) => void;
   setLofiSelectedTrack: (track: string | null) => void;
+  toggleFavoriteFriend: (friendId: string) => void;
   logout: () => void;
 }
 
@@ -124,6 +128,7 @@ export const useHomeRoomId = () => useAppStore((state) => state.homeRoomId);
 export const useAudioConnectionStatus = () => useAppStore((state) => state.audioConnectionStatus);
 export const useIsOnline = () => useAppStore((state) => state.isOnline);
 export const useLowPowerMode = () => useAppStore((state) => state.lowPowerMode);
+export const useFavoriteFriends = () => useAppStore(useShallow((state) => state.favoriteFriends));
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -158,6 +163,9 @@ export const useAppStore = create<AppState>()(
   lofiAutoPlay: true, // ON by default
   lofiVolume: 0.5, // Medium volume
   lofiSelectedTrack: null, // null = use mood-based default
+
+  // Favorite friends
+  favoriteFriends: [],
 
   // Actions
   setCurrentUser: (user) => set({ currentUser: user, isAuthenticated: !!user }),
@@ -322,6 +330,12 @@ export const useAppStore = create<AppState>()(
 
   setLofiSelectedTrack: (track) => set({ lofiSelectedTrack: track }),
 
+  toggleFavoriteFriend: (friendId) => set((state) => ({
+    favoriteFriends: state.favoriteFriends.includes(friendId)
+      ? state.favoriteFriends.filter(id => id !== friendId)
+      : [...state.favoriteFriends, friendId]
+  })),
+
   logout: () => set((state) => ({
     currentUser: null,
     isAuthenticated: false,
@@ -360,6 +374,7 @@ export const useAppStore = create<AppState>()(
         lofiAutoPlay: state.lofiAutoPlay,
         lofiVolume: state.lofiVolume,
         lofiSelectedTrack: state.lofiSelectedTrack,
+        favoriteFriends: state.favoriteFriends,
       }),
     }
   )

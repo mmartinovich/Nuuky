@@ -202,12 +202,6 @@ export const useContactSync = () => {
 
       setMatches({ onNuuky, notOnNuuky });
       setHasSynced(true);
-
-      // Show results summary
-      Alert.alert(
-        'Contacts Synced',
-        `Found ${onNuuky.length} friend${onNuuky.length !== 1 ? 's' : ''} on Nūūky and ${notOnNuuky.length} to invite.`
-      );
     } catch (error: any) {
       logger.error('Error syncing contacts:', error);
       Alert.alert('Error', 'Failed to sync contacts. Please try again.');

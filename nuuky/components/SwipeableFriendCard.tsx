@@ -22,6 +22,8 @@ interface SwipeableFriendCardProps {
   friendship: Friendship;
   onPress?: () => void;
   onRemove: (friendship: Friendship) => void;
+  onToggleFavorite?: (friendId: string) => void;
+  isFavorite?: boolean;
   textPrimaryColor: string;
   streak?: Streak;
 }
@@ -30,6 +32,8 @@ export const SwipeableFriendCard: React.FC<SwipeableFriendCardProps> = ({
   friendship,
   onPress,
   onRemove,
+  onToggleFavorite,
+  isFavorite = false,
   textPrimaryColor,
   streak,
 }) => {
@@ -50,6 +54,12 @@ export const SwipeableFriendCard: React.FC<SwipeableFriendCardProps> = ({
     swipeableRef.current?.close();
   }, []);
 
+  const handleFavoriteAction = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onToggleFavorite?.(friend.id);
+    swipeableRef.current?.close();
+  }, [friend.id, onToggleFavorite]);
+
   const renderRightActions = useCallback(
     (_prog: SharedValue<number>, drag: SharedValue<number>) => {
       return (
@@ -62,6 +72,21 @@ export const SwipeableFriendCard: React.FC<SwipeableFriendCardProps> = ({
       );
     },
     [handleRemoveAction]
+  );
+
+  const renderLeftActions = useCallback(
+    (_prog: SharedValue<number>, drag: SharedValue<number>) => {
+      return (
+        <LeftActionButton
+          drag={drag}
+          iconName={isFavorite ? "star" : "star-outline"}
+          label={isFavorite ? "Unstar" : "Star"}
+          onPress={handleFavoriteAction}
+          isFavorite={isFavorite}
+        />
+      );
+    },
+    [handleFavoriteAction, isFavorite]
   );
 
   const onSwipeableOpen = useCallback(() => {
@@ -84,8 +109,11 @@ export const SwipeableFriendCard: React.FC<SwipeableFriendCardProps> = ({
     <ReanimatedSwipeable
       ref={swipeableRef}
       renderRightActions={renderRightActions}
+      renderLeftActions={onToggleFavorite ? renderLeftActions : undefined}
       rightThreshold={ACTION_WIDTH}
+      leftThreshold={ACTION_WIDTH}
       overshootRight={false}
+      overshootLeft={false}
       friction={1.5}
       onSwipeableOpen={onSwipeableOpen}
       onSwipeableClose={onSwipeableClose}
@@ -225,10 +253,62 @@ function RightActionButton({
   );
 }
 
+function LeftActionButton({
+  drag,
+  iconName,
+  label,
+  onPress,
+  isFavorite,
+}: {
+  drag: SharedValue<number>;
+  iconName: string;
+  label: string;
+  onPress: () => void;
+  isFavorite: boolean;
+}) {
+  const animatedStyle = useAnimatedStyle(() => {
+    const dragValue = drag.value;
+    const translateX = interpolate(
+      dragValue,
+      [0, ACTION_WIDTH + ACTION_GAP],
+      [-(ACTION_WIDTH + ACTION_GAP), 0],
+      'clamp'
+    );
+    const opacity = interpolate(
+      dragValue,
+      [0, ACTION_WIDTH * 0.5],
+      [0, 1],
+      'clamp'
+    );
+    return {
+      transform: [{ translateX }],
+      opacity,
+    };
+  });
+
+  return (
+    <Reanimated.View style={[styles.leftActionWrapper, animatedStyle]}>
+      <TouchableOpacity
+        style={[styles.actionButton, styles.favoriteButton, isFavorite && styles.favoriteButtonActive]}
+        onPress={onPress}
+        activeOpacity={0.7}
+      >
+        <Ionicons name={iconName as any} size={22} color={isFavorite ? '#1a1a2e' : '#FFFFFF'} />
+        <Text style={[styles.actionLabel, isFavorite && styles.favoriteLabel]}>{label}</Text>
+      </TouchableOpacity>
+    </Reanimated.View>
+  );
+}
+
 const styles = StyleSheet.create({
   actionWrapper: {
     width: ACTION_WIDTH + ACTION_GAP,
     paddingLeft: ACTION_GAP,
+    justifyContent: 'center',
+  },
+  leftActionWrapper: {
+    width: ACTION_WIDTH + ACTION_GAP,
+    paddingRight: ACTION_GAP,
     justifyContent: 'center',
   },
   actionButton: {
@@ -239,10 +319,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
+  favoriteButton: {
+    backgroundColor: '#6366F1',
+  },
+  favoriteButtonActive: {
+    backgroundColor: '#FFB800',
+  },
   actionLabel: {
     fontSize: 12,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  favoriteLabel: {
+    color: '#1a1a2e',
   },
   friendCard: {
     flexDirection: "row",
