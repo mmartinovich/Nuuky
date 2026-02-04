@@ -430,7 +430,7 @@ export default function FriendsScreen() {
 
   const renderSectionHeader = useCallback(
     ({ section }: { section: SectionListData<Friendship, FriendSection> }) => (
-      <View style={[styles.sectionHeaderBar, { backgroundColor: theme.colors.bg.primary }]}>
+      <View style={styles.sectionHeaderBar}>
         {section.isFavorites ? (
           <View style={styles.sectionTitleRow}>
             <Ionicons name="star" size={14} color="#FFB800" />
@@ -441,7 +441,7 @@ export default function FriendsScreen() {
         )}
       </View>
     ),
-    [theme.colors.bg.primary, theme.colors.text.tertiary]
+    [theme.colors.text.tertiary]
   );
 
   const keyExtractor = useCallback((item: Friendship) => item.id, []);
@@ -555,7 +555,7 @@ export default function FriendsScreen() {
               keyExtractor={keyExtractor}
               renderItem={renderFriendItem}
               renderSectionHeader={renderSectionHeader}
-              stickySectionHeadersEnabled={true}
+              stickySectionHeadersEnabled={false}
               removeClippedSubviews={true}
               maxToRenderPerBatch={10}
               windowSize={10}
@@ -1069,6 +1069,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 4,
     marginBottom: 4,
+    backgroundColor: 'transparent',
   },
   sectionHeaderText: {
     fontSize: 13,
