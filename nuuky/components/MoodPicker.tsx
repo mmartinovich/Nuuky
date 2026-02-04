@@ -37,6 +37,7 @@ interface MoodPickerProps {
   originPoint?: { x: number; y: number };
   moodSelfie?: MoodSelfie | null;
   onCaptureSelfie?: () => Promise<boolean>;
+  onPickFromLibrary?: () => Promise<boolean>;
   onDeleteSelfie?: () => void;
   selfieLoading?: boolean;
 }
@@ -53,6 +54,7 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
   originPoint,
   moodSelfie,
   onCaptureSelfie,
+  onPickFromLibrary,
   onDeleteSelfie,
   selfieLoading,
 }) => {
@@ -113,13 +115,23 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
   // Check if selfie is active (not expired)
   const isSelfieActive = moodSelfie && new Date(moodSelfie.expires_at) > new Date();
 
-  const handleCaptureSelfie = useCallback(async () => {
+  const handleCaptureSelfie = useCallback(async (): Promise<boolean> => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const success = await onCaptureSelfie?.();
     if (success) {
       handleClose();
     }
+    return success ?? false;
   }, [onCaptureSelfie, handleClose]);
+
+  const handlePickFromLibrary = useCallback(async (): Promise<boolean> => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const success = await onPickFromLibrary?.();
+    if (success) {
+      handleClose();
+    }
+    return success ?? false;
+  }, [onPickFromLibrary, handleClose]);
 
   const handleDeleteSelfie = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -285,6 +297,7 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                       value={editEmoji}
                       onChangeEmoji={setEditEmoji}
                       onCameraPress={handleCaptureSelfie}
+                      onLibraryPress={handlePickFromLibrary}
                       selfieUrl={isSelfieActive ? moodSelfie?.image_url : null}
                       onDeleteSelfie={handleDeleteSelfie}
                       selfieLoading={selfieLoading}
@@ -300,7 +313,7 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                         maxLength={20}
                         returnKeyType="done"
                       />
-                      <Text style={{ color: theme.colors.text.tertiary, fontSize: 11, marginTop: 4, paddingRight: 12, marginBottom: 8, textAlign: 'right' }}>{editText.length}/20</Text>
+                      <Text style={[styles.charCounter, { color: theme.colors.text.tertiary }]}>{editText.length}/20</Text>
                     </View>
 
                     <View style={styles.editorButtons}>
@@ -444,12 +457,19 @@ const styles = StyleSheet.create({
   textInputCard: {
     borderRadius: radius.md,
     borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   textInput: {
+    flex: 1,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 10,
     fontSize: 15,
     fontWeight: '500',
+  },
+  charCounter: {
+    fontSize: 11,
+    paddingRight: 12,
   },
   editorButtons: {
     flexDirection: 'row',

@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, ScrollView, TextInput, Keyboard } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, ScrollView, TextInput, Keyboard, ActionSheetIOS, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image as CachedImage } from 'expo-image';
 import { spacing, radius } from '../lib/theme';
@@ -17,6 +17,7 @@ interface EmojiInputProps {
   placeholder?: string;
   // Selfie props
   onCameraPress?: () => Promise<boolean> | void;
+  onLibraryPress?: () => Promise<boolean> | void;
   selfieUrl?: string | null;
   onDeleteSelfie?: () => void;
   selfieLoading?: boolean;
@@ -26,6 +27,7 @@ export const EmojiInput: React.FC<EmojiInputProps> = ({
   value,
   onChangeEmoji,
   onCameraPress,
+  onLibraryPress,
   selfieUrl,
   onDeleteSelfie,
   selfieLoading,
@@ -60,20 +62,54 @@ export const EmojiInput: React.FC<EmojiInputProps> = ({
     }, 100);
   };
 
+  const handlePhotoPress = () => {
+    if (hasSelfie) {
+      onDeleteSelfie?.();
+      return;
+    }
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Take Photo', 'Choose from Library', 'Cancel'],
+          cancelButtonIndex: 2,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 0) onCameraPress?.();
+          if (buttonIndex === 1) onLibraryPress?.();
+        }
+      );
+    } else {
+      // Android fallback using Alert
+      Alert.alert(
+        'Add Photo',
+        undefined,
+        [
+          { text: 'Take Photo', onPress: () => onCameraPress?.() },
+          { text: 'Choose from Library', onPress: () => onLibraryPress?.() },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.row}>
-        {/* Camera button - same style as selected box */}
-        {onCameraPress && (
+        {/* Single photo button with action sheet */}
+        {(onCameraPress || onLibraryPress) && (
           <TouchableOpacity
             style={[
               styles.selectedBox,
               { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border },
               hasSelfie && { borderColor: '#EC4899', borderWidth: 2, backgroundColor: '#EC4899' },
             ]}
-            onPress={hasSelfie ? onDeleteSelfie : onCameraPress}
+            onPress={handlePhotoPress}
             activeOpacity={0.7}
             disabled={selfieLoading}
+            accessibilityLabel={hasSelfie ? 'Remove photo' : 'Add photo to mood'}
+            accessibilityHint={hasSelfie ? 'Tap to remove attached photo' : 'Opens options to take a photo or choose from library'}
+            accessibilityRole="button"
           >
             {hasSelfie ? (
               <View style={styles.selfieContainer}>
@@ -82,7 +118,6 @@ export const EmojiInput: React.FC<EmojiInputProps> = ({
                   style={styles.selfiePreview}
                   contentFit="cover"
                 />
-                {/* Small delete hint */}
                 <View style={styles.selfieDeleteHint}>
                   <Ionicons name="close" size={10} color="#FFF" />
                 </View>

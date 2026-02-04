@@ -179,7 +179,7 @@ export default function QuantumOrbitScreen() {
   const { shareInvite } = useInvite();
 
   // Mood selfie
-  const { activeSelfie, captureSelfie, deleteSelfie, fetchActiveSelfie, loading: selfieLoading } = useMoodSelfie();
+  const { activeSelfie, captureSelfie, pickFromLibrary, deleteSelfie, fetchActiveSelfie, loading: selfieLoading } = useMoodSelfie();
 
   // Photo nudge
   const { fetchReceivedPhotoNudges, fetchPhotoNudge } = usePhotoNudge();
@@ -798,6 +798,7 @@ export default function QuantumOrbitScreen() {
         }}
         moodSelfie={activeSelfie}
         onCaptureSelfie={captureSelfie}
+        onPickFromLibrary={pickFromLibrary}
         onDeleteSelfie={deleteSelfie}
         selfieLoading={selfieLoading}
       />

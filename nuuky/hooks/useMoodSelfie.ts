@@ -55,38 +55,12 @@ export const useMoodSelfie = () => {
     }
   }, [currentUser]);
 
-  const captureSelfie = useCallback(async (): Promise<boolean> => {
-    if (!currentUser) {
-      Alert.alert('Error', 'You must be logged in');
-      return false;
-    }
+  // Shared upload logic for both camera and library
+  const uploadSelfieImage = useCallback(async (imageUri: string): Promise<boolean> => {
+    if (!currentUser) return false;
 
+    setLoading(true);
     try {
-      // Request camera permission
-      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permissionResult.granted) {
-        Alert.alert(
-          'Permission Required',
-          'Please allow access to your camera in settings.'
-        );
-        return false;
-      }
-
-      // Launch front-facing camera with compression
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.7, // Compress to ~70% quality for smaller file size
-        cameraType: ImagePicker.CameraType.front,
-      });
-
-      if (result.canceled) {
-        return false;
-      }
-
-      setLoading(true);
-      const imageUri = result.assets[0].uri;
-
       // Create file path
       const fileName = `${currentUser.id}/${Date.now()}.jpg`;
 
@@ -163,13 +137,89 @@ export const useMoodSelfie = () => {
 
       return true;
     } catch (error: any) {
-      logger.error('Error capturing mood selfie:', error);
-      Alert.alert('Error', `Failed to capture selfie: ${error?.message || 'Unknown error'}`);
+      logger.error('Error uploading mood selfie:', error);
+      Alert.alert('Error', `Failed to upload image: ${error?.message || 'Unknown error'}`);
       return false;
     } finally {
       setLoading(false);
     }
   }, [currentUser, setCurrentUser]);
+
+  const captureSelfie = useCallback(async (): Promise<boolean> => {
+    if (!currentUser) {
+      Alert.alert('Error', 'You must be logged in');
+      return false;
+    }
+
+    try {
+      // Request camera permission
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert(
+          'Permission Required',
+          'Please allow access to your camera in settings.'
+        );
+        return false;
+      }
+
+      // Launch front-facing camera with compression
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7, // Compress to ~70% quality for smaller file size
+        cameraType: ImagePicker.CameraType.front,
+      });
+
+      if (result.canceled) {
+        return false;
+      }
+
+      const imageUri = result.assets[0].uri;
+      return await uploadSelfieImage(imageUri);
+    } catch (error: any) {
+      logger.error('Error capturing mood selfie:', error);
+      Alert.alert('Error', `Failed to capture selfie: ${error?.message || 'Unknown error'}`);
+      return false;
+    }
+  }, [currentUser, uploadSelfieImage]);
+
+  const pickFromLibrary = useCallback(async (): Promise<boolean> => {
+    if (!currentUser) {
+      Alert.alert('Error', 'You must be logged in');
+      return false;
+    }
+
+    try {
+      // Request media library permission
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert(
+          'Permission Required',
+          'Please allow access to your photo library in settings.'
+        );
+        return false;
+      }
+
+      // Launch photo library picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+
+      if (result.canceled) {
+        return false;
+      }
+
+      const imageUri = result.assets[0].uri;
+      return await uploadSelfieImage(imageUri);
+    } catch (error: any) {
+      logger.error('Error picking from library:', error);
+      Alert.alert('Error', `Failed to pick image: ${error?.message || 'Unknown error'}`);
+      return false;
+    }
+  }, [currentUser, uploadSelfieImage]);
 
   const deleteSelfie = useCallback(async (): Promise<boolean> => {
     if (!currentUser || !activeSelfie) {
@@ -223,6 +273,7 @@ export const useMoodSelfie = () => {
     activeSelfie,
     isExpired,
     captureSelfie,
+    pickFromLibrary,
     deleteSelfie,
     fetchActiveSelfie,
     getTimeRemaining,
