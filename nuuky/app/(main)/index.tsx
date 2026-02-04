@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Alert, StatusBar, Image, Animated as RNAnimated } from "react-native";
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Alert, StatusBar, Animated as RNAnimated } from "react-native";
+import { Image as CachedImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -212,6 +213,13 @@ export default function QuantumOrbitScreen() {
       fetchActiveSelfie();
     }
   }, [currentUser?.id]);
+
+  // Prefetch selfie image for instant loading in mood picker
+  useEffect(() => {
+    if (activeSelfie?.image_url) {
+      CachedImage.prefetch(activeSelfie.image_url);
+    }
+  }, [activeSelfie?.image_url]);
 
   const { unreadCount: notificationCount } = useNotifications();
   const totalBadgeCount = notificationCount + roomInvites.length;
@@ -679,6 +687,15 @@ export default function QuantumOrbitScreen() {
     <>
     <RNAnimated.View style={[styles.container, { backgroundColor: theme.colors.bg.primary, opacity: fadeAnim }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+
+      {/* Hidden preload of selfie image for instant display in mood picker */}
+      {activeSelfie?.image_url && (
+        <CachedImage
+          source={{ uri: activeSelfie.image_url }}
+          style={{ width: 1, height: 1, position: 'absolute', opacity: 0 }}
+          cachePolicy="memory-disk"
+        />
+      )}
 
       <LinearGradient colors={theme.gradients.background} style={StyleSheet.absoluteFill} />
       <AnimatedGlow />

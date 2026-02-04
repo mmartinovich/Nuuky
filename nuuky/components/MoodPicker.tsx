@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Pressable, Modal, Image, ScrollView, TextInput, Dimensions } from 'react-native';
+import { Image as CachedImage } from 'expo-image';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { PresetMood, CustomMood, MoodSelfie } from '../types';
@@ -77,6 +79,10 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
       setIsEditing(false);
       setEditEmoji(customMood?.emoji ?? '');
       setEditText(customMood?.text ?? '');
+      // Prefetch selfie image so it's ready immediately
+      if (moodSelfie?.image_url) {
+        CachedImage.prefetch(moodSelfie.image_url);
+      }
     } else {
       progress.value = 0;
     }
@@ -174,24 +180,18 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
           </BlurView>
         </Animated.View>
 
-        <Animated.View style={[styles.fullScreenContent, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 8 }, animatedStyle]}>
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={[styles.closeButton, { backgroundColor: theme.colors.glass.background }]}
-              onPress={handleClose}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="close" size={22} color={theme.colors.text.primary} />
-            </TouchableOpacity>
-          </View>
-
-          <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>How are you?</Text>
-          <Text style={[styles.subtitle, { color: theme.colors.text.tertiary }]}>Your friends will see this</Text>
-
+        <Animated.View style={[styles.fullScreenContent, animatedStyle]}>
+          {/* ScrollView - underneath header */}
           <ScrollView
             showsVerticalScrollIndicator={false}
             bounces={false}
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={[
+              styles.scrollContent,
+              {
+                paddingTop: insets.top + 130,
+                paddingBottom: insets.bottom + 24,
+              },
+            ]}
             style={styles.scrollView}
             keyboardShouldPersistTaps="handled"
           >
@@ -264,7 +264,11 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                 >
                   <View style={styles.imageWrapperSmall}>
                     {customMood && !isEditing ? (
-                      <Text style={{ fontSize: 42 }}>{customMood.emoji}</Text>
+                      isSelfieActive && moodSelfie?.image_url ? (
+                        <CachedImage source={{ uri: moodSelfie.image_url }} style={styles.selfieImage} cachePolicy="memory-disk" contentFit="cover" />
+                      ) : (
+                        <Text style={{ fontSize: 42 }}>{customMood.emoji}</Text>
+                      )
                     ) : isEditing && editEmoji ? (
                       <Text style={{ fontSize: 42 }}>{editEmoji}</Text>
                     ) : (
@@ -340,6 +344,27 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
               </View>
             </View>
           </ScrollView>
+
+          {/* Header with gradient fade - absolute positioned on top */}
+          <LinearGradient
+            colors={['rgba(0,0,0,0.95)', 'rgba(0,0,0,0.85)', 'rgba(0,0,0,0.5)', 'transparent']}
+            locations={[0, 0.4, 0.7, 1]}
+            style={[styles.headerOverlay, { paddingTop: insets.top + 8 }]}
+            pointerEvents="box-none"
+          >
+            <View style={styles.header} pointerEvents="box-none">
+              <TouchableOpacity
+                style={[styles.closeButton, { backgroundColor: theme.colors.glass.background }]}
+                onPress={handleClose}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close" size={22} color={theme.colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>How are you?</Text>
+            <Text style={[styles.subtitle, { color: theme.colors.text.tertiary }]}>Your friends will see this</Text>
+          </LinearGradient>
         </Animated.View>
       </View>
     </Modal>
@@ -352,7 +377,14 @@ const styles = StyleSheet.create({
   },
   fullScreenContent: {
     flex: 1,
+  },
+  headerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: 24,
+    paddingBottom: 20,
   },
   header: {
     flexDirection: 'row',
@@ -374,13 +406,12 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    marginBottom: 24,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 24,
+    paddingHorizontal: 24,
   },
   moodList: {
     gap: 12,
@@ -404,6 +435,11 @@ const styles = StyleSheet.create({
     height: 56,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  selfieImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
   },
   moodImage: {
     width: 56,

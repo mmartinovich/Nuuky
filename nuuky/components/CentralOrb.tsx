@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useMemo, memo } from "react";
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Animated, Easing, Image } from "react-native";
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Animated, Easing } from "react-native";
+import { Image as CachedImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import Svg, { Defs, RadialGradient, Stop, Circle } from "react-native-svg";
@@ -580,14 +581,23 @@ function CentralOrbComponent({
                 style={styles.highlight}
               />
 
-              {/* Priority: selfie (only with custom mood) > customMood > presetMood */}
-              {showSelfie && moodSelfie ? (
-                <Image source={{ uri: moodSelfie.image_url }} style={styles.selfieImage} />
-              ) : customMood ? (
-                <Text style={styles.customMoodEmoji}>{customMood.emoji}</Text>
-              ) : (
-                <Image source={moodImage} style={styles.moodImage} />
+              {/* All content pre-rendered, toggle visibility for instant switching */}
+              {/* Selfie - always render if available to keep in memory */}
+              {moodSelfie?.image_url && (
+                <View style={[styles.moodContentAbsolute, { opacity: showSelfie ? 1 : 0, zIndex: showSelfie ? 10 : 0 }]} pointerEvents={showSelfie ? 'auto' : 'none'}>
+                  <CachedImage source={{ uri: moodSelfie.image_url }} style={styles.selfieImage} cachePolicy="memory-disk" contentFit="cover" />
+                </View>
               )}
+              {/* Custom emoji */}
+              {customMood && (
+                <View style={[styles.moodContentAbsolute, { opacity: !showSelfie && isCustomMoodActive ? 1 : 0, zIndex: !showSelfie && isCustomMoodActive ? 10 : 0 }]} pointerEvents={!showSelfie && isCustomMoodActive ? 'auto' : 'none'}>
+                  <Text style={styles.customMoodEmoji}>{customMood.emoji}</Text>
+                </View>
+              )}
+              {/* Preset mood - always render */}
+              <View style={[styles.moodContentAbsolute, { opacity: !showSelfie && !isCustomMoodActive ? 1 : 0, zIndex: !showSelfie && !isCustomMoodActive ? 10 : 0 }]} pointerEvents={!showSelfie && !isCustomMoodActive ? 'auto' : 'none'}>
+                <CachedImage source={moodImage} style={styles.moodImage} contentFit="contain" />
+              </View>
             </LinearGradient>
           </BlurView>
 
@@ -658,23 +668,23 @@ const styles = StyleSheet.create({
     height: "60%",
     borderRadius: 9999,
   },
+  moodContentAbsolute: {
+    position: "absolute",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   moodImage: {
     width: 150,
     height: 150,
-    resizeMode: "contain",
-    zIndex: 10,
   },
   selfieImage: {
     width: ORB_SIZE,
     height: ORB_SIZE,
     borderRadius: ORB_SIZE / 2,
-    resizeMode: "cover",
-    zIndex: 10,
   },
   customMoodEmoji: {
     fontSize: 80,
     textAlign: "center",
-    zIndex: 10,
   },
   glassBorder: {
     position: "absolute",
