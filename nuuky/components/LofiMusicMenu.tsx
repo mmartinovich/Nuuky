@@ -50,8 +50,19 @@ const VolumeSlider: React.FC<VolumeSliderProps> = ({
   const sliderRef = useRef<View>(null);
   const sliderX = useRef(0);
 
+  // Use shared value for immediate UI updates
+  const sliderValue = useSharedValue(value);
+
+  // Sync shared value when prop changes from external source
+  useEffect(() => {
+    sliderValue.value = value;
+  }, [value]);
+
   const handleTouch = (pageX: number) => {
     const newValue = Math.max(0, Math.min(1, (pageX - sliderX.current) / SLIDER_WIDTH));
+    // Update shared value immediately for responsive UI
+    sliderValue.value = newValue;
+    // Notify parent (can be throttled/debounced by parent if needed)
     onValueChange(newValue);
   };
 
@@ -71,6 +82,16 @@ const VolumeSlider: React.FC<VolumeSliderProps> = ({
     })
   ).current;
 
+  // Animated styles for fill and thumb - updates on UI thread
+  // Note: Using pixel values since Reanimated doesn't support percentage strings
+  const fillStyle = useAnimatedStyle(() => ({
+    width: sliderValue.value * SLIDER_WIDTH,
+  }));
+
+  const thumbStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: sliderValue.value * SLIDER_WIDTH }],
+  }));
+
   return (
     <View style={styles.volumeRow}>
       <Ionicons name="volume-low" size={20} color={iconColor} />
@@ -80,20 +101,21 @@ const VolumeSlider: React.FC<VolumeSliderProps> = ({
         {...panResponder.panHandlers}
       >
         <View style={[styles.sliderTrack, { backgroundColor: trackColor }]} />
-        <View
+        <Animated.View
           style={[
             styles.sliderFill,
-            { backgroundColor: accentColor, width: `${value * 100}%` },
+            { backgroundColor: accentColor },
+            fillStyle,
           ]}
         />
-        <View
+        <Animated.View
           style={[
             styles.sliderThumb,
             {
               backgroundColor: accentColor,
-              left: `${value * 100}%`,
-              marginLeft: -12,
+              left: -12,
             },
+            thumbStyle,
           ]}
         />
       </View>
