@@ -1,7 +1,7 @@
 import { logger } from '../lib/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../stores/appStore';
 import { subscriptionManager } from '../lib/subscriptionManager';
@@ -9,6 +9,7 @@ import { AppNotification } from '../types';
 
 export const useNotifications = () => {
   const router = useRouter();
+  const pathname = usePathname();
   const {
     currentUser,
     notifications,
@@ -153,13 +154,16 @@ export const useNotifications = () => {
       await markAsRead(notification.id);
     }
 
-    // Navigate based on notification type
+    // Navigate based on notification type (skip if already on target screen)
     switch (notification.type) {
       case 'nudge':
       case 'flare':
       case 'streak_fading':
         // Navigate to home (Quantum Orbit) - friend context is in the data
-        router.push('/(main)');
+        // Don't navigate if already on main screen
+        if (pathname !== '/' && pathname !== '/(main)') {
+          router.push('/(main)');
+        }
         break;
       case 'photo_nudge':
         // Navigate to home with photo_nudge_id param to open the viewer
@@ -168,22 +172,28 @@ export const useNotifications = () => {
             pathname: '/(main)',
             params: { photo_nudge_id: notification.data.photo_nudge_id },
           });
-        } else {
+        } else if (pathname !== '/' && pathname !== '/(main)') {
           router.push('/(main)');
         }
         break;
       case 'friend_request':
       case 'friend_accepted':
-        router.push('/(main)/friends');
+        if (pathname !== '/(main)/friends') {
+          router.push('/(main)/friends');
+        }
         break;
       case 'room_invite':
-        router.push('/(main)/rooms');
+        if (pathname !== '/(main)/rooms') {
+          router.push('/(main)/rooms');
+        }
         break;
       default:
-        router.push('/(main)');
+        if (pathname !== '/' && pathname !== '/(main)') {
+          router.push('/(main)');
+        }
     }
     return notification;
-  }, [router]);
+  }, [router, pathname]);
 
   // Setup realtime subscription for new notifications
   const setupRealtimeSubscription = () => {

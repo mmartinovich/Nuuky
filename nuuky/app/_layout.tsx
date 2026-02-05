@@ -1,7 +1,7 @@
 import { logger } from '../lib/logger';
 import { useEffect, useState, useRef } from "react";
 import { Alert, View } from "react-native";
-import { Stack, useRouter } from "expo-router";
+import { Stack, useRouter, usePathname } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Linking from "expo-linking";
 import * as SplashScreen from "expo-splash-screen";
@@ -118,15 +118,26 @@ export default function RootLayout() {
   const notificationCleanupRef = useRef<(() => void) | null>(null);
   const pendingDeepLinkRef = useRef<PendingDeepLinkAction | null>(null);
   const showNotificationBannerRef = useRef<((notification: any) => void) | null>(null);
+  const pathname = usePathname();
+  const pathnameRef = useRef(pathname);
+
+  // Keep pathname ref updated
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
 
   // Handle notification tap navigation
   const handleNotificationNavigation = (data: any) => {
     const type = data?.type;
+    const currentPath = pathnameRef.current;
 
     switch (type) {
       case "nudge":
       case "flare":
-        router.push("/(main)");
+        // Don't navigate if already on main screen
+        if (currentPath !== "/" && currentPath !== "/(main)") {
+          router.push("/(main)");
+        }
         break;
       case "photo_nudge":
         // Navigate to main with photo_nudge_id param to open the viewer
@@ -135,21 +146,27 @@ export default function RootLayout() {
             pathname: "/(main)",
             params: { photo_nudge_id: data.photo_nudge_id },
           });
-        } else {
+        } else if (currentPath !== "/" && currentPath !== "/(main)") {
           router.push("/(main)");
         }
         break;
       case "friend_request":
       case "friend_accepted":
-        router.push("/(main)/friends");
+        if (currentPath !== "/(main)/friends") {
+          router.push("/(main)/friends");
+        }
         break;
       case "room_invite":
       case "call_me":
         // Both room invites and call requests go to rooms
-        router.push("/(main)/rooms");
+        if (currentPath !== "/(main)/rooms") {
+          router.push("/(main)/rooms");
+        }
         break;
       default:
-        router.push("/(main)/notifications");
+        if (currentPath !== "/(main)/notifications") {
+          router.push("/(main)/notifications");
+        }
     }
   };
 

@@ -1,3 +1,4 @@
+import React from 'react';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
@@ -134,6 +135,36 @@ export const useAudioConnectionStatus = () => useAppStore((state) => state.audio
 export const useIsOnline = () => useAppStore((state) => state.isOnline);
 export const useLowPowerMode = () => useAppStore((state) => state.lowPowerMode);
 export const useFavoriteFriends = () => useAppStore(useShallow((state) => state.favoriteFriends));
+
+// Track hydration state for async storage
+let hasHydratedStore = false;
+
+export const useHasHydrated = () => {
+  const [hydrated, setHydrated] = React.useState(hasHydratedStore);
+
+  React.useEffect(() => {
+    // If already hydrated, no need to subscribe
+    if (hasHydratedStore) {
+      setHydrated(true);
+      return;
+    }
+
+    // Subscribe to hydration
+    const unsubFinishHydration = useAppStore.persist.onFinishHydration(() => {
+      hasHydratedStore = true;
+      setHydrated(true);
+    });
+
+    return () => {
+      unsubFinishHydration();
+    };
+  }, []);
+
+  return hydrated;
+};
+
+// Also export a non-hook version for checks outside React
+export const getHasHydrated = () => hasHydratedStore;
 
 export const useAppStore = create<AppState>()(
   persist(

@@ -45,7 +45,7 @@ try {
     },
   };
 }
-import { useAppStore, useCurrentUser, useFriendsStore, useSpeakingParticipants, useActiveCustomMood } from "../../stores/appStore";
+import { useAppStore, useCurrentUser, useFriendsStore, useSpeakingParticipants, useActiveCustomMood, useHasHydrated } from "../../stores/appStore";
 import { User } from "../../types";
 import { MoodPicker } from "../../components/MoodPicker";
 
@@ -106,6 +106,7 @@ export default function QuantumOrbitScreen() {
   const insets = useSafeAreaInsets();
   const { theme, isDark, accent } = useTheme();
   const currentUser = useCurrentUser();
+  const hasHydrated = useHasHydrated();
   const friends = useFriendsStore();
   const speakingParticipants = useSpeakingParticipants();
   const activeCustomMood = useActiveCustomMood();
@@ -285,6 +286,11 @@ export default function QuantumOrbitScreen() {
   const defaultRoomLoaded = !defaultRoomId || myRooms.some((r) => r.id === defaultRoomId);
 
   const orbitUsers = useMemo(() => {
+    // Wait for Zustand to hydrate persisted state (defaultRoomId) to avoid
+    // briefly showing all friends before the correct room participants load
+    if (!hasHydrated) {
+      return [];
+    }
     if (defaultRoomId) {
       if (!defaultRoomLoaded) {
         // Room data hasn't loaded yet — show nothing to avoid flash
@@ -294,7 +300,7 @@ export default function QuantumOrbitScreen() {
       return participantUsers;
     }
     return friendList;
-  }, [defaultRoomId, defaultRoomLoaded, participantUsers, friendList]);
+  }, [hasHydrated, defaultRoomId, defaultRoomLoaded, participantUsers, friendList]);
 
   const orbitIds = useMemo(() => orbitUsers.map((f) => f.id).join(","), [orbitUsers]);
 
@@ -658,7 +664,7 @@ export default function QuantumOrbitScreen() {
 
   // Keep splash screen visible until orbit data has settled
   const orbitSettled = orbitUsers.length > 0 || defaultRoomLoaded || (!loading && friendList.length === 0);
-  const isDataReady = !!currentUser && !firstTimeLoading && (orbitSettled || safetyTimeout);
+  const isDataReady = !!currentUser && hasHydrated && !firstTimeLoading && (orbitSettled || safetyTimeout);
 
   const fadeAnim = useRef(new RNAnimated.Value(0)).current;
   const [hasRevealedOnce, setHasRevealedOnce] = useState(false);
