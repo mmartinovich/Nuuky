@@ -75,9 +75,11 @@ export default function LoginScreen() {
     logger.log("[Auth] getUser result:", user?.id);
 
     let { data: userData, error: fetchError } = await supabase.from("users").select("*").eq("id", userId).single();
-    logger.log("[Auth] Fetched user profile:", userData?.id, "error:", fetchError?.message);
+    logger.log("[Auth] Fetched user profile:", userData?.id, "error:", fetchError?.code, fetchError?.message);
 
-    if (!userData && user) {
+    // Only create a new profile if user truly doesn't exist (PGRST116 = row not found)
+    // Don't create if there's a different error (network, RLS, etc.)
+    if (fetchError && fetchError.code === "PGRST116" && user) {
       logger.log("[Auth] Creating new user profile...");
       // Create profile for OAuth user (fallback if trigger doesn't work)
       const { data: newUser, error: insertError } = await supabase
@@ -96,6 +98,10 @@ export default function LoginScreen() {
         .single();
       logger.log("[Auth] Insert result:", newUser?.id, "error:", insertError?.message);
       userData = newUser;
+    } else if (fetchError && fetchError.code !== "PGRST116") {
+      // Handle other fetch errors (network, RLS, etc.)
+      logger.error("[Auth] Error fetching user profile:", fetchError);
+      return null;
     }
 
     if (userData) {

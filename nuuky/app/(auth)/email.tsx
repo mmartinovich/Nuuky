@@ -153,7 +153,9 @@ export default function EmailAuthScreen() {
 
     let { data: userData, error: fetchError } = await supabase.from("users").select("*").eq("id", userId).single();
 
-    if (!userData && user) {
+    // Only create a new profile if user truly doesn't exist (PGRST116 = row not found)
+    // Don't create if there's a different error (network, RLS, etc.)
+    if (fetchError && fetchError.code === "PGRST116" && user) {
       // Create profile for new user
       const { data: newUser, error: insertError } = await supabase
         .from("users")
@@ -175,6 +177,11 @@ export default function EmailAuthScreen() {
         return null;
       }
       userData = newUser;
+    } else if (fetchError && fetchError.code !== "PGRST116") {
+      // Handle other fetch errors (network, RLS, etc.)
+      logger.error("Error fetching user profile:", fetchError);
+      Alert.alert("Error", "Failed to load profile. Please try again.");
+      return null;
     }
 
     if (userData) {

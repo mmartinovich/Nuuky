@@ -60,7 +60,8 @@ export const useAuth = () => {
         .eq('id', userId)
         .single();
 
-      // If user doesn't exist, create profile (fallback if trigger doesn't work)
+      // Only create a new profile if user truly doesn't exist (PGRST116 = row not found)
+      // Don't create if there's a different error (network, RLS, etc.)
       if (error && error.code === 'PGRST116' && user) {
         const { data: newUser } = await supabase
           .from('users')
@@ -76,10 +77,16 @@ export const useAuth = () => {
             auth_provider: user.app_metadata?.provider || 'google',
             is_online: true,
             mood: 'neutral',
+            profile_completed: false, // New users need onboarding
           })
           .select()
           .single();
         data = newUser;
+      } else if (error && error.code !== 'PGRST116') {
+        // Handle other fetch errors (network, RLS, etc.) - don't try to create user
+        logger.error('Error fetching user profile (non-404):', error);
+        Alert.alert('Profile Error', 'Failed to load your profile. Please try again.');
+        return;
       }
 
       if (data) {
