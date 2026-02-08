@@ -62,11 +62,11 @@ const Bullet: React.FC<BulletProps> = ({ children, theme }) => (
 export default function PrivacyPolicyScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.bg.primary }]}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      <StatusBar barStyle={"light-content"} />
       <LinearGradient
         colors={theme.gradients.background}
         style={StyleSheet.absoluteFill}

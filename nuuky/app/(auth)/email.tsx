@@ -115,6 +115,9 @@ export default function EmailAuthScreen() {
       return;
     }
 
+    // Prevent double-tap
+    if (loading) return;
+
     setLoading(true);
     setError(null);
 

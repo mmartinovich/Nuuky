@@ -39,7 +39,7 @@ export function BoltIcon({ size = 11, tier = 'teal' }: { size?: number; tier?: B
 }
 
 function StreakBadgeComponent({ streak }: StreakBadgeProps) {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
 
   if (streak.state === 'broken' || streak.consecutive_days < 1) return null;
 
@@ -53,12 +53,12 @@ function StreakBadgeComponent({ streak }: StreakBadgeProps) {
     <View style={styles.container}>
       <View style={[
         styles.pill,
-        { backgroundColor: isDark ? 'rgba(15, 25, 45, 0.9)' : 'rgba(255, 255, 255, 0.95)' },
+        { backgroundColor: 'rgba(15, 25, 45, 0.9)' },
         isHot && !isFire && styles.pillHot,
         isFire && styles.pillFire
       ]}>
         <BoltIcon size={isLarge ? 10 : 12} tier={tier} />
-        <Text style={[styles.count, { color: isDark ? '#ffffff' : '#1a1a2e' }, isLarge && styles.countSmall]}>
+        <Text style={[styles.count, { color: '#ffffff' }, isLarge && styles.countSmall]}>
           {days}
         </Text>
       </View>

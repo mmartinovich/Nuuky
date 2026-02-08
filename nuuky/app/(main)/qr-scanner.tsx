@@ -22,7 +22,7 @@ import { spacing, radius, typography, interactionStates } from "../../lib/theme"
 export default function QRScannerScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);

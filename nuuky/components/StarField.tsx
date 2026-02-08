@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, memo } from 'react';
 import { View, StyleSheet, Dimensions, Animated, Easing } from 'react-native';
-import { useTheme } from '../hooks/useTheme';
 import { useLowPowerMode } from '../stores/appStore';
 
 const { width, height } = Dimensions.get('window');
@@ -18,7 +17,6 @@ interface Star {
 }
 
 export function StarField() {
-  const { isDark } = useTheme();
   const lowPowerMode = useLowPowerMode();
 
   const starCount = lowPowerMode ? STAR_COUNT_LOW_POWER : STAR_COUNT_NORMAL;
@@ -39,7 +37,7 @@ export function StarField() {
   return (
     <View style={styles.container} pointerEvents="none">
       {stars.map((star) => (
-        <StarParticle key={star.id} star={star} isDark={isDark} />
+        <StarParticle key={star.id} star={star} />
       ))}
     </View>
   );
@@ -47,10 +45,9 @@ export function StarField() {
 
 interface StarParticleProps {
   star: Star;
-  isDark: boolean;
 }
 
-const StarParticle = memo(({ star, isDark }: StarParticleProps) => {
+const StarParticle = memo(({ star }: StarParticleProps) => {
   const twinkleAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -76,10 +73,9 @@ const StarParticle = memo(({ star, isDark }: StarParticleProps) => {
     };
   }, []);
 
-  const lightModeMultiplier = isDark ? 1 : 0.15;
   const opacity = twinkleAnim.interpolate({
     inputRange: [0, 0.5, 1],
-    outputRange: [star.opacity * 0.6 * lightModeMultiplier, star.opacity * lightModeMultiplier, star.opacity * 0.6 * lightModeMultiplier],
+    outputRange: [star.opacity * 0.6, star.opacity, star.opacity * 0.6],
   });
 
   const scale = twinkleAnim.interpolate({

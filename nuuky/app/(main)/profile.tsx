@@ -142,7 +142,7 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({ title, footer, children
 export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const { currentUser } = useAppStore();
   const { loading, previewUri, pickAndUploadAvatar, updateDisplayName, updatePhone, deleteAvatar } = useProfile();
   const { deleteAccount } = useAuth();
@@ -204,13 +204,15 @@ export default function ProfileScreen() {
   useEffect(() => {
     if (loading) {
       spinValue.setValue(0);
-      Animated.loop(
+      const loopAnim = Animated.loop(
         Animated.timing(spinValue, {
           toValue: 1,
           duration: 1000,
           useNativeDriver: true,
         }),
-      ).start();
+      );
+      loopAnim.start();
+      return () => loopAnim.stop();
     }
   }, [loading]);
 
@@ -341,7 +343,7 @@ export default function ProfileScreen() {
 
       // Sort countries by dial code length (longest first) to match most specific first
       const sortedEntries = Object.entries(COUNTRY_DIAL_CODES)
-        .sort((a: any, b: any) => b[1].length - a[1].length);
+        .sort((a, b) => (b[1] as string).length - (a[1] as string).length);
 
       // Find matching country by checking if phone starts with the dial code
       for (const [country, dialCode] of sortedEntries) {
@@ -368,7 +370,7 @@ export default function ProfileScreen() {
       style={[styles.container, { backgroundColor: theme.colors.bg.primary }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      <StatusBar barStyle={"light-content"} />
       <LinearGradient colors={theme.gradients.background} style={StyleSheet.absoluteFill} />
 
       <ScrollView

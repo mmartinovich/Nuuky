@@ -26,7 +26,7 @@ import { AppNotification } from '../../types';
 export default function NotificationsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { theme, isDark, accent } = useTheme();
+  const { theme, accent } = useTheme();
   const {
     notifications,
     unreadCount,
@@ -185,7 +185,7 @@ export default function NotificationsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.bg.primary }]}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <StatusBar barStyle={'light-content'} />
       <LinearGradient colors={theme.gradients.background} style={styles.gradient}>
         {/* Header - part of normal flow like Friends page */}
         <View style={[styles.headerSection, { paddingTop: insets.top + 8 }]}>

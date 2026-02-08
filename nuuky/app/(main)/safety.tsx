@@ -44,7 +44,6 @@ interface SafetyRowProps {
   isActive?: boolean;
   children?: React.ReactNode;
   theme: ReturnType<typeof useTheme>["theme"];
-  isDark: boolean;
 }
 
 const SafetyRow: React.FC<SafetyRowProps> = ({
@@ -193,7 +192,7 @@ const SafetySection: React.FC<SafetySectionProps> = ({
 export default function SafetyScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { theme, isDark, accent } = useTheme();
+  const { theme, accent } = useTheme();
   const {
     anchors,
     isInGhostMode,
@@ -248,7 +247,7 @@ export default function SafetyScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.bg.primary }]}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      <StatusBar barStyle={"light-content"} />
       <LinearGradient
         colors={theme.gradients.background}
         style={StyleSheet.absoluteFill}
@@ -275,18 +274,18 @@ export default function SafetyScreen() {
             description="Disappear from everyone temporarily"
             isFirst
             theme={theme}
-            isDark={isDark}
+
           >
             <Switch
               value={isInGhostMode}
               onValueChange={handleGhostModeToggle}
               trackColor={{
-                false: isDark ? "rgba(120,120,128,0.32)" : "rgba(120,120,128,0.16)",
+                false: "rgba(120,120,128,0.32)",
                 true: ICON_BACKGROUNDS.ghost,
               }}
               thumbColor="#FFFFFF"
               ios_backgroundColor={
-                isDark ? "rgba(120,120,128,0.32)" : "rgba(120,120,128,0.16)"
+                "rgba(120,120,128,0.32)"
               }
             />
           </SafetyRow>
@@ -297,18 +296,18 @@ export default function SafetyScreen() {
             description="Pause all presence and notifications"
             isLast
             theme={theme}
-            isDark={isDark}
+
           >
             <Switch
               value={isOnBreak}
               onValueChange={handleBreakToggle}
               trackColor={{
-                false: isDark ? "rgba(120,120,128,0.32)" : "rgba(120,120,128,0.16)",
+                false: "rgba(120,120,128,0.32)",
                 true: ICON_BACKGROUNDS.break,
               }}
               thumbColor="#FFFFFF"
               ios_backgroundColor={
-                isDark ? "rgba(120,120,128,0.32)" : "rgba(120,120,128,0.16)"
+                "rgba(120,120,128,0.32)"
               }
             />
           </SafetyRow>

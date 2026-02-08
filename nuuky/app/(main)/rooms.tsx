@@ -30,7 +30,7 @@ const { width } = Dimensions.get("window");
 export default function RoomsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { theme, isDark, accent } = useTheme();
+  const { theme, accent } = useTheme();
   const { currentUser, myRooms } = useAppStore();
   const { loadMyRooms, canCreateRoom, createRoom, deleteRoom, leaveRoomById } = useRoom();
   const { loading: firstTimeLoading } = useFirstTimeRoom();
@@ -112,7 +112,7 @@ export default function RoomsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.bg.primary }]}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      <StatusBar barStyle={"light-content"} />
       <LinearGradient colors={theme.gradients.background} style={styles.gradient}>
         {/* Content */}
         <ScrollView

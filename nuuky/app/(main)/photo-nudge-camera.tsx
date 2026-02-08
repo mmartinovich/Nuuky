@@ -31,7 +31,7 @@ const MAX_CAPTION_LENGTH = 50;
 export default function PhotoNudgeCameraScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const params = useLocalSearchParams<{
     friendId: string;
     friendName: string;

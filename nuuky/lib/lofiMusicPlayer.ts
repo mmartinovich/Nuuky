@@ -76,7 +76,7 @@ let currentTrack: LofiTrack | null = null;
 let isAudioAvailable = false;
 let isPlaying = false;
 let targetVolume = 0.7; // Default volume (70%)
-let isFading = false;
+let fadeGeneration = 0; // Generation counter to prevent concurrent fade races
 
 const FADE_DURATION = 500; // ms
 const FADE_STEPS = 20;
@@ -121,12 +121,12 @@ const fadeVolume = async (
 ): Promise<void> => {
   if (!sound) return;
 
-  isFading = true;
+  const myGeneration = ++fadeGeneration;
   const step = (to - from) / FADE_STEPS;
   let current = from;
 
   for (let i = 0; i < FADE_STEPS; i++) {
-    if (!isFading) break; // Allow interruption
+    if (fadeGeneration !== myGeneration) break; // Newer fade started, bail
     current += step;
     try {
       await sound.setVolumeAsync(Math.max(0, Math.min(1, current)));
@@ -136,8 +136,9 @@ const fadeVolume = async (
     await new Promise((resolve) => setTimeout(resolve, FADE_INTERVAL));
   }
 
-  isFading = false;
-  onComplete?.();
+  if (fadeGeneration === myGeneration) {
+    onComplete?.();
+  }
 };
 
 /**
@@ -225,7 +226,7 @@ export const stopLofi = async (fadeOut = true): Promise<void> => {
   if (!currentSound) return;
 
   try {
-    isFading = false; // Cancel any ongoing fade
+    ++fadeGeneration; // Cancel any ongoing fade
 
     if (fadeOut && isPlaying) {
       await fadeVolume(currentSound, targetVolume, 0, async () => {
@@ -261,7 +262,7 @@ export const pauseLofi = async (fadeOut = true): Promise<void> => {
   if (!currentSound || !isPlaying) return;
 
   try {
-    isFading = false;
+    ++fadeGeneration; // Cancel any ongoing fade
 
     if (fadeOut) {
       await fadeVolume(currentSound, targetVolume, 0, async () => {
@@ -313,7 +314,7 @@ export const resumeLofi = async (fadeIn = true): Promise<boolean> => {
 export const setLofiVolume = async (volume: number): Promise<void> => {
   targetVolume = Math.max(0, Math.min(1, volume));
 
-  if (currentSound && isPlaying && !isFading) {
+  if (currentSound && isPlaying) {
     try {
       await currentSound.setVolumeAsync(targetVolume);
     } catch (error) {

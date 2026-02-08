@@ -49,8 +49,6 @@ import { useAppStore, useCurrentUser, useFriendsStore, useSpeakingParticipants, 
 import { User } from "../../types";
 import { MoodPicker } from "../../components/MoodPicker";
 
-// Throttle mechanism for presence updates
-let lastPresenceRefresh = 0;
 const PRESENCE_REFRESH_THROTTLE_MS = 10000; // 10 seconds - reduced from 3s for battery
 
 import { subscriptionManager } from "../../lib/subscriptionManager";
@@ -85,7 +83,6 @@ import { SoundReactionPicker } from "../../components/SoundReactionPicker";
 import { SoundReactionToast } from "../../components/SoundReactionToast";
 import { useSoundReactions } from "../../hooks/useSoundReactions";
 import { playPreview, stopPreview } from "../../lib/soundPlayer";
-import { SoundReactionType } from "../../types";
 import { LofiMusicMenu } from "../../components/LofiMusicMenu";
 import { NotificationsModal } from "../../components/NotificationsModal";
 import { useLofiMusic } from "../../hooks/useLofiMusic";
@@ -94,7 +91,7 @@ import { useInvite } from "../../hooks/useInvite";
 import { useMoodSelfie } from "../../hooks/useMoodSelfie";
 import { usePhotoNudge } from "../../hooks/usePhotoNudge";
 import { PhotoNudgeViewer } from "../../components/PhotoNudgeViewer";
-import { PhotoNudge } from "../../types";
+import { useHomeModals } from "../../hooks/useHomeModals";
 
 const { width, height } = Dimensions.get("window");
 const CENTER_X = width / 2;
@@ -104,7 +101,8 @@ export default function QuantumOrbitScreen() {
   const router = useRouter();
   const { photo_nudge_id } = useLocalSearchParams<{ photo_nudge_id?: string }>();
   const insets = useSafeAreaInsets();
-  const { theme, isDark, accent } = useTheme();
+  const lastPresenceRefreshRef = useRef(0);
+  const { theme, accent } = useTheme();
   const currentUser = useCurrentUser();
   const hasHydrated = useHasHydrated();
   const friends = useFriendsStore();
@@ -184,24 +182,7 @@ export default function QuantumOrbitScreen() {
   const { activeSelfie, captureSelfie, pickFromLibrary, deleteSelfie, fetchActiveSelfie, loading: selfieLoading } = useMoodSelfie();
 
   // Photo nudge
-  const { fetchReceivedPhotoNudges, fetchPhotoNudge } = usePhotoNudge();
-  const [showPhotoNudge, setShowPhotoNudge] = useState(false);
-  const [activePhotoNudge, setActivePhotoNudge] = useState<PhotoNudge | null>(null);
-
-  // Open photo nudge viewer when navigated with photo_nudge_id param (from notification tap)
-  useEffect(() => {
-    if (photo_nudge_id && currentUser) {
-      (async () => {
-        const nudge = await fetchPhotoNudge(photo_nudge_id);
-        if (nudge) {
-          setActivePhotoNudge(nudge);
-          setShowPhotoNudge(true);
-        }
-        // Clear the param to prevent re-opening on re-render
-        router.setParams({ photo_nudge_id: undefined });
-      })();
-    }
-  }, [photo_nudge_id, currentUser?.id]);
+  const { fetchPhotoNudge } = usePhotoNudge();
 
   // Store ref for the audio callback
   useEffect(() => {
@@ -225,18 +206,38 @@ export default function QuantumOrbitScreen() {
   const { unreadCount: notificationCount } = useNotifications();
   const totalBadgeCount = notificationCount + roomInvites.length;
 
+  // Modal management
+  const modals = useHomeModals({
+    onSoundSelect: (soundId) => soundReactions.sendReaction(soundId),
+    onCreateRoom: async (name, isPrivate) => {
+      const room = await createRoom(name, isPrivate ? [] : undefined);
+      if (room) {
+        router.push(`/(main)/room/${room.id}`);
+      }
+    },
+    onJoinRoom: async (roomId) => {
+      await joinRoomFn(roomId);
+      router.push(`/(main)/room/${roomId}`);
+    },
+    isAudioConnected,
+    audioConnect,
+    defaultRoom,
+    fetchPhotoNudge,
+  });
+
+  // Open photo nudge viewer when navigated with photo_nudge_id param (from notification tap)
+  useEffect(() => {
+    if (photo_nudge_id && currentUser) {
+      modals.openPhotoNudgeById(photo_nudge_id);
+      router.setParams({ photo_nudge_id: undefined });
+    }
+  }, [photo_nudge_id, currentUser?.id]);
+
   const [loading, setLoading] = useState(true);
-  const [showMoodPicker, setShowMoodPicker] = useState(false);
   const [showHint, setShowHint] = useState(true);
   const [selectedFriend, setSelectedFriend] = useState<User | null>(null);
   const [bubblePosition, setBubblePosition] = useState({ x: 0, y: 0 });
   const [isMuted, setIsMuted] = useState(true);
-  const [showRoomList, setShowRoomList] = useState(false);
-  const [showCreateRoom, setShowCreateRoom] = useState(false);
-  const [showRoomSettings, setShowRoomSettings] = useState(false);
-  const [showSoundPicker, setShowSoundPicker] = useState(false);
-  const [showLofiMenu, setShowLofiMenu] = useState(false);
-  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
 
 
   // Extracted hooks
@@ -304,8 +305,8 @@ export default function QuantumOrbitScreen() {
 
   const orbitIds = useMemo(() => orbitUsers.map((f) => f.id).join(","), [orbitUsers]);
 
-  // Organic layout algorithm
-  const calculateFriendPositions = (count: number) => {
+  // Organic layout algorithm — memoized via useCallback to avoid recalculation every render
+  const calculateFriendPositions = useCallback((count: number) => {
     if (count === 0) return [];
 
     const positions: Array<{ x: number; y: number }> = [];
@@ -368,9 +369,9 @@ export default function QuantumOrbitScreen() {
     }
 
     return positions;
-  };
+  }, []);
 
-  const orbitPositions = useMemo(() => calculateFriendPositions(orbitUsers.length), [orbitUsers.length, orbitIds]);
+  const orbitPositions = useMemo(() => calculateFriendPositions(orbitUsers.length), [calculateFriendPositions, orbitUsers.length, orbitIds]);
 
   const orbitBaseAngles = useMemo(() => {
     return orbitPositions.map((pos) => {
@@ -397,7 +398,7 @@ export default function QuantumOrbitScreen() {
   }, [streaks]);
 
   const activeFlareUserIds = useMemo(() => {
-    return new Set(activeFlares.map((f: any) => f.user_id));
+    return new Set(activeFlares.map((f) => f.user_id));
   }, [activeFlares]);
 
   const handleStreakInteraction = useCallback(() => {
@@ -423,16 +424,24 @@ export default function QuantumOrbitScreen() {
 
       const needsLoad = friendList.length === 0;
 
-      if (needsLoad) {
-        setLoading(true);
-        loadFriends(false);
-      } else {
-        loadFriends(true);
-      }
+      // Await initial friend load before subscribing to avoid
+      // subscriptions firing before initial data is present
+      const init = async () => {
+        if (needsLoad) {
+          setLoading(true);
+          await loadFriends(false);
+        } else {
+          await loadFriends(true);
+        }
+      };
+
+      let cleanup: (() => void) | undefined;
+      init().then(() => {
+        cleanup = setupRealtimeSubscription();
+      });
 
       loadHintState();
-      const cleanup = setupRealtimeSubscription();
-      return cleanup;
+      return () => cleanup?.();
     } else {
       setLoading(false);
     }
@@ -502,8 +511,8 @@ export default function QuantumOrbitScreen() {
 
     const throttledLoadFriends = () => {
       const now = Date.now();
-      if (now - lastPresenceRefresh < PRESENCE_REFRESH_THROTTLE_MS) return;
-      lastPresenceRefresh = now;
+      if (now - lastPresenceRefreshRef.current < PRESENCE_REFRESH_THROTTLE_MS) return;
+      lastPresenceRefreshRef.current = now;
       loadFriends(true);
     };
 
@@ -577,7 +586,7 @@ export default function QuantumOrbitScreen() {
     if (showHint) {
       saveInteractionState();
     }
-    setShowMoodPicker(true);
+    modals.openMoodPicker();
   }, [showHint]);
 
   const handleFlarePress = useCallback(async () => {
@@ -591,26 +600,6 @@ export default function QuantumOrbitScreen() {
   const handleOpenRooms = useCallback(() => {
     router.push("/(main)/rooms");
   }, [router]);
-
-  const handleCreateRoom = useCallback(
-    async (name?: string, isPrivate?: boolean) => {
-      const room = await createRoom(name, isPrivate ? [] : undefined);
-      if (room) {
-        setShowCreateRoom(false);
-        router.push(`/(main)/room/${room.id}`);
-      }
-    },
-    [createRoom, router],
-  );
-
-  const handleJoinRoom = useCallback(
-    async (roomId: string) => {
-      setShowRoomList(false);
-      await joinRoomFn(roomId);
-      router.push(`/(main)/room/${roomId}`);
-    },
-    [joinRoomFn, router],
-  );
 
   const handleMicToggle = useCallback(async () => {
     if (!defaultRoom) {
@@ -627,27 +616,8 @@ export default function QuantumOrbitScreen() {
     }
   }, [defaultRoom, isMuted, audioUnmute, audioMute]);
 
-  // Sound reaction handlers
-  const handleSwipeUpMic = useCallback(async () => {
-    if (!defaultRoom) {
-      Alert.alert("No Room", "Join a room to send sound reactions.");
-      return;
-    }
-
-    // Connect without enabling mic if not already connected
-    if (!isAudioConnected) {
-      audioConnect();
-    }
-
-    setShowSoundPicker(true);
-  }, [defaultRoom, isAudioConnected, audioConnect]);
-
-  const handleSoundSelect = useCallback(async (soundId: SoundReactionType) => {
-    const result = await soundReactions.sendReaction(soundId);
-    if (!result.success && result.error) {
-      Alert.alert("Cannot Send", result.error);
-    }
-  }, [soundReactions]);
+  // Sound reaction handler alias
+  const handleSwipeUpMic = modals.openSoundPicker;
 
   // Calculate mic button position for picker anchor
   const micButtonPosition = useMemo(() => ({
@@ -692,7 +662,7 @@ export default function QuantumOrbitScreen() {
   return (
     <>
     <RNAnimated.View style={[styles.container, { backgroundColor: theme.colors.bg.primary, opacity: fadeAnim }]}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      <StatusBar barStyle={"light-content"} />
 
       {/* Hidden preload of selfie image for instant display in mood picker */}
       {activeSelfie?.image_url && (
@@ -742,7 +712,7 @@ export default function QuantumOrbitScreen() {
             radius={orbitRadii[index] || 150}
             orbitAngle={orbitAngle}
             streak={streakMap.get(user.id)}
-            panHandlers={showSoundPicker ? undefined : panResponder.panHandlers}
+            panHandlers={modals.showSoundPicker ? undefined : panResponder.panHandlers}
           />
         ))}
 
@@ -779,9 +749,9 @@ export default function QuantumOrbitScreen() {
         currentVibe={currentVibe}
         audioConnectionStatus={audioConnectionStatus}
         isLofiPlaying={lofiMusic.isPlaying}
-        onNotificationPress={() => setShowNotificationsModal(true)}
-        onRoomPillPress={() => setShowRoomSettings(true)}
-        onMusicPress={() => setShowLofiMenu(true)}
+        onNotificationPress={modals.openNotifications}
+        onRoomPillPress={modals.openRoomSettings}
+        onMusicPress={modals.openLofiMenu}
       />
 
       <BottomNavBar
@@ -805,10 +775,10 @@ export default function QuantumOrbitScreen() {
 
 
       <MoodPicker
-        visible={showMoodPicker}
+        visible={modals.showMoodPicker}
         currentMood={currentMood}
         onSelectMood={changeMood}
-        onClose={() => setShowMoodPicker(false)}
+        onClose={modals.closeMoodPicker}
         originPoint={{ x: CENTER_X, y: CENTER_Y }}
         customMood={customMoods[0] || activeCustomMood || null}
         isCustomMoodActive={!!activeCustomMood}
@@ -827,28 +797,25 @@ export default function QuantumOrbitScreen() {
       />
 
       <RoomListModal
-        visible={showRoomList}
-        onClose={() => setShowRoomList(false)}
+        visible={modals.showRoomList}
+        onClose={modals.closeRoomList}
         rooms={activeRooms}
-        onJoinRoom={handleJoinRoom}
-        onCreateRoom={() => {
-          setShowRoomList(false);
-          setShowCreateRoom(true);
-        }}
+        onJoinRoom={modals.handleJoinRoom}
+        onCreateRoom={modals.openCreateRoom}
       />
 
-      <CreateRoomModal visible={showCreateRoom} onClose={() => setShowCreateRoom(false)} onCreate={handleCreateRoom} />
+      <CreateRoomModal visible={modals.showCreateRoom} onClose={modals.closeCreateRoom} onCreate={modals.handleCreateRoom} />
 
       {defaultRoom && (
         <RoomSettingsModal
-          visible={showRoomSettings}
+          visible={modals.showRoomSettings}
           roomName={defaultRoom.name || "Room"}
           roomId={defaultRoom.id}
           isCreator={defaultRoom.creator_id === currentUser?.id}
           creatorId={defaultRoom.creator_id}
           participants={roomParticipants}
           currentUserId={currentUser?.id || ""}
-          onClose={() => setShowRoomSettings(false)}
+          onClose={modals.closeRoomSettings}
           onRename={async (name) => {
             const success = await updateRoomName(defaultRoom.id, name);
             if (!success) {
@@ -876,9 +843,9 @@ export default function QuantumOrbitScreen() {
 
       {/* Sound Reactions - outside animated container for proper z-index */}
       <SoundReactionPicker
-        visible={showSoundPicker}
-        onSelect={handleSoundSelect}
-        onClose={() => setShowSoundPicker(false)}
+        visible={modals.showSoundPicker}
+        onSelect={modals.handleSoundSelect}
+        onClose={modals.closeSoundPicker}
         canSend={soundReactions.canSend}
         cooldownProgress={soundReactions.cooldownProgress}
         lastSentSound={soundReactions.lastSentSound}
@@ -898,8 +865,8 @@ export default function QuantumOrbitScreen() {
       />
 
       <LofiMusicMenu
-        visible={showLofiMenu}
-        onClose={() => setShowLofiMenu(false)}
+        visible={modals.showLofiMenu}
+        onClose={modals.closeLofiMenu}
         isPlaying={lofiMusic.isPlaying}
         currentTrack={lofiMusic.currentTrack}
         selectedTrack={lofiMusic.selectedTrack}
@@ -915,21 +882,15 @@ export default function QuantumOrbitScreen() {
       />
 
       <NotificationsModal
-        visible={showNotificationsModal}
-        onClose={() => setShowNotificationsModal(false)}
-        onOpenPhotoNudge={(photoNudge) => {
-          setActivePhotoNudge(photoNudge);
-          setShowPhotoNudge(true);
-        }}
+        visible={modals.showNotificationsModal}
+        onClose={modals.closeNotifications}
+        onOpenPhotoNudge={modals.openPhotoNudge}
       />
 
       <PhotoNudgeViewer
-        visible={showPhotoNudge}
-        photoNudge={activePhotoNudge}
-        onClose={() => {
-          setShowPhotoNudge(false);
-          setActivePhotoNudge(null);
-        }}
+        visible={modals.showPhotoNudge}
+        photoNudge={modals.activePhotoNudge}
+        onClose={modals.closePhotoNudge}
       />
     </>
   );

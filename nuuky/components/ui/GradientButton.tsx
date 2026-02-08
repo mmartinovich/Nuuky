@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(100, 100, 100, 0.3)',
   },
   text: {
-    fontWeight: typography.weight.semibold as any,
+    fontWeight: typography.weight.semibold as TextStyle['fontWeight'],
     color: colors.text.primary,
   },
   textDisabled: {

@@ -22,12 +22,13 @@ export const useAuth = () => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!isMountedRef.current) return;
         if (event === 'SIGNED_IN' && session?.user) {
           await fetchUserProfile(session.user.id);
         } else if (event === 'SIGNED_OUT') {
           logout();
         }
-        setLoading(false);
+        if (isMountedRef.current) setLoading(false);
       }
     );
 
@@ -39,14 +40,16 @@ export const useAuth = () => {
   const checkSession = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
+      if (session?.user && isMountedRef.current) {
         await fetchUserProfile(session.user.id);
       }
     } catch (error) {
       logger.error('Error checking session:', error);
-      Alert.alert('Session Error', 'Failed to restore your session. Please sign in again.');
+      if (isMountedRef.current) {
+        Alert.alert('Session Error', 'Failed to restore your session. Please sign in again.');
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) setLoading(false);
     }
   };
 

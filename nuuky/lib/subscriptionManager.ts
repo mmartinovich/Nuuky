@@ -18,6 +18,7 @@ class SubscriptionManager {
   private appState: AppStateStatus = AppState.currentState;
   private isInitialized = false;
   private isPaused = false;
+  private appStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
 
   constructor() {
     this.init();
@@ -28,7 +29,7 @@ class SubscriptionManager {
     this.isInitialized = true;
 
     // Listen to app state changes
-    AppState.addEventListener('change', this.handleAppStateChange);
+    this.appStateSubscription = AppState.addEventListener('change', this.handleAppStateChange);
   }
 
   private handleAppStateChange = (nextAppState: AppStateStatus) => {
@@ -54,9 +55,12 @@ class SubscriptionManager {
    * @returns Cleanup function to unregister the subscription
    */
   register(id: string, createChannel: SubscriptionCallback): CleanupCallback {
-    // If already registered, clean up first
-    if (this.subscriptions.has(id)) {
-      this.unregister(id);
+    // If already registered, fully stop and remove the old subscription first
+    // to prevent the new subscription from racing with the old cleanup
+    const existing = this.subscriptions.get(id);
+    if (existing) {
+      this.stopSubscription(existing);
+      this.subscriptions.delete(id);
     }
 
     const subscription: ManagedSubscription = {
@@ -162,6 +166,13 @@ class SubscriptionManager {
       this.stopSubscription(subscription);
     });
     this.subscriptions.clear();
+
+    // Remove AppState listener
+    if (this.appStateSubscription) {
+      this.appStateSubscription.remove();
+      this.appStateSubscription = null;
+      this.isInitialized = false;
+    }
   }
 }
 

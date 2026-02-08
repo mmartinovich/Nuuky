@@ -4,7 +4,6 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { encryptedStorage } from '../lib/secureStorage';
 import { User, Friendship, Room, RoomParticipant, RoomInvite, AudioConnectionStatus, CustomMood, PresetMood, AppNotification, Anchor } from '../types';
-import { ThemeMode } from '../lib/theme';
 
 interface AppState {
   // Auth state
@@ -30,9 +29,6 @@ interface AppState {
 
   // Home room state (permanently pinned "My Nuuky" room)
   homeRoomId: string | null;
-
-  // Theme state
-  themeMode: ThemeMode;
 
   // Network state
   isOnline: boolean;
@@ -97,7 +93,6 @@ interface AppState {
   removeNotification: (notificationId: string) => void;
   setDefaultRoomId: (roomId: string | null) => void;
   setHomeRoomId: (roomId: string | null) => void;
-  setThemeMode: (mode: ThemeMode) => void;
   setIsOnline: (online: boolean) => void;
   setLowPowerMode: (enabled: boolean) => void;
   setAudioConnectionStatus: (status: AudioConnectionStatus) => void;
@@ -128,7 +123,6 @@ export const useSpeakingParticipants = () => useAppStore(useShallow((state) => s
 export const useActiveCustomMood = () => useAppStore((state) => state.activeCustomMood);
 export const useNotificationsStore = () => useAppStore(useShallow((state) => state.notifications));
 export const useUnreadNotificationCount = () => useAppStore((state) => state.unreadNotificationCount);
-export const useThemeMode = () => useAppStore((state) => state.themeMode);
 export const useDefaultRoomId = () => useAppStore((state) => state.defaultRoomId);
 export const useHomeRoomId = () => useAppStore((state) => state.homeRoomId);
 export const useAudioConnectionStatus = () => useAppStore((state) => state.audioConnectionStatus);
@@ -137,21 +131,11 @@ export const useLowPowerMode = () => useAppStore((state) => state.lowPowerMode);
 export const useFavoriteFriends = () => useAppStore(useShallow((state) => state.favoriteFriends));
 
 // Track hydration state for async storage
-let hasHydratedStore = false;
-
 export const useHasHydrated = () => {
-  const [hydrated, setHydrated] = React.useState(hasHydratedStore);
+  const [hydrated, setHydrated] = React.useState(() => useAppStore.persist.hasHydrated());
 
   React.useEffect(() => {
-    // If already hydrated, no need to subscribe
-    if (hasHydratedStore) {
-      setHydrated(true);
-      return;
-    }
-
-    // Subscribe to hydration
     const unsubFinishHydration = useAppStore.persist.onFinishHydration(() => {
-      hasHydratedStore = true;
       setHydrated(true);
     });
 
@@ -164,7 +148,7 @@ export const useHasHydrated = () => {
 };
 
 // Also export a non-hook version for checks outside React
-export const getHasHydrated = () => hasHydratedStore;
+export const getHasHydrated = () => useAppStore.persist.hasHydrated();
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -182,7 +166,6 @@ export const useAppStore = create<AppState>()(
   roomInvites: [],
   defaultRoomId: null,
   homeRoomId: null,
-  themeMode: 'dark' as ThemeMode,
   isOnline: true,
   lowPowerMode: false,
   audioConnectionStatus: 'disconnected' as AudioConnectionStatus,
@@ -333,8 +316,6 @@ export const useAppStore = create<AppState>()(
 
   setHomeRoomId: (roomId) => set({ homeRoomId: roomId }),
 
-  setThemeMode: (mode) => set({ themeMode: mode }),
-
   setIsOnline: (online) => set({ isOnline: online }),
   setLowPowerMode: (enabled) => set({ lowPowerMode: enabled }),
 
@@ -398,8 +379,6 @@ export const useAppStore = create<AppState>()(
     // Reset notifications
     notifications: [],
     unreadNotificationCount: 0,
-    // Preserve theme preference on logout
-    themeMode: state.themeMode,
   }))
 }),
     {
@@ -407,7 +386,6 @@ export const useAppStore = create<AppState>()(
       storage: createJSONStorage(() => encryptedStorage),
       partialize: (state) => ({
         currentUser: state.currentUser,
-        themeMode: state.themeMode,
         defaultRoomId: state.defaultRoomId,
         homeRoomId: state.homeRoomId,
         lowPowerMode: state.lowPowerMode,

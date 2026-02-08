@@ -34,7 +34,7 @@ export function PhotoNudgeViewer({
   onClose,
 }: PhotoNudgeViewerProps) {
   const insets = useSafeAreaInsets();
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const { markAsViewed, reactWithHeart, getTimeRemaining } = usePhotoNudge();
 
   const [isReacted, setIsReacted] = useState(false);

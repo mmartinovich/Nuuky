@@ -40,7 +40,7 @@ function CentralOrbComponent({
   showHint = false,
   statusText,
 }: CentralOrbProps) {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const lowPowerMode = useLowPowerMode();
   const breatheAnim = useRef(new Animated.Value(0)).current;
   const flareAnim = useRef(new Animated.Value(0)).current;
@@ -571,11 +571,7 @@ function CentralOrbComponent({
             >
               {/* Enhanced white highlight - top-left shimmer */}
               <LinearGradient
-                colors={
-                  isDark
-                    ? ["rgba(255, 255, 255, 0.4)", "rgba(255, 255, 255, 0.1)", "transparent"]
-                    : ["rgba(0, 0, 0, 0.08)", "rgba(0, 0, 0, 0.03)", "transparent"]
-                }
+                colors={["rgba(255, 255, 255, 0.4)", "rgba(255, 255, 255, 0.1)", "transparent"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.highlight}

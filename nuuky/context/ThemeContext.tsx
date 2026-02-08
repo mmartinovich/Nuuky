@@ -1,35 +1,19 @@
 import React, { createContext, useContext, useMemo } from 'react';
-import { useColorScheme } from 'react-native';
 import { useAppStore } from '../stores/appStore';
-import { getTheme, ThemeMode, ResolvedTheme, AccentColors, getAccentFromMood, getCustomMoodColor } from '../lib/theme';
+import { getTheme, AccentColors, getAccentFromMood } from '../lib/theme';
 
 interface ThemeContextType {
   theme: ReturnType<typeof getTheme>;
-  themeMode: ThemeMode;
-  resolvedTheme: ResolvedTheme;
-  setThemeMode: (mode: ThemeMode) => void;
-  isDark: boolean;
+  isDark: true;
   accent: AccentColors;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const systemColorScheme = useColorScheme();
-  const themeMode = useAppStore((state) => state.themeMode);
-  const setThemeMode = useAppStore((state) => state.setThemeMode);
   const currentUser = useAppStore((state) => state.currentUser);
 
-  const resolvedTheme: ResolvedTheme = useMemo(() => {
-    if (themeMode === 'system') {
-      return systemColorScheme === 'light' ? 'light' : 'dark';
-    }
-    return themeMode;
-  }, [themeMode, systemColorScheme]);
-
-  const theme = useMemo(() => getTheme(resolvedTheme), [resolvedTheme]);
-
-  const isDark = resolvedTheme === 'dark';
+  const theme = useMemo(() => getTheme(), []);
 
   // Compute accent colors based on user's current mood (including custom moods)
   const accent = useMemo(() => {
@@ -43,18 +27,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       };
     }
     return getAccentFromMood(currentUser?.mood);
-  }, [currentUser?.mood, currentUser?.custom_mood_id, currentUser?.custom_mood?.color]);
+  }, [currentUser?.mood, currentUser?.custom_mood_id]);
 
   const value = useMemo(
     () => ({
       theme,
-      themeMode,
-      resolvedTheme,
-      setThemeMode,
-      isDark,
+      isDark: true as const,
       accent,
     }),
-    [theme, themeMode, resolvedTheme, setThemeMode, isDark, accent]
+    [theme, accent]
   );
 
   return (

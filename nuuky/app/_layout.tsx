@@ -1,6 +1,6 @@
 import { logger } from '../lib/logger';
 import { useEffect, useState, useRef } from "react";
-import { Alert, View } from "react-native";
+import { AccessibilityInfo, Alert, AppState, View } from "react-native";
 import { Stack, useRouter, usePathname } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Linking from "expo-linking";
@@ -230,17 +230,21 @@ export default function RootLayout() {
         // Immediately fetch latest notifications to update badge count
         const userId = useAppStore.getState().currentUser?.id;
         if (userId) {
-          supabase
-            .from('notifications')
-            .select('*')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .then(({ data: newNotifs }) => {
-              if (newNotifs?.[0]) {
-                useAppStore.getState().addNotification(newNotifs[0]);
-              }
-            });
+          Promise.resolve(
+            supabase
+              .from('notifications')
+              .select('*')
+              .eq('user_id', userId)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .then(({ data: newNotifs }) => {
+                if (newNotifs?.[0]) {
+                  useAppStore.getState().addNotification(newNotifs[0]);
+                }
+              })
+          ).catch((err: unknown) => {
+            logger.error('Failed to fetch notification after push:', err);
+          });
         }
       },
       // On notification response (tap)
@@ -689,6 +693,58 @@ export default function RootLayout() {
   // Splash screen is hidden by individual screens when they're ready:
   // - (main)/index.tsx hides it after orbit data loads
   // - Auth/onboarding screens hide it on mount
+
+  // Session timeout enforcement: check on app foreground
+  useEffect(() => {
+    const checkSessionTimeout = () => {
+      const { lastActivityTimestamp, sessionTimeoutMinutes, isAuthenticated, logout } = useAppStore.getState();
+      if (!isAuthenticated) return;
+
+      const elapsed = Date.now() - lastActivityTimestamp;
+      const timeoutMs = sessionTimeoutMinutes * 60 * 1000;
+      if (elapsed > timeoutMs) {
+        logger.warn('Session timeout reached, logging out');
+        supabase.auth.signOut().catch(() => {});
+        logout();
+      }
+    };
+
+    // Check on mount
+    checkSessionTimeout();
+
+    // Check when app comes to foreground
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        checkSessionTimeout();
+        useAppStore.getState().setLastActivity();
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
+
+  // Respect system reduced motion preference
+  useEffect(() => {
+    const handleReduceMotionChanged = (isEnabled: boolean) => {
+      if (isEnabled) {
+        useAppStore.getState().setLowPowerMode(true);
+      }
+    };
+
+    const subscription = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      handleReduceMotionChanged
+    );
+
+    // Check initial state
+    AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (enabled) {
+        useAppStore.getState().setLowPowerMode(true);
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   // Execute pending deep link when user becomes authenticated
   useEffect(() => {

@@ -1,13 +1,11 @@
 import { logger } from '../lib/logger';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../stores/appStore';
 import { subscriptionManager } from '../lib/subscriptionManager';
 import { Friendship } from '../types';
 
-// Throttle mechanism to prevent excessive API calls on realtime updates
-let lastFriendsRefresh = 0;
 const FRIENDS_REFRESH_THROTTLE_MS = 3000; // Only refresh every 3 seconds
 
 export const useFriends = () => {
@@ -15,6 +13,7 @@ export const useFriends = () => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const lastFriendsRefreshRef = useRef(0);
 
   useEffect(() => {
     if (currentUser) {
@@ -91,10 +90,10 @@ export const useFriends = () => {
     // Throttled refresh to prevent excessive API calls
     const throttledLoadFriends = async () => {
       const now = Date.now();
-      if (now - lastFriendsRefresh < FRIENDS_REFRESH_THROTTLE_MS) {
+      if (now - lastFriendsRefreshRef.current < FRIENDS_REFRESH_THROTTLE_MS) {
         return;
       }
-      lastFriendsRefresh = now;
+      lastFriendsRefreshRef.current = now;
 
       // Get fresh user from store
       const user = useAppStore.getState().currentUser;

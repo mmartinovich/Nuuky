@@ -60,6 +60,7 @@ export const SilenceTimeoutPresets = {
 let cachedToken: LiveKitTokenResponse | null = null;
 let tokenExpiryTime: number = 0;
 let cachedRoomId: string | null = null;
+let cachedUserId: string | null = null;
 const TOKEN_CACHE_TTL = 3600000; // 1 hour in milliseconds
 
 // Helper to invalidate token cache
@@ -67,6 +68,7 @@ export const invalidateTokenCache = () => {
   cachedToken = null;
   tokenExpiryTime = 0;
   cachedRoomId = null;
+  cachedUserId = null;
 };
 
 // Event callbacks
@@ -113,19 +115,20 @@ export const requestLiveKitToken = async (
   try {
     const now = Date.now();
 
-    // Return cached token if valid and for same room
-    if (cachedToken &&
-        cachedRoomId === roomId &&
-        now < tokenExpiryTime) {
-      return cachedToken;
-    }
-
     const {
       data: { session },
     } = await supabase.auth.getSession();
     if (!session?.access_token) {
       logger.error('[LiveKit] No active session found');
       throw new Error('No active session');
+    }
+
+    // Return cached token if valid, for same room, and same user
+    if (cachedToken &&
+        cachedRoomId === roomId &&
+        cachedUserId === session.user.id &&
+        now < tokenExpiryTime) {
+      return cachedToken;
     }
 
     // Explicitly pass the authorization header
@@ -144,6 +147,7 @@ export const requestLiveKitToken = async (
     // Cache the token
     cachedToken = data;
     cachedRoomId = roomId;
+    cachedUserId = session.user.id;
     tokenExpiryTime = now + TOKEN_CACHE_TTL;
 
     return data;

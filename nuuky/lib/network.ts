@@ -32,8 +32,10 @@ export const fetchWithRetry = async <T>(
     } catch (error) {
       lastError = error;
       if (attempt < maxRetries - 1) {
+        const delay = baseDelay * Math.pow(2, attempt);
+        const jitter = delay * (0.5 + Math.random() * 0.5); // 50-100% of delay
         await new Promise((resolve) =>
-          setTimeout(resolve, baseDelay * Math.pow(2, attempt))
+          setTimeout(resolve, jitter)
         );
       }
     }

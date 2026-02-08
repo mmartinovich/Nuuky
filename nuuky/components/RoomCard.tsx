@@ -9,12 +9,14 @@ import { isUserTrulyOnline } from '../lib/utils';
 interface RoomCardProps {
   room: Room;
   onPress: () => void;
+  onLongPress?: () => void;
   isCreator?: boolean;
   isDefault?: boolean;
   creatorName?: string;
+  creatorAvatarUrl?: string;
 }
 
-const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, isCreator = false, isDefault = false, creatorName }) => {
+const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, onLongPress, isCreator = false, isDefault = false, creatorName, creatorAvatarUrl }) => {
   const { accent, theme } = useTheme();
   const participants = room.participants || [];
   const participantCount = participants.length;
@@ -69,6 +71,8 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, isCreator =
     <TouchableOpacity
       activeOpacity={interactionStates?.pressed || 0.7}
       onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={400}
       style={[
         styles.card,
         dynamicStyles.card,
@@ -328,6 +332,26 @@ const styles = StyleSheet.create({
   },
 });
 
+const participantsEqual = (
+  a: Room['participants'],
+  b: Room['participants'],
+): boolean => {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (
+      a[i].id !== b[i].id ||
+      a[i].user?.is_online !== b[i].user?.is_online ||
+      a[i].user?.last_seen_at !== b[i].user?.last_seen_at ||
+      a[i].user?.default_room_id !== b[i].user?.default_room_id
+    ) {
+      return false;
+    }
+  }
+  return true;
+};
+
 export const RoomCard = memo(RoomCardComponent, (prevProps, nextProps) => {
   return (
     prevProps.room.id === nextProps.room.id &&
@@ -335,8 +359,6 @@ export const RoomCard = memo(RoomCardComponent, (prevProps, nextProps) => {
     prevProps.isDefault === nextProps.isDefault &&
     prevProps.isCreator === nextProps.isCreator &&
     prevProps.creatorName === nextProps.creatorName &&
-    prevProps.room.participants?.length === nextProps.room.participants?.length &&
-    JSON.stringify(prevProps.room.participants?.map(p => ({ id: p.id, online: p.user?.is_online, lastSeen: p.user?.last_seen_at, defaultRoom: p.user?.default_room_id }))) ===
-    JSON.stringify(nextProps.room.participants?.map(p => ({ id: p.id, online: p.user?.is_online, lastSeen: p.user?.last_seen_at, defaultRoom: p.user?.default_room_id })))
+    participantsEqual(prevProps.room.participants, nextProps.room.participants)
   );
 });

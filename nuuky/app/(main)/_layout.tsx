@@ -1,10 +1,17 @@
+import React from "react";
 import { Stack } from "expo-router";
 import { useTheme } from "../../hooks/useTheme";
+import { ErrorBoundary } from "../../components/ErrorBoundary";
+
+function ScreenErrorBoundary({ children }: { children: React.ReactNode }) {
+  return <ErrorBoundary>{children}</ErrorBoundary>;
+}
 
 export default function MainLayout() {
   const { theme } = useTheme();
 
   return (
+    <ScreenErrorBoundary>
     <Stack
       screenOptions={{
         headerShown: true,
@@ -100,5 +107,6 @@ export default function MainLayout() {
         }}
       />
     </Stack>
+    </ScreenErrorBoundary>
   );
 }

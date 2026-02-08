@@ -74,7 +74,7 @@ const fuzzyMatch = (query: string, text: string): boolean => {
 export default function FriendsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { theme, isDark, accent } = useTheme();
+  const { theme, accent } = useTheme();
   const sectionListRef = useRef<SectionList<Friendship, FriendSection>>(null);
 
   const {
@@ -283,6 +283,8 @@ export default function FriendsScreen() {
   }, [searchUsers, clearUserSearchResults]);
 
   const handleAddFriendFromSearch = async (userId: string) => {
+    // Prevent double-tap: if already adding someone, bail out
+    if (addingFriendId) return;
     setAddingFriendId(userId);
     try {
       await addFriendHook(userId);
@@ -450,7 +452,7 @@ export default function FriendsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.bg.primary }]}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      <StatusBar barStyle={"light-content"} />
       <LinearGradient colors={theme.gradients.background} style={styles.gradient}>
 
         {/* Fixed Header */}

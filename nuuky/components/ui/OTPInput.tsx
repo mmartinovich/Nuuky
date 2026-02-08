@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from "react";
-import { View, TextInput, StyleSheet, Pressable, Platform } from "react-native";
+import React, { useRef, useEffect, useMemo } from "react";
+import { View, TextInput, StyleSheet, Pressable, Platform, TextStyle } from "react-native";
 import { BlurView } from "expo-blur";
 import { useTheme } from "../../hooks/useTheme";
 import { spacing, radius, typography } from "../../lib/theme";
@@ -28,11 +28,14 @@ export const OTPInput: React.FC<OTPInputProps> = ({
   const { theme } = useTheme();
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
-  // Split value into array of digits
-  const digits = value.split("").slice(0, length);
-  while (digits.length < length) {
-    digits.push("");
-  }
+  // Split value into array of digits (memoized to avoid array recreation every render)
+  const digits = useMemo(() => {
+    const arr = value.split("").slice(0, length);
+    while (arr.length < length) {
+      arr.push("");
+    }
+    return arr;
+  }, [value, length]);
 
   // Focus first empty input on mount
   useEffect(() => {
@@ -150,7 +153,7 @@ const styles = StyleSheet.create({
     height: "100%",
     textAlign: "center",
     fontSize: typography.size["2xl"],
-    fontWeight: typography.weight.bold as any,
+    fontWeight: typography.weight.bold as TextStyle['fontWeight'],
     padding: 0,
   },
 });

@@ -104,6 +104,17 @@ export const SwipeableRoomCard: React.FC<SwipeableRoomCardProps> = ({
       <RoomCard
         room={room}
         onPress={onPress}
+        onLongPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          const actionLabel = isCreator ? 'Delete' : 'Leave';
+          const message = isCreator
+            ? `This will permanently delete "${room.name || 'this room'}" and remove all members.`
+            : `You will leave "${room.name || 'this room'}". You can rejoin later if invited.`;
+          Alert.alert(`${actionLabel} Room?`, message, [
+            { text: 'Cancel', style: 'cancel' },
+            { text: actionLabel, style: 'destructive', onPress: performDestructiveAction },
+          ]);
+        }}
         isCreator={isCreator}
         isDefault={isDefault}
         creatorName={creatorName}

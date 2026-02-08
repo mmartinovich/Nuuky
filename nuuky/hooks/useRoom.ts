@@ -10,7 +10,8 @@ const REFRESH_THROTTLE_MS = 2000; // Only allow refresh every 2 seconds
 
 // Module-level tracking: only ONE useRoom instance owns realtime subscriptions at a time.
 // Prevents rooms.tsx from stealing index.tsx's subscriptions when it mounts its own useRoom.
-let activeSubscriptionOwner: string | null = null;
+// Uses an object ref to make check-and-set effectively atomic in JS single-threaded model.
+const subscriptionOwnership = { current: null as string | null };
 
 export const useRoom = () => {
   // Instance-level refs instead of module-level variables to avoid cross-instance race conditions
@@ -43,13 +44,13 @@ export const useRoom = () => {
 
       // Only the first instance sets up realtime subscriptions.
       // This prevents rooms.tsx from stealing and then deleting index.tsx's subs.
-      if (!activeSubscriptionOwner) {
-        activeSubscriptionOwner = instanceIdRef.current;
+      if (!subscriptionOwnership.current) {
+        subscriptionOwnership.current = instanceIdRef.current;
         const cleanup = setupRealtimeSubscription();
         return () => {
           cleanup();
-          if (activeSubscriptionOwner === instanceIdRef.current) {
-            activeSubscriptionOwner = null;
+          if (subscriptionOwnership.current === instanceIdRef.current) {
+            subscriptionOwnership.current = null;
           }
         };
       }
@@ -73,7 +74,7 @@ export const useRoom = () => {
   // rooms.tsx's useRoom instances from creating/destroying channels on every visit.
   useEffect(() => {
     if (!currentRoom) return;
-    if (activeSubscriptionOwner !== instanceIdRef.current) return;
+    if (subscriptionOwnership.current !== instanceIdRef.current) return;
 
     const subId = `room-participants-room-${currentRoom.id}`;
     const cleanup = subscriptionManager.register(subId, () => {
@@ -102,9 +103,9 @@ export const useRoom = () => {
           (payload) => {
             // Reload if the changed user is a room participant
             const participantIds = new Set(
-              useAppStore.getState().roomParticipants.map((p: any) => p.user_id)
+              useAppStore.getState().roomParticipants.map((p) => p.user_id)
             );
-            if (payload.new && participantIds.has((payload.new as any).id)) {
+            if (payload.new && participantIds.has((payload.new as Record<string, string>).id)) {
               loadParticipants();
               loadMyRooms();
             }
@@ -173,7 +174,8 @@ export const useRoom = () => {
           *,
           creator:creator_id (
             id,
-            display_name
+            display_name,
+            avatar_url
           ),
           participants:room_participants (
             id,
@@ -437,7 +439,7 @@ export const useRoom = () => {
     // Fast path: check local state first to avoid DB round-trips when switching between known rooms
     const freshMyRooms = useAppStore.getState().myRooms;
     const knownRoom = freshMyRooms.find(r => r.id === roomId);
-    const isKnownParticipant = knownRoom?.participants?.some((p: any) => p.user_id === currentUser.id);
+    const isKnownParticipant = knownRoom?.participants?.some((p) => p.user_id === currentUser.id);
 
     if (isKnownParticipant && knownRoom) {
       // Only update state if actually switching to a different room to avoid redundant re-renders

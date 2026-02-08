@@ -132,15 +132,15 @@ interface QRCodeModalProps {
  * Full-screen modal for displaying a QR code
  */
 export const QRCodeModal: React.FC<QRCodeModalProps> = ({ visible, value, title, subtitle, onClose }) => {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <BlurView intensity={20} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+        <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
 
         <View style={[styles.modalContainer, { borderColor: theme.colors.glass.border }]}>
-          <BlurView intensity={80} tint={isDark ? "dark" : "light"} style={styles.modal}>
+          <BlurView intensity={80} tint="dark" style={styles.modal}>
             {/* Header */}
             <View style={styles.header}>
               <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>{title || "QR Code"}</Text>

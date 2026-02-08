@@ -82,9 +82,11 @@ export const usePresence = () => {
         // App came to foreground - mark as online and restart heartbeat
         updatePresence(true);
         lastActivityRef.current = Date.now();
-        if (!heartbeatIntervalRef.current) {
-          heartbeatIntervalRef.current = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
+        // Clear any existing interval before creating a new one to prevent leaks
+        if (heartbeatIntervalRef.current) {
+          clearInterval(heartbeatIntervalRef.current);
         }
+        heartbeatIntervalRef.current = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
       } else if (nextAppState.match(/inactive|background/)) {
         // App went to background - mark as offline and stop heartbeat
         updatePresence(false);

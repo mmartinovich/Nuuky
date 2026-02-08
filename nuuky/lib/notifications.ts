@@ -80,7 +80,7 @@ export async function sendPushNotification(
   expoPushToken: string,
   title: string,
   body: string,
-  data?: any
+  data?: Record<string, string | number | boolean | undefined>
 ) {
   const message = {
     to: expoPushToken,
@@ -152,7 +152,7 @@ export function setupNotificationListeners(
 export async function scheduleLocalNotification(
   title: string,
   body: string,
-  data?: any,
+  data?: Record<string, string | number | boolean | undefined>,
   seconds: number = 0
 ) {
   await Notifications.scheduleNotificationAsync({

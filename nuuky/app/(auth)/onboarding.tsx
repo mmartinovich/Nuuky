@@ -30,7 +30,7 @@ import { validatePhone, formatPhoneDisplay, getDialCode, getPhonePlaceholder, ge
 export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const { currentUser } = useAppStore();
   const { loading, pickAndUploadAvatar, updateDisplayName, updatePhone, completeProfile } = useProfile();
   const { checking, validateUsername, checkAvailability, suggestUsername, updateUsername } = useUsername();

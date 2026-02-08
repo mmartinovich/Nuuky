@@ -16,7 +16,7 @@ interface InviteCardProps {
 }
 
 export const InviteCard: React.FC<InviteCardProps> = ({ invite, onAccept, onDecline, cardStyle = false }) => {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const [timeRemaining, setTimeRemaining] = useState('');
   const [isExpired, setIsExpired] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -121,7 +121,7 @@ export const InviteCard: React.FC<InviteCardProps> = ({ invite, onAccept, onDecl
             <Text style={[styles.timeText, { color: theme.colors.text.secondary }]}>{timeRemaining}</Text>
           </View>
         ) : (
-          <View style={[styles.timeBadge, styles.expiredBadge, { backgroundColor: isDark ? 'rgba(236, 72, 153, 0.1)' : 'rgba(236, 72, 153, 0.08)', borderColor: isDark ? 'rgba(236, 72, 153, 0.3)' : 'rgba(236, 72, 153, 0.2)' }]}>
+          <View style={[styles.timeBadge, styles.expiredBadge, { backgroundColor: 'rgba(236, 72, 153, 0.1)', borderColor: 'rgba(236, 72, 153, 0.3)' }]}>
             <Text style={[styles.expiredText, { color: theme.colors.mood.reachOut.base }]}>Expired</Text>
           </View>
         )}

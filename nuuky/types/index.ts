@@ -81,6 +81,7 @@ export interface Room {
   creator?: {
     id: string;
     display_name: string;
+    avatar_url?: string;
   };
 }
 

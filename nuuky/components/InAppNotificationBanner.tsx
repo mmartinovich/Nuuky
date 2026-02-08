@@ -37,7 +37,7 @@ interface Props {
 }
 
 export const InAppNotificationBanner: React.FC<Props> = ({ notification, onDismiss }) => {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const translateY = useRef(new Animated.Value(-BANNER_HEIGHT - insets.top - 20)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -161,7 +161,7 @@ export const InAppNotificationBanner: React.FC<Props> = ({ notification, onDismi
         style={styles.touchable}
       >
         <BlurView
-          intensity={isDark ? 80 : 90}
+          intensity={80}
           tint={theme.colors.blurTint}
           style={styles.blurContainer}
         >

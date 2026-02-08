@@ -3,8 +3,8 @@
 // ============================================
 // Theme Types
 // ============================================
-export type ThemeMode = 'light' | 'dark' | 'system';
-export type ResolvedTheme = 'light' | 'dark';
+export type ThemeMode = 'dark';
+export type ResolvedTheme = 'dark';
 export type PresetMood = 'good' | 'neutral' | 'not_great' | 'reach_out';
 
 // Accent colors derived from mood
@@ -127,66 +127,6 @@ const darkColors = {
 };
 
 // ============================================
-// Light Theme Colors (Soft Cosmic Lavender)
-// ============================================
-const lightColors = {
-  // Backgrounds - Soft lavender whites
-  bg: {
-    primary: '#F8F6FF',
-    secondary: '#EDE9FE',
-    tertiary: '#E4E0F7',
-  },
-  // Glass properties for light glassmorphism
-  glass: {
-    background: 'rgba(0, 0, 0, 0.04)',
-    border: 'rgba(0, 0, 0, 0.12)',
-    highlight: 'rgba(255, 255, 255, 0.9)',
-    shadow: 'rgba(139, 92, 246, 0.1)',
-  },
-  // Text colors - dark on light
-  text: {
-    primary: '#1a1a2e',
-    secondary: '#4c4c6d',
-    tertiary: '#65658a',
-    accent: '#6d28d9',
-    neon: '#c026d3',
-  },
-  // UI elements
-  ui: {
-    border: 'rgba(139, 92, 246, 0.2)',
-    borderLight: 'rgba(0, 0, 0, 0.05)',
-    card: 'rgba(255, 255, 255, 0.7)',
-    cardHover: 'rgba(255, 255, 255, 0.9)',
-    overlay: 'rgba(248, 246, 255, 0.95)',
-    neonBorder: 'rgba(192, 38, 211, 0.4)',
-  },
-  // Accent colors (default - used when no mood-based accent is available)
-  accent: {
-    primary: '#3FCBFF', // Default to neutral (cyan)
-    soft: 'rgba(63, 203, 255, 0.15)',
-    muted: 'rgba(63, 203, 255, 0.5)',
-  },
-  // Navigation bar
-  nav: {
-    background: '#F5F3FF',
-  },
-  // Status/action colors
-  status: {
-    success: '#16A34A',
-    error: '#DC2626',
-    warning: '#D97706',
-    info: '#2563EB',
-  },
-  action: {
-    delete: '#DC2626',
-    archive: '#D97706',
-    mute: '#6B7280',
-  },
-  // BlurView tint
-  blurTint: 'light' as const,
-};
-
-// ============================================
 // Dark Theme Gradients
 // ============================================
 const darkGradients = {
@@ -203,30 +143,14 @@ const darkGradients = {
 };
 
 // ============================================
-// Light Theme Gradients
-// ============================================
-const lightGradients = {
-  background: ['#F8F6FF', '#EDE9FE', '#E4E0F7'] as const,
-  backgroundAlt: ['#EDE9FE', '#E4E0F7', '#F0ECFF'] as const,
-  card: ['rgba(255, 255, 255, 0.9)', 'rgba(255, 255, 255, 0.7)'] as const,
-  glass: ['rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.85)'] as const,
-  neonPink: ['#EC4899', '#DB2777', '#BE185D'] as const,
-  neonCyan: ['#3B82F6', '#2563EB', '#1D4ED8'] as const,
-  neonGreen: ['#22C55E', '#16A34A', '#15803D'] as const,
-  neonPurple: ['#A855F7', '#9333EA', '#7E22CE'] as const,
-  button: ['rgba(139, 92, 246, 0.15)', 'rgba(192, 38, 211, 0.15)'] as const,
-  vibe: ['#EC4899', '#A855F7', '#3B82F6', '#22C55E'] as const,
-};
-
-// ============================================
 // Theme Getter Function
 // ============================================
-export const getTheme = (mode: ResolvedTheme) => ({
+export const getTheme = (_mode?: ResolvedTheme) => ({
   colors: {
     ...sharedColors,
-    ...(mode === 'dark' ? darkColors : lightColors),
+    ...darkColors,
   },
-  gradients: mode === 'dark' ? darkGradients : lightGradients,
+  gradients: darkGradients,
 });
 
 // ============================================

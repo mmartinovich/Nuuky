@@ -147,9 +147,9 @@ export const useProfile = () => {
       // Determine content type based on extension
       const contentType = fileExt === 'png' ? 'image/png' : 'image/jpeg';
 
-      // Verify auth session before upload
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData?.session) {
+      // Refresh session to ensure token is valid for upload
+      const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession();
+      if (sessionError || !sessionData?.session) {
         throw new Error('Session expired - please log in again');
       }
 

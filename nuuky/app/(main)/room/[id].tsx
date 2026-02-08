@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, Alert, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Alert, TouchableOpacity, ActivityIndicator, Text } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -104,23 +104,33 @@ export default function RoomScreen() {
       const success = await audioUnmute();
       if (success) {
         setIsMuted(false);
-        // Update database
-        await supabase
+        // Update database — revert local state on failure
+        const { error } = await supabase
           .from('room_participants')
           .update({ is_muted: false })
           .eq('room_id', currentRoom.id)
           .eq('user_id', currentUser.id);
+        if (error) {
+          setIsMuted(true);
+          await audioMute();
+          Alert.alert('Error', 'Failed to update mute status');
+        }
       }
     } else {
       // User is muting
       await audioMute();
       setIsMuted(true);
-      // Update database
-      await supabase
+      // Update database — revert local state on failure
+      const { error } = await supabase
         .from('room_participants')
         .update({ is_muted: true })
         .eq('room_id', currentRoom.id)
         .eq('user_id', currentUser.id);
+      if (error) {
+        setIsMuted(false);
+        await audioUnmute();
+        Alert.alert('Error', 'Failed to update mute status');
+      }
     }
   };
 
@@ -157,7 +167,14 @@ export default function RoomScreen() {
   };
 
   if (!currentRoom || loading || !currentUser) {
-    return <View style={[styles.container, { backgroundColor: theme.colors.bg.primary }]} />;
+    return (
+      <View style={[styles.container, styles.loadingContainer, { backgroundColor: theme.colors.bg.primary }]}>
+        <ActivityIndicator size="large" color={accent.primary} />
+        <Text style={{ color: theme.colors.text.tertiary, marginTop: 12, fontSize: 14 }}>
+          Joining room...
+        </Text>
+      </View>
+    );
   }
 
   // Get friend users
@@ -237,6 +254,10 @@ export default function RoomScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   audioBadgeContainer: {
     position: 'absolute',

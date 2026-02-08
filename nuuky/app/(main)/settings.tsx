@@ -18,7 +18,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../hooks/useTheme";
 import { usePreferences } from "../../hooks/usePreferences";
 import { useAppStore } from "../../stores/appStore";
-import { spacing, interactionStates, ThemeMode } from "../../lib/theme";
+import { spacing, interactionStates } from "../../lib/theme";
 
 
 interface SettingsRowProps {
@@ -153,7 +153,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
-  const { theme, isDark, themeMode, setThemeMode, accent } = useTheme();
+  const { theme, accent } = useTheme();
   const {
     nudgesEnabled,
     flaresEnabled,
@@ -181,7 +181,7 @@ export default function SettingsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.bg.primary }]}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      <StatusBar barStyle={"light-content"} />
       <LinearGradient
         colors={theme.gradients.background}
         style={StyleSheet.absoluteFill}
@@ -239,12 +239,12 @@ export default function SettingsScreen() {
               onValueChange={() => { toggleNudges(); }}
               disabled={prefsLoading}
               trackColor={{
-                false: isDark ? "rgba(120,120,128,0.32)" : "rgba(120,120,128,0.16)",
+                false: "rgba(120,120,128,0.32)",
                 true: accent.primary,
               }}
               thumbColor="#FFFFFF"
               ios_backgroundColor={
-                isDark ? "rgba(120,120,128,0.32)" : "rgba(120,120,128,0.16)"
+                "rgba(120,120,128,0.32)"
               }
             />
           </SettingsRow>
@@ -260,12 +260,12 @@ export default function SettingsScreen() {
               onValueChange={() => { toggleFlares(); }}
               disabled={prefsLoading}
               trackColor={{
-                false: isDark ? "rgba(120,120,128,0.32)" : "rgba(120,120,128,0.16)",
+                false: "rgba(120,120,128,0.32)",
                 true: accent.primary,
               }}
               thumbColor="#FFFFFF"
               ios_backgroundColor={
-                isDark ? "rgba(120,120,128,0.32)" : "rgba(120,120,128,0.16)"
+                "rgba(120,120,128,0.32)"
               }
             />
           </SettingsRow>
