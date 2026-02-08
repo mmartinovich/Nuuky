@@ -2,19 +2,16 @@ import { logger } from '../lib/logger';
 import { useState, useEffect, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
-import { useAppStore } from '../stores/appStore';
+import { useAppStore, useCurrentUser, useHomeRoomId, useMyRooms } from '../stores/appStore';
 import { Room } from '../types';
 
 const HOME_ROOM_KEY = 'nooke_home_room_id';
 
 export const useHomeRoom = () => {
-  const {
-    currentUser,
-    homeRoomId,
-    setHomeRoomId,
-    defaultRoomId,
-    myRooms
-  } = useAppStore();
+  const currentUser = useCurrentUser();
+  const homeRoomId = useHomeRoomId();
+  const setHomeRoomId = useAppStore((s) => s.setHomeRoomId);
+  const myRooms = useMyRooms();
 
   const [loading, setLoading] = useState(true);
 

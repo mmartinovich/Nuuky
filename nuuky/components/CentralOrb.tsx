@@ -617,7 +617,8 @@ export const CentralOrb = memo(CentralOrbComponent, (prevProps, nextProps) => {
     prevProps.moodSelfie?.id === nextProps.moodSelfie?.id &&
     prevProps.moodSelfie?.expires_at === nextProps.moodSelfie?.expires_at &&
     prevProps.isCustomMoodActive === nextProps.isCustomMoodActive &&
-    prevProps.statusText === nextProps.statusText
+    prevProps.statusText === nextProps.statusText &&
+    prevProps.onPress === nextProps.onPress
   );
 });
 

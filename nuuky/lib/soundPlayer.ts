@@ -40,7 +40,7 @@ export const SOUND_TYPES: SoundReactionType[] = ['laugh', 'wow', 'applause', 'aw
 // Preloaded sound instances for instant playback
 let preloadedSounds: Map<SoundReactionType, any> = new Map();
 let isPreloaded = false;
-let isPreloading = false;
+let preloadPromise: Promise<void> | null = null;
 let isAudioAvailable = false;
 
 /**
@@ -48,9 +48,20 @@ let isAudioAvailable = false;
  * Call this once at app startup.
  */
 export const preloadSounds = async (): Promise<void> => {
-  if (isPreloaded || isPreloading) return;
+  if (isPreloaded) return;
+  // If already preloading, return the existing promise to avoid races
+  if (preloadPromise) return preloadPromise;
 
-  isPreloading = true;
+  preloadPromise = _doPreload();
+  try {
+    await preloadPromise;
+  } finally {
+    preloadPromise = null;
+  }
+};
+
+const _doPreload = async (): Promise<void> => {
+
   logger.log('[SoundPlayer] Preloading reaction sounds...');
 
   try {
@@ -58,7 +69,6 @@ export const preloadSounds = async (): Promise<void> => {
     isAudioAvailable = await loadAudio();
     if (!isAudioAvailable || !Audio) {
       logger.warn('[SoundPlayer] Audio not available - rebuild native app with: npx expo run:ios');
-      isPreloading = false;
       return;
     }
 
@@ -93,8 +103,6 @@ export const preloadSounds = async (): Promise<void> => {
     logger.log(`[SoundPlayer] Preloaded ${preloadedSounds.size}/${SOUND_TYPES.length} sounds`);
   } catch (error) {
     logger.error('[SoundPlayer] Preload failed:', error);
-  } finally {
-    isPreloading = false;
   }
 };
 
@@ -123,9 +131,11 @@ export const playSound = async (soundId: SoundReactionType): Promise<void> => {
         source,
         { shouldPlay: true, volume: 1.0 }
       );
-      // Clean up after playback
+      // Clean up after playback (with safety timeout to prevent leak)
+      const safetyTimeout = setTimeout(() => { try { newSound.unloadAsync(); } catch {} }, 10000);
       newSound.setOnPlaybackStatusUpdate((status: any) => {
         if (status.isLoaded && status.didJustFinish) {
+          clearTimeout(safetyTimeout);
           newSound.unloadAsync();
         }
       });

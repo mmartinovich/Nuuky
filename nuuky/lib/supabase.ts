@@ -37,8 +37,10 @@ export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKe
 });
 
 // Helper function to get current user session
+// Returns null for no session, throws on actual errors
 export const getCurrentUser = async () => {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error) throw error;
   return session?.user || null;
 };
 

@@ -77,7 +77,7 @@ export const useSoundReactions = ({
         }
       };
     }
-  }, [cooldownRemaining > 0]);
+  }, [cooldownRemaining > 0]); // eslint-disable-line react-hooks/exhaustive-deps -- intentionally boolean: start/stop interval on transition
 
   // Auto-dismiss received reactions after TOAST_DURATION_MS
   useEffect(() => {

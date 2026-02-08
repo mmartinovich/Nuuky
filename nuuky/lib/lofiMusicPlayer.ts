@@ -163,9 +163,9 @@ export const playLofi = async (track: LofiTrack, fadeIn = true): Promise<boolean
       return true;
     }
 
-    // Stop current track if different
+    // Stop current track if different (use fadeOut=false to avoid async race)
     if (currentSound && currentTrack !== track) {
-      await stopLofi(true);
+      await stopLofi(false);
     }
 
     // Load new track if needed
@@ -190,6 +190,9 @@ export const playLofi = async (track: LofiTrack, fadeIn = true): Promise<boolean
         logger.log(`[LofiPlayer] Loaded track successfully: ${track}`);
       } catch (loadError) {
         logger.error(`[LofiPlayer] Failed to load track: ${track}`, loadError);
+        currentSound = null;
+        currentTrack = null;
+        isPlaying = false;
         return false;
       }
     }

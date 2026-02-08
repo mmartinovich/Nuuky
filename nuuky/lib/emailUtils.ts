@@ -46,7 +46,7 @@ export const OTP_ERROR_MESSAGES: Record<string, string> = {
  * Gets a user-friendly error message from a Supabase error
  */
 export const getOTPErrorMessage = (error: any): string => {
-  const code = error?.code || error?.message;
+  const code = error?.code;
   const message = error?.message || "";
   
   // Check for rate limit errors
@@ -54,5 +54,5 @@ export const getOTPErrorMessage = (error: any): string => {
     return "Too many login attempts. Please wait 5-10 minutes before trying again.";
   }
   
-  return OTP_ERROR_MESSAGES[code] || message || "An error occurred. Please try again.";
+  return (code && OTP_ERROR_MESSAGES[code]) || OTP_ERROR_MESSAGES[message] || message || "An error occurred. Please try again.";
 };

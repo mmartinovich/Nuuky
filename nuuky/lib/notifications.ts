@@ -90,15 +90,23 @@ export async function sendPushNotification(
     data,
   };
 
-  await fetch('https://exp.host/--/api/v2/push/send', {
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      'Accept-encoding': 'gzip, deflate',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(message),
-  });
+  try {
+    const response = await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Accept-encoding': 'gzip, deflate',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(message),
+    });
+
+    if (!response.ok) {
+      console.warn(`[Notifications] Push send failed with status ${response.status}`);
+    }
+  } catch (error) {
+    console.warn('[Notifications] Push send network error:', error);
+  }
 }
 
 // Notification types for different events

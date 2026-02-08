@@ -17,7 +17,8 @@ const CENTER_Y = height / 2 - 20;
 const PARTICLE_SIZE = 60;
 
 // Track active listeners by friend ID to prevent accumulation
-const activeListeners = new Map<string, { orbitListener: string; localListener: string; cleanup: () => void }>();
+// WeakRef-style cleanup: entries are always cleaned up by the owning component's effect cleanup
+const activeListeners = new Map<string, { cleanup: () => void }>();
 
 interface FriendParticleProps {
   friend: User;
@@ -178,7 +179,7 @@ function FriendParticleComponent({
       activeListeners.delete(friendId);
     };
 
-    activeListeners.set(friendId, { orbitListener, localListener: localListener || '', cleanup });
+    activeListeners.set(friendId, { cleanup });
 
     return cleanup;
   }, [friend.id, baseAngle, radius, orbitAngle, localOrbitAnim, lowPowerMode]);
@@ -281,9 +282,12 @@ function FriendParticleComponent({
     onPress();
   };
 
-  const moodColors = friend.custom_mood?.color
-    ? getCustomMoodColor(friend.custom_mood.color)
-    : getMoodColor(friend.mood || 'neutral');
+  const moodColors = useMemo(
+    () => friend.custom_mood?.color
+      ? getCustomMoodColor(friend.custom_mood.color)
+      : getMoodColor(friend.mood || 'neutral'),
+    [friend.custom_mood?.color, friend.mood]
+  );
 
   // Check if friend has an active mood selfie (not expired)
   const hasSelfie = useMemo(() => {
@@ -520,6 +524,7 @@ export const FriendParticle = memo(FriendParticleComponent, (prevProps, nextProp
     prevProps.hasActiveFlare === nextProps.hasActiveFlare &&
     prevProps.baseAngle === nextProps.baseAngle &&
     prevProps.radius === nextProps.radius &&
+    prevProps.onPress === nextProps.onPress &&
     prevProps.streak?.consecutive_days === nextProps.streak?.consecutive_days &&
     prevProps.streak?.state === nextProps.streak?.state
     // Note: orbitAngle is an Animated.Value that changes continuously

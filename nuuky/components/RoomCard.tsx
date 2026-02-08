@@ -37,29 +37,35 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, onLongPress
   }), [theme]);
 
   // Sort participants: active-in-room first → online-elsewhere (dimmed) → offline
-  const sortedParticipants = [...participants].sort((a, b) => {
-    const aOnline = a.user && isUserTrulyOnline(a.user.is_online, a.user.last_seen_at);
-    const bOnline = b.user && isUserTrulyOnline(b.user.is_online, b.user.last_seen_at);
-    const aActiveHere = aOnline && a.user?.default_room_id === room.id;
-    const bActiveHere = bOnline && b.user?.default_room_id === room.id;
+  const { displayedActive, displayedAway, remainingCount } = useMemo(() => {
+    const sorted = [...participants].sort((a, b) => {
+      const aOnline = a.user && isUserTrulyOnline(a.user.is_online, a.user.last_seen_at);
+      const bOnline = b.user && isUserTrulyOnline(b.user.is_online, b.user.last_seen_at);
+      const aActiveHere = aOnline && a.user?.default_room_id === room.id;
+      const bActiveHere = bOnline && b.user?.default_room_id === room.id;
 
-    if (aActiveHere && !bActiveHere) return -1;
-    if (!aActiveHere && bActiveHere) return 1;
-    if (aOnline && !bOnline) return -1;
-    if (!aOnline && bOnline) return 1;
-    return 0;
-  });
+      if (aActiveHere && !bActiveHere) return -1;
+      if (!aActiveHere && bActiveHere) return 1;
+      if (aOnline && !bOnline) return -1;
+      if (!aOnline && bOnline) return 1;
+      return 0;
+    });
 
-  const activeHereParticipants = sortedParticipants.filter(p =>
-    p.user && isUserTrulyOnline(p.user.is_online, p.user.last_seen_at) && p.user.default_room_id === room.id
-  );
-  const awayParticipants = sortedParticipants.filter(p =>
-    p.user && !(isUserTrulyOnline(p.user.is_online, p.user.last_seen_at) && p.user.default_room_id === room.id)
-  );
+    const active = sorted.filter(p =>
+      p.user && isUserTrulyOnline(p.user.is_online, p.user.last_seen_at) && p.user.default_room_id === room.id
+    );
+    const away = sorted.filter(p =>
+      p.user && !(isUserTrulyOnline(p.user.is_online, p.user.last_seen_at) && p.user.default_room_id === room.id)
+    );
 
-  const displayedActive = activeHereParticipants.slice(0, 5);
-  const displayedAway = awayParticipants.slice(0, 4);
-  const remainingCount = Math.max(0, participantCount - displayedActive.length - displayedAway.length);
+    const dispActive = active.slice(0, 5);
+    const dispAway = away.slice(0, 4);
+    return {
+      displayedActive: dispActive,
+      displayedAway: dispAway,
+      remainingCount: Math.max(0, participantCount - dispActive.length - dispAway.length),
+    };
+  }, [participants, room.id, participantCount]);
 
   const isHomeRoom = room.name === 'My Nūūky';
   const displayName = isHomeRoom && !isCreator && creatorName
@@ -233,9 +239,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: spacing.md,
-    paddingLeft: spacing.md + 4,
-    gap: spacing.sm,
+    padding: spacing.sm + 4,
+    paddingLeft: spacing.sm + 8,
+    gap: 4,
   },
   header: {
     flexDirection: 'row',
@@ -252,13 +258,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   roomName: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '600',
   },
   creatorSubtitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '400',
-    marginTop: 2,
+    marginTop: 1,
   },
   headerRight: {
     flexDirection: 'row',
@@ -272,44 +278,44 @@ const styles = StyleSheet.create({
   avatarRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 36,
+    minHeight: 28,
   },
   avatarContainer: {
     position: 'relative',
   },
   avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarPlaceholder: {},
   avatarText: {
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '600',
   },
   avatarOnlineDot: {
     position: 'absolute',
     bottom: -1,
     right: -1,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: '#22C55E',
-    borderWidth: 2,
+    borderWidth: 1.5,
   },
   avatarSmall: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarTextSmall: {
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: '600',
   },
   avatarGroupSeparator: {

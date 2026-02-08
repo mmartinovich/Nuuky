@@ -379,6 +379,14 @@ export const useAppStore = create<AppState>()(
     // Reset notifications
     notifications: [],
     unreadNotificationCount: 0,
+    // Reset session state
+    sessionWarningShown: false,
+    lastActivityTimestamp: Date.now(),
+    // Reset lo-fi & favorites (privacy: don't leak to next user)
+    lofiAutoPlay: true,
+    lofiVolume: 0.7,
+    lofiSelectedTrack: null,
+    favoriteFriends: [],
   }))
 }),
     {

@@ -3,6 +3,7 @@
  */
 export function formatRelativeTime(dateString: string): string {
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
@@ -61,6 +62,7 @@ export function isUserTrulyOnline(isOnline: boolean, lastSeenAt: string | null |
 
   // Check if last_seen_at is within the timeout window
   const lastSeenDate = new Date(lastSeenAt);
+  if (isNaN(lastSeenDate.getTime())) return isOnline; // Invalid date, trust the flag
   const now = new Date();
   const diffMs = now.getTime() - lastSeenDate.getTime();
 

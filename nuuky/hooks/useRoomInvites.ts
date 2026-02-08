@@ -1,16 +1,15 @@
 import { logger } from '../lib/logger';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../stores/appStore';
 import { subscriptionManager } from '../lib/subscriptionManager';
 import { RoomInvite } from '../types';
 
-// Throttle mechanism for invite updates
-let lastInvitesRefresh = 0;
 const INVITES_REFRESH_THROTTLE_MS = 2000; // Only refresh every 2 seconds
 
 export const useRoomInvites = () => {
+  const lastInvitesRefreshRef = useRef(0);
   const { currentUser, roomInvites, setRoomInvites, addRoomInvite, removeRoomInvite } = useAppStore();
   const [loading, setLoading] = useState(false);
 
@@ -422,8 +421,8 @@ export const useRoomInvites = () => {
     // Throttled invite load
     const throttledLoadInvites = () => {
       const now = Date.now();
-      if (now - lastInvitesRefresh < INVITES_REFRESH_THROTTLE_MS) return;
-      lastInvitesRefresh = now;
+      if (now - lastInvitesRefreshRef.current < INVITES_REFRESH_THROTTLE_MS) return;
+      lastInvitesRefreshRef.current = now;
       loadMyInvites();
     };
 

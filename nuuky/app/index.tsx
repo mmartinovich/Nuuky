@@ -13,13 +13,17 @@ export default function Index() {
   useEffect(() => {
     // Wait a moment for the auth state to be checked
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+      } catch (error) {
+        // Session check failed - continue to auth redirect
+      }
       // Give the auth state time to update
       setTimeout(() => {
         setIsLoading(false);
       }, 100);
     };
-    
+
     checkAuth();
   }, []);
   
@@ -31,7 +35,7 @@ export default function Index() {
   // Redirect based on authentication status and profile completion
   if (isAuthenticated) {
     // Check if user has completed onboarding
-    if (currentUser && currentUser.profile_completed === false) {
+    if (currentUser && currentUser.profile_completed !== true) {
       return <Redirect href="/(auth)/onboarding" />;
     }
     return <Redirect href="/(main)" />;

@@ -32,11 +32,11 @@ export const usePreferences = () => {
         .single();
 
       if (error) {
-        // If no preferences exist, create default ones
+        // If no preferences exist, create default ones using upsert to handle race
         if (error.code === 'PGRST116') {
           const { data: newPrefs, error: createError } = await supabase
             .from('user_preferences')
-            .insert({ user_id: currentUser.id })
+            .upsert({ user_id: currentUser.id }, { onConflict: 'user_id' })
             .select()
             .single();
 

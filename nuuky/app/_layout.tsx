@@ -51,15 +51,14 @@ if (typeof globalThis.addEventListener === 'function') {
 // Deep link validation helpers
 const VALID_USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
 const VALID_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const deepLinkTimestamps: number[] = [];
+let deepLinkTimestamps: number[] = [];
 const DEEP_LINK_RATE_LIMIT = 5;
 const DEEP_LINK_RATE_WINDOW_MS = 60_000;
 
 function isDeepLinkRateLimited(): boolean {
   const now = Date.now();
-  while (deepLinkTimestamps.length > 0 && now - deepLinkTimestamps[0] > DEEP_LINK_RATE_WINDOW_MS) {
-    deepLinkTimestamps.shift();
-  }
+  // Filter out expired timestamps (replace array to avoid unbounded growth from shift())
+  deepLinkTimestamps = deepLinkTimestamps.filter(t => now - t <= DEEP_LINK_RATE_WINDOW_MS);
   if (deepLinkTimestamps.length >= DEEP_LINK_RATE_LIMIT) return true;
   deepLinkTimestamps.push(now);
   return false;
@@ -696,7 +695,7 @@ export default function RootLayout() {
 
   // Session timeout enforcement: check on app foreground
   useEffect(() => {
-    const checkSessionTimeout = () => {
+    const checkSessionTimeout = async () => {
       const { lastActivityTimestamp, sessionTimeoutMinutes, isAuthenticated, logout } = useAppStore.getState();
       if (!isAuthenticated) return;
 
@@ -704,7 +703,7 @@ export default function RootLayout() {
       const timeoutMs = sessionTimeoutMinutes * 60 * 1000;
       if (elapsed > timeoutMs) {
         logger.warn('Session timeout reached, logging out');
-        supabase.auth.signOut().catch(() => {});
+        try { await supabase.auth.signOut(); } catch {}
         logout();
       }
     };
@@ -712,11 +711,15 @@ export default function RootLayout() {
     // Check on mount
     checkSessionTimeout();
 
-    // Check when app comes to foreground
+    // Check when app comes to foreground - update activity AFTER timeout check
+    // so the current foreground event doesn't reset the timer before we check
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') {
         checkSessionTimeout();
-        useAppStore.getState().setLastActivity();
+        // Only update activity timestamp if session is still valid (not logged out above)
+        if (useAppStore.getState().isAuthenticated) {
+          useAppStore.getState().setLastActivity();
+        }
       }
     });
 

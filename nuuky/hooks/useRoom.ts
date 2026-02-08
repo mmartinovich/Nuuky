@@ -20,7 +20,17 @@ export const useRoom = () => {
   const isJoiningRoomRef = useRef(false);
   const lastJoinedRoomIdRef = useRef<string | null>(null);
   const instanceIdRef = useRef(`useRoom-${Date.now()}-${Math.random()}`);
-  const { currentUser, currentRoom, setCurrentRoom, setActiveRooms, myRooms, setMyRooms, addMyRoom, updateMyRoom, removeMyRoom, setRoomParticipants, roomParticipants } = useAppStore();
+  const currentUser = useAppStore((s) => s.currentUser);
+  const currentRoom = useAppStore((s) => s.currentRoom);
+  const myRooms = useAppStore((s) => s.myRooms);
+  const roomParticipants = useAppStore((s) => s.roomParticipants);
+  const setCurrentRoom = useAppStore((s) => s.setCurrentRoom);
+  const setActiveRooms = useAppStore((s) => s.setActiveRooms);
+  const setMyRooms = useAppStore((s) => s.setMyRooms);
+  const addMyRoom = useAppStore((s) => s.addMyRoom);
+  const updateMyRoom = useAppStore((s) => s.updateMyRoom);
+  const removeMyRoom = useAppStore((s) => s.removeMyRoom);
+  const setRoomParticipants = useAppStore((s) => s.setRoomParticipants);
   const [activeRooms, setActiveRoomsList] = useState<Room[]>([]);
   const [loading, setLoading] = useState(false);
 

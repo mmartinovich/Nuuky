@@ -211,9 +211,9 @@ export const connectToAudioRoom = async (roomId: string, enableMic: boolean = tr
     await currentRoom.connect(tokenData.serverUrl, tokenData.token);
 
     // Bail if stale — a newer switch happened during WebRTC handshake.
-    // The newer connectToAudioRoom call will see this room as currentRoom
-    // and properly await its disconnect — so just bail, don't disconnect here.
+    // Disconnect the room we just created to avoid zombie connections.
     if (connectionGeneration !== myGeneration) {
+      try { await currentRoom.disconnect(); } catch {}
       return false;
     }
 
