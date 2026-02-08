@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,19 +6,18 @@ import {
   TouchableOpacity,
   Modal,
   Switch,
-  Dimensions,
-  PanResponder,
-  GestureResponderEvent,
   ScrollView,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withSpring,
   runOnJS,
   Easing,
 } from 'react-native-reanimated';
@@ -28,8 +27,7 @@ import { radius, spacing } from '../lib/theme';
 import { LofiTrack, LOFI_TRACK_METADATA, moodToTrack } from '../lib/lofiMusicPlayer';
 import { PresetMood } from '../types';
 
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
-const SLIDER_WIDTH = SCREEN_W - 80;
+const THUMB_SIZE = 24;
 
 // Custom volume slider component
 interface VolumeSliderProps {
@@ -47,78 +45,109 @@ const VolumeSlider: React.FC<VolumeSliderProps> = ({
   trackColor,
   iconColor,
 }) => {
-  const sliderRef = useRef<View>(null);
-  const sliderX = useRef(0);
-
-  // Use shared value for immediate UI updates
+  const sliderWidth = useSharedValue(0);
   const sliderValue = useSharedValue(value);
+  const thumbScale = useSharedValue(1);
+  // Track whether gesture owns the value to block prop-driven updates
+  const gestureActive = useSharedValue(false);
 
-  // Sync shared value when prop changes from external source
+  // Sync from props ONLY when gesture is not active (e.g. external reset)
   useEffect(() => {
-    sliderValue.value = value;
+    if (!gestureActive.value) {
+      sliderValue.value = value;
+    }
   }, [value]);
 
-  const handleTouch = (pageX: number) => {
-    const newValue = Math.max(0, Math.min(1, (pageX - sliderX.current) / SLIDER_WIDTH));
-    // Update shared value immediately for responsive UI
-    sliderValue.value = newValue;
-    // Notify parent (can be throttled/debounced by parent if needed)
-    onValueChange(newValue);
+  const commitValue = (val: number) => {
+    onValueChange(val);
   };
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (evt: GestureResponderEvent) => {
-        sliderRef.current?.measureInWindow((x) => {
-          sliderX.current = x;
-          handleTouch(evt.nativeEvent.pageX);
-        });
-      },
-      onPanResponderMove: (evt: GestureResponderEvent) => {
-        handleTouch(evt.nativeEvent.pageX);
-      },
-    })
-  ).current;
+  const clampValue = (x: number, w: number) => {
+    'worklet';
+    return Math.max(0, Math.min(1, x / w));
+  };
 
-  // Animated styles for fill and thumb - updates on UI thread
-  // Note: Using pixel values since Reanimated doesn't support percentage strings
+  const gesture = Gesture.Pan()
+    .onBegin((e) => {
+      gestureActive.value = true;
+      thumbScale.value = withSpring(1.2, { damping: 15, stiffness: 300 });
+      const w = sliderWidth.value;
+      if (w > 0) {
+        sliderValue.value = clampValue(e.x, w);
+      }
+    })
+    .onUpdate((e) => {
+      const w = sliderWidth.value;
+      if (w > 0) {
+        sliderValue.value = clampValue(e.x, w);
+      }
+    })
+    .onEnd(() => {
+      // Commit final value to parent only on release
+      runOnJS(commitValue)(sliderValue.value);
+    })
+    .onFinalize(() => {
+      thumbScale.value = withSpring(1, { damping: 15, stiffness: 300 });
+      // Keep gestureActive true briefly so the prop update from commitValue
+      // doesn't fight with the shared value. Release after a frame.
+      gestureActive.value = false;
+    })
+    .hitSlop({ top: 16, bottom: 16, left: 16, right: 16 });
+
+  // Tap gesture for direct positioning
+  const tapGesture = Gesture.Tap()
+    .onBegin((e) => {
+      gestureActive.value = true;
+      const w = sliderWidth.value;
+      if (w > 0) {
+        sliderValue.value = clampValue(e.x, w);
+      }
+    })
+    .onEnd(() => {
+      runOnJS(commitValue)(sliderValue.value);
+      gestureActive.value = false;
+    });
+
+  const composed = Gesture.Race(gesture, tapGesture);
+
   const fillStyle = useAnimatedStyle(() => ({
-    width: sliderValue.value * SLIDER_WIDTH,
+    width: sliderValue.value * sliderWidth.value,
   }));
 
   const thumbStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: sliderValue.value * SLIDER_WIDTH }],
+    transform: [
+      { translateX: sliderValue.value * sliderWidth.value - THUMB_SIZE / 2 },
+      { scale: thumbScale.value },
+    ],
   }));
 
   return (
     <View style={styles.volumeRow}>
       <Ionicons name="volume-low" size={20} color={iconColor} />
-      <View
-        ref={sliderRef}
-        style={styles.sliderContainer}
-        {...panResponder.panHandlers}
-      >
-        <View style={[styles.sliderTrack, { backgroundColor: trackColor }]} />
+      <GestureDetector gesture={composed}>
         <Animated.View
-          style={[
-            styles.sliderFill,
-            { backgroundColor: accentColor },
-            fillStyle,
-          ]}
-        />
-        <Animated.View
-          style={[
-            styles.sliderThumb,
-            {
-              backgroundColor: accentColor,
-              left: -12,
-            },
-            thumbStyle,
-          ]}
-        />
-      </View>
+          style={styles.sliderContainer}
+          onLayout={(e) => {
+            sliderWidth.value = e.nativeEvent.layout.width;
+          }}
+        >
+          <View style={[styles.sliderTrack, { backgroundColor: trackColor }]} />
+          <Animated.View
+            style={[
+              styles.sliderFill,
+              { backgroundColor: accentColor },
+              fillStyle,
+            ]}
+          />
+          <Animated.View
+            style={[
+              styles.sliderThumb,
+              { backgroundColor: accentColor },
+              thumbStyle,
+            ]}
+          />
+        </Animated.View>
+      </GestureDetector>
       <Ionicons name="volume-high" size={20} color={iconColor} />
     </View>
   );
@@ -622,9 +651,10 @@ const styles = StyleSheet.create({
   },
   sliderThumb: {
     position: 'absolute',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    top: (44 - THUMB_SIZE) / 2,
+    width: THUMB_SIZE,
+    height: THUMB_SIZE,
+    borderRadius: THUMB_SIZE / 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
