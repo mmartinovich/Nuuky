@@ -42,6 +42,7 @@ export const useFlare = () => {
       return;
     }
     const timer = setTimeout(() => {
+      if (!isMountedRef.current) return;
       setMyActiveFlare(null);
       loadActiveFlares();
     }, remaining);
@@ -59,6 +60,7 @@ export const useFlare = () => {
       return;
     }
     const timer = setTimeout(() => {
+      if (!isMountedRef.current) return;
       setActiveFlares(prev => prev.filter(f => new Date(f.expires_at).getTime() > Date.now()));
     }, remaining);
     return () => clearTimeout(timer);

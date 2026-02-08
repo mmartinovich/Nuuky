@@ -39,6 +39,7 @@ export default function RoomsScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   // Track if initial load has happened to prevent double loading
   const hasLoadedRef = useRef(false);
@@ -57,12 +58,11 @@ export default function RoomsScreen() {
   // Refresh rooms list when screen comes into focus (only after initial load)
   useFocusEffect(
     React.useCallback(() => {
-      // Skip if still in first-time loading or if this is the initial mount
+      // Skip if still in first-time loading
       if (firstTimeLoading) return;
-      // Only reload on subsequent focus events, not initial mount
+      // Refresh on re-focus to catch rooms deleted/updated while away
       if (hasLoadedRef.current) {
-        // Already loaded, this is a re-focus - skip duplicate load
-        // Data is already fresh from myRooms in Zustand
+        loadData();
       }
     }, [firstTimeLoading])
   );
@@ -82,11 +82,17 @@ export default function RoomsScreen() {
   };
 
   const handleCreateRoomSubmit = async (name?: string, isPrivate?: boolean) => {
-    const room = await createRoom(name);
-    if (room) {
-      setShowCreateRoom(false);
-      setAsDefaultRoom(room.id);
-      router.back();
+    if (creating) return;
+    setCreating(true);
+    try {
+      const room = await createRoom(name);
+      if (room) {
+        setShowCreateRoom(false);
+        setAsDefaultRoom(room.id);
+        router.back();
+      }
+    } finally {
+      setCreating(false);
     }
   };
 

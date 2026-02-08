@@ -19,10 +19,17 @@ interface Anchor {
 
 serve(async (req) => {
   try {
-    // Verify cron secret
+    // Verify cron secret using constant-time comparison to prevent timing attacks
     const authHeader = req.headers.get('Authorization');
     const cronSecret = Deno.env.get('CRON_SECRET');
-    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+    const providedSecret = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : '';
+    const encoder = new TextEncoder();
+    const secretBytes = encoder.encode(cronSecret || '');
+    const providedBytes = encoder.encode(providedSecret);
+    const secretsMatch = cronSecret && secretBytes.length === providedBytes.length &&
+      crypto.subtle.timingSafeEqual ? await crypto.subtle.timingSafeEqual(secretBytes, providedBytes) :
+      cronSecret === providedSecret; // Fallback if timingSafeEqual unavailable
+    if (!cronSecret || !secretsMatch) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }

@@ -80,9 +80,9 @@ export async function sendExpoNotification(
       return false;
     }
 
-    const result: ExpoPushResponse = await response.json();
+    const result = await response.json();
 
-    if (result.data && result.data.length > 0) {
+    if (result.data && Array.isArray(result.data) && result.data.length > 0) {
       const ticket = result.data[0];
 
       if (ticket.status === 'error') {

@@ -1,5 +1,5 @@
 import { logger } from '../lib/logger';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../stores/appStore';
@@ -9,6 +9,8 @@ export const usePreferences = () => {
   const { currentUser } = useAppStore();
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(true);
+  const preferencesRef = useRef(preferences);
+  preferencesRef.current = preferences;
 
   // Load preferences on mount and when user changes
   useEffect(() => {
@@ -69,11 +71,12 @@ export const usePreferences = () => {
     key: 'nudges_enabled' | 'flares_enabled' | 'room_invites_enabled',
     value: boolean
   ): Promise<boolean> => {
-    if (!currentUser || !preferences) return false;
+    const currentPrefs = preferencesRef.current;
+    if (!currentUser || !currentPrefs) return false;
 
     // Optimistic update
-    const previousPreferences = preferences;
-    setPreferences({ ...preferences, [key]: value });
+    const previousPreferences = currentPrefs;
+    setPreferences({ ...currentPrefs, [key]: value });
 
     try {
       const { error } = await supabase
@@ -90,7 +93,7 @@ export const usePreferences = () => {
       Alert.alert('Error', 'Failed to update preference. Please try again.');
       return false;
     }
-  }, [currentUser, preferences]);
+  }, [currentUser?.id]);
 
   const toggleNudges = useCallback(async (): Promise<boolean> => {
     if (!preferences) return false;

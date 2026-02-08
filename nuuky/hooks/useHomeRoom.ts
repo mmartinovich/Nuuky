@@ -96,6 +96,9 @@ export const useHomeRoom = () => {
   const setAsHomeRoom = async (roomId: string): Promise<boolean> => {
     if (!currentUser) return false;
 
+    // Save previous value for rollback before optimistic update
+    const previousRoomId = homeRoomId;
+
     try {
       // Optimistic update: Set locally first for instant UI
       setHomeRoomId(roomId);
@@ -108,9 +111,13 @@ export const useHomeRoom = () => {
         .eq('id', currentUser.id);
 
       if (error) {
-        // Rollback on error
-        const cachedRoomId = await AsyncStorage.getItem(HOME_ROOM_KEY);
-        setHomeRoomId(cachedRoomId);
+        // Rollback on error using saved previous value
+        setHomeRoomId(previousRoomId);
+        if (previousRoomId) {
+          await AsyncStorage.setItem(HOME_ROOM_KEY, previousRoomId);
+        } else {
+          await AsyncStorage.removeItem(HOME_ROOM_KEY);
+        }
         throw error;
       }
 

@@ -417,11 +417,17 @@ export default function RootLayout() {
                   await supabase.rpc("increment_invite_link_use", { link_token: token });
 
                   // Join room
-                  await supabase.from("room_participants").insert({
+                  const { error: joinError } = await supabase.from("room_participants").insert({
                     room_id: link.room.id,
                     user_id: user.id,
                     is_muted: false,
                   });
+
+                  if (joinError) {
+                    logger.error("Failed to join room:", joinError);
+                    Alert.alert("Error", "Failed to join room. Please try again.");
+                    return;
+                  }
 
                   Alert.alert("Joined!", `You've joined ${link.room.name || "the room"}`);
                   router.push(`/(main)/room/${link.room.id}`);
@@ -621,17 +627,13 @@ export default function RootLayout() {
         }
 
         // Mark app as ready after initialization (always set, even if some operations failed)
-        if (mounted) {
-          setIsReady(true);
-        }
+        setReadyOnce();
 
         return subscription;
       } catch (error) {
         logger.error('Initialization error:', error);
         // Always mark as ready even if initialization fails
-        if (mounted) {
-          setIsReady(true);
-        }
+        setReadyOnce();
         return null;
       }
     };
@@ -660,11 +662,17 @@ export default function RootLayout() {
     let linkingSubscription: ReturnType<typeof Linking.addEventListener> | undefined;
     
     // Fallback timeout: ensure app loads even if initialization hangs
-    const fallbackTimeout = setTimeout(() => {
-      if (mounted) {
-        logger.warn('Initialization timeout reached, forcing app ready');
+    let isReadySet = false;
+    const setReadyOnce = () => {
+      if (mounted && !isReadySet) {
+        isReadySet = true;
         setIsReady(true);
       }
+    };
+
+    const fallbackTimeout = setTimeout(() => {
+      logger.warn('Initialization timeout reached, forcing app ready');
+      setReadyOnce();
     }, 10000); // 10 second maximum wait
 
     initialize()
@@ -675,9 +683,7 @@ export default function RootLayout() {
       .catch((error) => {
         logger.error('Initialization promise rejected:', error);
         clearTimeout(fallbackTimeout);
-        if (mounted) {
-          setIsReady(true);
-        }
+        setReadyOnce();
       });
 
     return () => {
@@ -749,61 +755,9 @@ export default function RootLayout() {
     return () => subscription.remove();
   }, []);
 
-  // Execute pending deep link when user becomes authenticated
-  useEffect(() => {
-    let isMounted = true;
-
-    if (currentUser && pendingDeepLinkRef.current) {
-      const pendingAction = pendingDeepLinkRef.current;
-      pendingDeepLinkRef.current = null;
-
-      // Wait for navigation to settle
-      const timer = setTimeout(async () => {
-        if (!isMounted) return;
-        if (pendingAction.type === "profile") {
-          // Look up user and prompt to add friend
-          const { data: targetUser } = await supabase
-            .from("users")
-            .select("id, username, display_name")
-            .eq("username", pendingAction.payload.toLowerCase())
-            .single();
-
-          if (targetUser && targetUser.id !== currentUser.id) {
-            Alert.alert(
-              "Add Friend",
-              `Would you like to add ${targetUser.display_name} (@${targetUser.username}) as a friend?`,
-              [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Add Friend",
-                  onPress: async () => {
-                    try {
-                      await supabase.from("friendships").insert([
-                        { user_id: currentUser.id, friend_id: targetUser.id, status: "accepted" },
-                        { user_id: targetUser.id, friend_id: currentUser.id, status: "accepted" },
-                      ]);
-                      Alert.alert("Success", `${targetUser.display_name} added as friend!`);
-                    } catch (err) {
-                      logger.error("Error adding friend:", err);
-                    }
-                  },
-                },
-              ],
-            );
-          }
-        } else if (pendingAction.type === "room_invite") {
-          // Navigate to room after joining via the token
-          router.push("/(main)/rooms");
-        }
-      }, 1000);
-
-      return () => {
-        isMounted = false;
-        clearTimeout(timer);
-      };
-    }
-    return () => { isMounted = false; };
-  }, [currentUser]);
+  // Note: Pending deep links are executed inside the OAuth callback
+  // (lines 486-498) or via handleProfileDeepLink/handleRoomInviteDeepLink
+  // which already store and replay pending actions. No duplicate useEffect needed.
 
   // Match splash background to avoid white flash during initialization
   if (!isReady || !fontsLoaded) {

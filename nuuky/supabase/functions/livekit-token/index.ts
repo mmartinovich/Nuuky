@@ -86,6 +86,28 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // Verify user is a participant of the room before issuing token
+    const { data: participant, error: participantError } = await supabaseAdmin
+      .from("room_participants")
+      .select("id")
+      .eq("room_id", roomId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (participantError) {
+      console.error("Participant check error:", participantError);
+    }
+
+    if (!participant) {
+      return new Response(
+        JSON.stringify({ error: "Not a participant of this room" }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     // Get user display name for participant identity
     const { data: userData, error: profileError } = await supabaseAdmin
       .from("users")

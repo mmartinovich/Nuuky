@@ -92,7 +92,7 @@ export const useRoomInvites = () => {
         .eq('room_id', roomId)
         .eq('receiver_id', friendId)
         .eq('status', 'pending')
-        .single();
+        .maybeSingle();
 
       if (existing) {
         Alert.alert('Already Invited', 'This friend has already been invited to this room');

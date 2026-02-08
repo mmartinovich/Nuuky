@@ -83,14 +83,19 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   const pendingPhotoNudgeRef = useRef<PhotoNudge | null>(null);
 
   // Pre-fetch photo nudges when modal opens
+  // Use ref to read current cache without causing re-runs when cache updates
+  const photoNudgeCacheRef = useRef(photoNudgeCache);
+  photoNudgeCacheRef.current = photoNudgeCache;
+
   const prefetchPhotoNudges = useCallback(async () => {
     const photoNudgeNotifications = notifications.filter(
       (n) => n.type === 'photo_nudge' && n.data?.photo_nudge_id
     );
 
+    const currentCache = photoNudgeCacheRef.current;
     const fetchPromises = photoNudgeNotifications.map(async (n) => {
       const id = n.data.photo_nudge_id!;
-      if (!photoNudgeCache[id]) {
+      if (!currentCache[id]) {
         const nudge = await fetchPhotoNudge(id);
         if (nudge) {
           return { id, nudge };
@@ -100,14 +105,14 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
     });
 
     const results = await Promise.all(fetchPromises);
-    const newCache: Record<string, PhotoNudge> = { ...photoNudgeCache };
+    const newCache: Record<string, PhotoNudge> = { ...currentCache };
     results.forEach((result) => {
       if (result) {
         newCache[result.id] = result.nudge;
       }
     });
     setPhotoNudgeCache(newCache);
-  }, [notifications, photoNudgeCache, fetchPhotoNudge]);
+  }, [notifications, fetchPhotoNudge]);
 
   useEffect(() => {
     if (visible) {

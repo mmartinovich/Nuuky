@@ -69,15 +69,15 @@ function FriendParticleComponent({
   // Local oscillation for organic floating movement
   const localOrbitAnim = useRef(new Animated.Value(0)).current;
   
+  // Track animated values in refs for synchronous access without private API (_value)
+  const orbitAngleRef = useRef(0);
+  const localOrbitRef2 = useRef(0);
+
   // Use Animated.Value for positions to avoid React re-renders
   // Include current orbit rotation so particles appear at the correct position on first paint
-  const currentOrbitAngle = (orbitAngle as any)._value || 0;
-  const fullInitialAngle = baseAngle + currentOrbitAngle;
+  const fullInitialAngle = baseAngle + orbitAngleRef.current;
   const translateXAnim = useRef(new Animated.Value(Math.cos(fullInitialAngle) * radius)).current;
   const translateYAnim = useRef(new Animated.Value(Math.sin(fullInitialAngle) * radius)).current;
-  const lastUpdateTime = useRef(Date.now());
-  const localOffsetRef = useRef(0);
-
   // Start gentle oscillation animation for organic floating
   // Optimized: Longer duration = fewer updates = better battery
   // Low power mode disables this animation entirely
@@ -134,9 +134,7 @@ function FriendParticleComponent({
     }
 
     // Cache last computed values to skip unnecessary updates
-    const parentAngle = (orbitAngle as any)._value || 0;
-    const localOffset = lowPowerMode ? 0 : ((localOrbitAnim as any)._value || 0);
-    const currentAngle = baseAngle + parentAngle + localOffset;
+    const currentAngle = baseAngle + orbitAngleRef.current + (lowPowerMode ? 0 : localOrbitRef2.current);
     let lastComputedX = Math.cos(currentAngle) * radius;
     let lastComputedY = Math.sin(currentAngle) * radius;
     let pendingUpdate = false;
@@ -148,11 +146,8 @@ function FriendParticleComponent({
 
       requestAnimationFrame(() => {
         pendingUpdate = false;
-        const parentAngle = (orbitAngle as any)._value || 0;
-        const localOffset = lowPowerMode ? 0 : ((localOrbitAnim as any)._value || 0);
-
         // Combine parent orbit rotation with local oscillation
-        const angle = baseAngle + parentAngle + localOffset;
+        const angle = baseAngle + orbitAngleRef.current + (lowPowerMode ? 0 : localOrbitRef2.current);
         const x = Math.cos(angle) * radius;
         const y = Math.sin(angle) * radius;
 
@@ -165,13 +160,18 @@ function FriendParticleComponent({
           translateXAnim.setValue(x);
           translateYAnim.setValue(y);
         }
-        localOffsetRef.current = localOffset;
       });
     };
 
-    const orbitListener = orbitAngle.addListener(updatePosition);
+    const orbitListener = orbitAngle.addListener(({ value }) => {
+      orbitAngleRef.current = value;
+      updatePosition();
+    });
     // Only add local listener if not in low power mode (oscillation disabled anyway)
-    const localListener = lowPowerMode ? null : localOrbitAnim.addListener(updatePosition);
+    const localListener = lowPowerMode ? null : localOrbitAnim.addListener(({ value }) => {
+      localOrbitRef2.current = value;
+      updatePosition();
+    });
 
     const cleanup = () => {
       orbitAngle.removeListener(orbitListener);

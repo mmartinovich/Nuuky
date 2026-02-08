@@ -315,7 +315,8 @@ export default function FriendsScreen() {
   };
 
   const handleRemoveFriend = useCallback((friendship: Friendship) => {
-    const friend = friendship.friend as User;
+    const friend = friendship.friend as User | null;
+    if (!friend) return;
     removeFriendship(friend.id);
   }, [removeFriendship]);
 
@@ -329,7 +330,8 @@ export default function FriendsScreen() {
 
   const handlePickRoom = useCallback(async (roomId: string) => {
     if (!inviteTarget) return;
-    const friend = inviteTarget.friend as User;
+    const friend = inviteTarget.friend as User | null;
+    if (!friend) return;
     await inviteFriendToRoom(roomId, friend.id);
     setInviteTarget(null);
   }, [inviteTarget, inviteFriendToRoom]);

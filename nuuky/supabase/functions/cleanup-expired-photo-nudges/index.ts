@@ -27,7 +27,7 @@ serve(async (req) => {
     }
 
     // Verify cron secret for scheduled function
-    verifyCronSecret(req);
+    await verifyCronSecret(req);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;

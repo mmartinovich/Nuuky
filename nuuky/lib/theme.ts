@@ -322,9 +322,12 @@ export const getMoodColor = (mood: 'good' | 'neutral' | 'not_great' | 'reach_out
 
 // Determine if text on a given hex color should be dark or light
 const getTextOnColor = (hex: string): string => {
+  // Validate hex format to prevent NaN from parseInt
+  if (!hex || hex.length < 7 || hex[0] !== '#') return '#FFFFFF';
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
+  if (isNaN(r) || isNaN(g) || isNaN(b)) return '#FFFFFF';
   // Relative luminance formula
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
   return luminance > 0.55 ? '#1A1A1A' : '#FFFFFF';

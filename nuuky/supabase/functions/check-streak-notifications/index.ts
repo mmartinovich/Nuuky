@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { sendExpoNotification } from '../_shared/expo-push.ts';
+import { verifyCronSecret, AuthError, authErrorResponse } from '../_shared/auth.ts';
 
 // Streak state thresholds (same as client-side useStreaks.ts)
 const ACTIVE_THRESHOLD_HOURS = 18;
@@ -55,6 +56,13 @@ function canSendNotification(lastNotificationAt: string | null): boolean {
 
 serve(async (req) => {
   try {
+    if (req.method !== 'POST') {
+      return new Response('Method not allowed', { status: 405 });
+    }
+
+    // Verify cron secret for scheduled function
+    await verifyCronSecret(req);
+
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -199,6 +207,9 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    if (error instanceof AuthError) {
+      return authErrorResponse(error);
+    }
     console.error('Function error:', error);
     return new Response(
       JSON.stringify({ error: (error as Error).message }),

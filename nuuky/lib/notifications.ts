@@ -81,7 +81,7 @@ export async function sendPushNotification(
   title: string,
   body: string,
   data?: Record<string, string | number | boolean | undefined>
-) {
+): Promise<boolean> {
   const message = {
     to: expoPushToken,
     sound: 'default',
@@ -103,9 +103,12 @@ export async function sendPushNotification(
 
     if (!response.ok) {
       console.warn(`[Notifications] Push send failed with status ${response.status}`);
+      return false;
     }
+    return true;
   } catch (error) {
     console.warn('[Notifications] Push send network error:', error);
+    return false;
   }
 }
 

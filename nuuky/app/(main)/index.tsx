@@ -407,12 +407,18 @@ export default function QuantumOrbitScreen() {
     }
   }, [selectedFriend, recordInteraction]);
 
-  // Join default room when it's set
+  // Join default room when it's set (guard against concurrent joins)
+  const joiningRoomRef = useRef(false);
   useEffect(() => {
-    if (defaultRoom && currentUser) {
-      joinRoomFn(defaultRoom.id).catch((err: any) => {
-        console.error('Failed to auto-join default room:', err);
-      });
+    if (defaultRoom && currentUser && !joiningRoomRef.current) {
+      joiningRoomRef.current = true;
+      joinRoomFn(defaultRoom.id)
+        .catch((err: any) => {
+          console.error('Failed to auto-join default room:', err);
+        })
+        .finally(() => {
+          joiningRoomRef.current = false;
+        });
     }
   }, [defaultRoom?.id, currentUser?.id]);
 

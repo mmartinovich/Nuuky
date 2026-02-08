@@ -12,6 +12,7 @@ import { RoomSettingsModal } from '../../../components/RoomSettingsModal';
 import { AudioConnectionBadge } from '../../../components/AudioConnectionBadge';
 import { useAppStore } from '../../../stores/appStore';
 import { supabase } from '../../../lib/supabase';
+import { logger } from '../../../lib/logger';
 
 export default function RoomScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -112,7 +113,9 @@ export default function RoomScreen() {
           .eq('user_id', currentUser.id);
         if (error) {
           setIsMuted(true);
-          await audioMute();
+          try { await audioMute(); } catch (muteErr) {
+            logger.error('Critical: failed to revert mute state:', muteErr);
+          }
           Alert.alert('Error', 'Failed to update mute status');
         }
       }
@@ -128,7 +131,9 @@ export default function RoomScreen() {
         .eq('user_id', currentUser.id);
       if (error) {
         setIsMuted(false);
-        await audioUnmute();
+        try { await audioUnmute(); } catch (unmuteErr) {
+          logger.error('Critical: failed to revert unmute state:', unmuteErr);
+        }
         Alert.alert('Error', 'Failed to update mute status');
       }
     }

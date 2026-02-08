@@ -208,10 +208,12 @@ export const playLofi = async (track: LofiTrack, fadeIn = true): Promise<boolean
       return false;
     }
 
-    // Fade in
+    // Fade in (catch errors to avoid unhandled rejection)
     if (fadeIn) {
       logger.log(`[LofiPlayer] Starting fade in to volume ${targetVolume}`);
-      fadeVolume(currentSound, 0, targetVolume);
+      fadeVolume(currentSound, 0, targetVolume).catch(err =>
+        logger.error('[LofiPlayer] Fade-in error:', err)
+      );
     }
 
     logger.log(`[LofiPlayer] Playing: ${track}`);
@@ -229,10 +231,11 @@ export const stopLofi = async (fadeOut = true): Promise<void> => {
   if (!currentSound) return;
 
   try {
-    ++fadeGeneration; // Cancel any ongoing fade
+    const myGeneration = ++fadeGeneration; // Cancel any ongoing fade
 
     if (fadeOut && isPlaying) {
       await fadeVolume(currentSound, targetVolume, 0, async () => {
+        if (fadeGeneration !== myGeneration) return; // Bail if stale
         try {
           await currentSound?.stopAsync();
           await currentSound?.unloadAsync();
@@ -265,10 +268,11 @@ export const pauseLofi = async (fadeOut = true): Promise<void> => {
   if (!currentSound || !isPlaying) return;
 
   try {
-    ++fadeGeneration; // Cancel any ongoing fade
+    const myGeneration = ++fadeGeneration; // Cancel any ongoing fade
 
     if (fadeOut) {
       await fadeVolume(currentSound, targetVolume, 0, async () => {
+        if (fadeGeneration !== myGeneration) return; // Bail if stale
         try {
           await currentSound?.pauseAsync();
         } catch {}
@@ -300,7 +304,9 @@ export const resumeLofi = async (fadeIn = true): Promise<boolean> => {
     isPlaying = true;
 
     if (fadeIn) {
-      fadeVolume(currentSound, 0, targetVolume);
+      fadeVolume(currentSound, 0, targetVolume).catch(err =>
+        logger.error('[LofiPlayer] Resume fade-in error:', err)
+      );
     }
 
     logger.log('[LofiPlayer] Resumed');

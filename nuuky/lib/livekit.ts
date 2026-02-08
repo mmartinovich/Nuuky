@@ -126,6 +126,7 @@ export const requestLiveKitToken = async (
     // Return cached token if valid, for same room, and same user
     if (cachedToken &&
         cachedRoomId === roomId &&
+        cachedUserId != null &&
         cachedUserId === session.user.id &&
         now < tokenExpiryTime) {
       return cachedToken;

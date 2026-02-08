@@ -47,9 +47,18 @@ export function verifySender(authenticatedUserId: string, senderId: string): voi
 
 /**
  * Simple in-memory rate limiter. Returns true if allowed, throws if rate limited.
+ * Periodically cleans up expired entries to prevent unbounded memory growth.
  */
 export function rateLimit(userId: string): void {
   const now = Date.now();
+
+  // Periodic cleanup: if map grows beyond 1000 entries, purge expired ones
+  if (rateLimitMap.size > 1000) {
+    for (const [key, val] of rateLimitMap) {
+      if (now >= val.resetAt) rateLimitMap.delete(key);
+    }
+  }
+
   const entry = rateLimitMap.get(userId);
 
   if (!entry || now >= entry.resetAt) {
@@ -74,11 +83,19 @@ export function validateArraySize(arr: unknown[], fieldName: string): void {
 
 /**
  * Verify cron secret for scheduled functions.
+ * Uses constant-time comparison to prevent timing attacks.
  */
-export function verifyCronSecret(req: Request): void {
-  const secret = req.headers.get('Authorization')?.replace('Bearer ', '');
+export async function verifyCronSecret(req: Request): Promise<void> {
+  const secret = req.headers.get('Authorization')?.replace('Bearer ', '') || '';
   const expectedSecret = Deno.env.get('CRON_SECRET');
-  if (!expectedSecret || secret !== expectedSecret) {
+  if (!expectedSecret) {
+    throw new AuthError('Unauthorized', 401);
+  }
+  const encoder = new TextEncoder();
+  const secretBytes = encoder.encode(expectedSecret);
+  const providedBytes = encoder.encode(secret);
+  if (secretBytes.length !== providedBytes.length ||
+      !(await crypto.subtle.timingSafeEqual(secretBytes, providedBytes))) {
     throw new AuthError('Unauthorized', 401);
   }
 }

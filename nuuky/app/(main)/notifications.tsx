@@ -68,6 +68,8 @@ export default function NotificationsScreen() {
     const success = await acceptInvite(inviteId);
     if (success) {
       await loadMyRooms();
+    } else {
+      // acceptInvite already shows its own alert on error
     }
   };
 
