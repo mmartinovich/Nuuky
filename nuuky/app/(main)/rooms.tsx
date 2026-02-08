@@ -43,6 +43,7 @@ export default function RoomsScreen() {
 
   // Track if initial load has happened to prevent double loading
   const hasLoadedRef = useRef(false);
+  const lastLoadRef = useRef(0);
 
   useEffect(() => {
     // Wait for first-time room creation to complete before loading
@@ -50,6 +51,7 @@ export default function RoomsScreen() {
       hasLoadedRef.current = true;
       // Only fetch from network if myRooms is empty; otherwise Zustand already has data
       if (myRooms.length === 0) {
+        lastLoadRef.current = Date.now();
         loadData();
       }
     }
@@ -62,6 +64,9 @@ export default function RoomsScreen() {
       if (firstTimeLoading) return;
       // Refresh on re-focus to catch rooms deleted/updated while away
       if (hasLoadedRef.current) {
+        // Skip reload if less than 30 seconds since last load
+        if (Date.now() - lastLoadRef.current < 30000) return;
+        lastLoadRef.current = Date.now();
         loadData();
       }
     }, [firstTimeLoading])

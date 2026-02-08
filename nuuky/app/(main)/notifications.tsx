@@ -101,6 +101,12 @@ export default function NotificationsScreen() {
     }
   }, [notifications.length, hasInvites]);
 
+  // Stable key for notifications array to avoid regrouping on same data
+  const notificationsKey = useMemo(
+    () => notifications.map((n) => n.id).join(','),
+    [notifications]
+  );
+
   // Group notifications by time period
   const groupedNotifications = useMemo(() => {
     const groups: {
@@ -119,7 +125,8 @@ export default function NotificationsScreen() {
     });
 
     return groups;
-  }, [notifications]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notificationsKey]);
 
   const handleDeleteNotification = async (notificationId: string) => {
     await deleteNotification(notificationId);

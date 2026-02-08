@@ -5,7 +5,7 @@ import { useAppStore } from "../stores/appStore";
 import { UserSearchResult } from "../types";
 
 export const useUserSearch = () => {
-  const { currentUser } = useAppStore();
+  const currentUser = useAppStore((s) => s.currentUser);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<UserSearchResult[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +69,7 @@ export const useUserSearch = () => {
         setLoading(false);
       }
     },
-    [currentUser],
+    [currentUser?.id],
   );
 
   /**

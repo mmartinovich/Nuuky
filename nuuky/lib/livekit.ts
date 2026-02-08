@@ -108,55 +108,69 @@ const configureAudioFocus = async (micEnabled: boolean): Promise<void> => {
   });
 };
 
+// In-flight token request deduplication
+const inFlightTokenRequests = new Map<string, Promise<LiveKitTokenResponse | null>>();
+
 // Request token from Edge Function
 export const requestLiveKitToken = async (
   roomId: string
 ): Promise<LiveKitTokenResponse | null> => {
-  try {
-    const now = Date.now();
+  // Reuse in-flight request for same roomId to avoid parallel duplicate calls
+  const existing = inFlightTokenRequests.get(roomId);
+  if (existing) return existing;
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session?.access_token) {
-      logger.error('[LiveKit] No active session found');
-      throw new Error('No active session');
+  const promise = (async (): Promise<LiveKitTokenResponse | null> => {
+    try {
+      const now = Date.now();
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        logger.error('[LiveKit] No active session found');
+        throw new Error('No active session');
+      }
+
+      // Return cached token if valid, for same room, and same user
+      if (cachedToken &&
+          cachedRoomId === roomId &&
+          cachedUserId != null &&
+          cachedUserId === session.user.id &&
+          now < tokenExpiryTime) {
+        return cachedToken;
+      }
+
+      // Explicitly pass the authorization header
+      const { data, error } = await supabase.functions.invoke('livekit-token', {
+        body: { roomId },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) {
+        logger.error('[LiveKit] Token request error:', error);
+        throw error;
+      }
+
+      // Cache the token
+      cachedToken = data;
+      cachedRoomId = roomId;
+      cachedUserId = session.user.id;
+      tokenExpiryTime = now + TOKEN_CACHE_TTL;
+
+      return data;
+    } catch (error) {
+      logger.error('[LiveKit] Failed to get token:', error);
+      eventCallbacks?.onError('Failed to get audio token');
+      return null;
+    } finally {
+      inFlightTokenRequests.delete(roomId);
     }
+  })();
 
-    // Return cached token if valid, for same room, and same user
-    if (cachedToken &&
-        cachedRoomId === roomId &&
-        cachedUserId != null &&
-        cachedUserId === session.user.id &&
-        now < tokenExpiryTime) {
-      return cachedToken;
-    }
-
-    // Explicitly pass the authorization header
-    const { data, error } = await supabase.functions.invoke('livekit-token', {
-      body: { roomId },
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
-    });
-
-    if (error) {
-      logger.error('[LiveKit] Token request error:', error);
-      throw error;
-    }
-
-    // Cache the token
-    cachedToken = data;
-    cachedRoomId = roomId;
-    cachedUserId = session.user.id;
-    tokenExpiryTime = now + TOKEN_CACHE_TTL;
-
-    return data;
-  } catch (error) {
-    logger.error('[LiveKit] Failed to get token:', error);
-    eventCallbacks?.onError('Failed to get audio token');
-    return null;
-  }
+  inFlightTokenRequests.set(roomId, promise);
+  return promise;
 };
 
 // Connect to LiveKit room

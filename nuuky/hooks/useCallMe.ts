@@ -10,7 +10,7 @@ import { useAppStore } from '../stores/appStore';
  * This is similar to a nudge but specifically requests a voice/video call
  */
 export const useCallMe = () => {
-  const { currentUser } = useAppStore();
+  const currentUser = useAppStore((s) => s.currentUser);
   const [loading, setLoading] = useState(false);
 
   const sendCallMe = async (

@@ -128,6 +128,8 @@ export default function FriendsScreen() {
   // Friends tab state
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>('alpha');
   const [inviteTarget, setInviteTarget] = useState<Friendship | null>(null);
 
@@ -138,24 +140,24 @@ export default function FriendsScreen() {
   const [addedContacts, setAddedContacts] = useState<Set<string>>(new Set());
   const [usernameSearchExpanded, setUsernameSearchExpanded] = useState(false);
 
-  // Fuzzy filtered friends
+  // Fuzzy filtered friends (uses debounced query to avoid filtering on every keystroke)
   const filteredFriends = useMemo(() => {
-    if (!searchQuery.trim()) return friends;
-    const q = searchQuery.trim();
+    if (!debouncedSearchQuery.trim()) return friends;
+    const q = debouncedSearchQuery.trim();
     return friends.filter((f) => {
       const friend = f.friend as User;
       return fuzzyMatch(q, friend.display_name) || fuzzyMatch(q, friend.username || '');
     }).sort((a, b) => {
       const aName = (a.friend as User).display_name.toLowerCase();
       const bName = (b.friend as User).display_name.toLowerCase();
-      const qLower = searchQuery.toLowerCase();
+      const qLower = debouncedSearchQuery.toLowerCase();
       const aStartsWith = aName.startsWith(qLower);
       const bStartsWith = bName.startsWith(qLower);
       if (aStartsWith && !bStartsWith) return -1;
       if (!aStartsWith && bStartsWith) return 1;
       return aName.localeCompare(bName);
     });
-  }, [friends, searchQuery]);
+  }, [friends, debouncedSearchQuery]);
 
   // Sorted friends based on sort mode
   const sortedFriends = useMemo(() => {
@@ -186,13 +188,13 @@ export default function FriendsScreen() {
   // Build sections for SectionList
   const friendsSections = useMemo((): FriendSection[] => {
     const sections: FriendSection[] = [];
-    if (!searchQuery.trim()) {
+    if (!debouncedSearchQuery.trim()) {
       const favorites = sortedFriends.filter(f => favoriteFriends.includes(f.friend_id));
       if (favorites.length > 0) {
         sections.push({ title: 'FAVORITES', data: favorites, isFavorites: true });
       }
     }
-    if (sortMode === 'alpha' && !searchQuery.trim()) {
+    if (sortMode === 'alpha' && !debouncedSearchQuery.trim()) {
       const nonFavorites = sortedFriends.filter(f => !favoriteFriends.includes(f.friend_id));
       let currentLetter = '';
       for (const friendship of nonFavorites) {
@@ -204,7 +206,7 @@ export default function FriendsScreen() {
         sections[sections.length - 1].data.push(friendship);
       }
     } else {
-      const nonFavorites = searchQuery.trim()
+      const nonFavorites = debouncedSearchQuery.trim()
         ? sortedFriends
         : sortedFriends.filter(f => !favoriteFriends.includes(f.friend_id));
       if (nonFavorites.length > 0) {
@@ -213,7 +215,7 @@ export default function FriendsScreen() {
       }
     }
     return sections;
-  }, [sortedFriends, favoriteFriends, sortMode, searchQuery]);
+  }, [sortedFriends, favoriteFriends, sortMode, debouncedSearchQuery]);
 
   // Available letters for alphabet scrubber
   const availableLetters = useMemo(() => {
@@ -239,9 +241,23 @@ export default function FriendsScreen() {
   // Total found on Nūūky (for messaging)
   const totalFoundOnNuuky = hasSynced ? matches.onNuuky.length : 0;
 
+  // Debounce search query for friend filtering (300ms)
+  const handleSearchQueryChange = useCallback((text: string) => {
+    setSearchQuery(text);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    if (!text.trim()) {
+      setDebouncedSearchQuery("");
+      return;
+    }
+    searchDebounceRef.current = setTimeout(() => {
+      setDebouncedSearchQuery(text);
+    }, 300);
+  }, []);
+
   useEffect(() => {
     return () => {
       if (userSearchDebounceRef.current) clearTimeout(userSearchDebounceRef.current);
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     };
   }, []);
 
@@ -337,7 +353,7 @@ export default function FriendsScreen() {
   }, [inviteTarget, inviteFriendToRoom]);
 
   const handleLetterPress = useCallback((letter: string) => {
-    if (sortMode !== 'alpha' || searchQuery.trim()) return;
+    if (sortMode !== 'alpha' || debouncedSearchQuery.trim()) return;
     let sectionIndex = -1;
     if (letter === '★') {
       sectionIndex = friendsSections.findIndex(s => s.isFavorites);
@@ -353,7 +369,7 @@ export default function FriendsScreen() {
         viewOffset: 0,
       });
     }
-  }, [friendsSections, sortMode, searchQuery]);
+  }, [friendsSections, sortMode, debouncedSearchQuery]);
 
   // Build scrubber letters array (with star if favorites exist)
   const scrubberLetters = useMemo(() => {
@@ -585,12 +601,12 @@ export default function FriendsScreen() {
                         placeholder="Filter friends..."
                         placeholderTextColor={theme.colors.text.tertiary}
                         value={searchQuery}
-                        onChangeText={setSearchQuery}
+                        onChangeText={handleSearchQueryChange}
                         autoCorrect={false}
                         autoCapitalize="none"
                       />
                       {searchQuery.length > 0 && (
-                        <TouchableOpacity onPress={() => setSearchQuery("")} activeOpacity={0.7}>
+                        <TouchableOpacity onPress={() => { setSearchQuery(""); setDebouncedSearchQuery(""); if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); }} activeOpacity={0.7}>
                           <Ionicons name="close-circle" size={18} color={theme.colors.text.tertiary} />
                         </TouchableOpacity>
                       )}
@@ -645,7 +661,7 @@ export default function FriendsScreen() {
             />
 
             {/* Alphabet Scrubber */}
-            {sortMode === 'alpha' && friends.length > 5 && !searchQuery.trim() && (
+            {sortMode === 'alpha' && friends.length > 5 && !debouncedSearchQuery.trim() && (
               <>
                 {/* Large letter indicator */}
                 <Animated.View

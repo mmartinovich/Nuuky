@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useMemo } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, PanResponder } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, PanResponder } from "react-native";
+import { Image } from "expo-image";
 import { Animated as RNAnimated, Easing } from "react-native";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -171,7 +172,7 @@ export const BottomNavBar = React.memo(function BottomNavBar({
         <Image
           source={require("../assets/nav-bar-shape.png")}
           style={[styles.navBarShape, { tintColor: theme.colors.nav.background }]}
-          resizeMode="stretch"
+          contentFit="fill"
         />
         <View style={styles.navBarContent}>
           {/* Left icons */}

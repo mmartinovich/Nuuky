@@ -8,14 +8,12 @@ import { CustomMood } from '../types';
 const USE_MOCK_DATA = false;
 
 export const useCustomMood = () => {
-  const {
-    currentUser,
-    customMoods,
-    setCustomMoods,
-    addCustomMood: addCustomMoodToStore,
-    deleteCustomMood: deleteCustomMoodFromStore,
-    setActiveCustomMood,
-  } = useAppStore();
+  const currentUser = useAppStore((s) => s.currentUser);
+  const customMoods = useAppStore((s) => s.customMoods);
+  const setCustomMoods = useAppStore((s) => s.setCustomMoods);
+  const addCustomMoodToStore = useAppStore((s) => s.addCustomMood);
+  const deleteCustomMoodFromStore = useAppStore((s) => s.deleteCustomMood);
+  const setActiveCustomMood = useAppStore((s) => s.setActiveCustomMood);
   const [loading, setLoading] = useState(false);
 
   // Fetch user's custom moods from database

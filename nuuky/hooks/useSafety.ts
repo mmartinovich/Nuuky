@@ -8,7 +8,10 @@ import { Anchor } from '../types';
 type Visibility = 'full' | 'limited' | 'minimal' | 'hidden';
 
 export const useSafety = () => {
-  const { currentUser, setCurrentUser, anchors, setAnchors } = useAppStore();
+  const currentUser = useAppStore((s) => s.currentUser);
+  const setCurrentUser = useAppStore((s) => s.setCurrentUser);
+  const anchors = useAppStore((s) => s.anchors);
+  const setAnchors = useAppStore((s) => s.setAnchors);
   const [isInGhostMode, setIsInGhostMode] = useState(false);
   const [isOnBreak, setIsOnBreak] = useState(false);
   const [loading, setLoading] = useState(false);

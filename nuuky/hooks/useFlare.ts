@@ -10,7 +10,8 @@ import { Flare } from "../types";
 const FLARE_REFRESH_THROTTLE_MS = 5000;
 
 export const useFlare = () => {
-  const { currentUser, friends } = useAppStore();
+  const currentUser = useAppStore((s) => s.currentUser);
+  const friends = useAppStore((s) => s.friends);
   const [loading, setLoading] = useState(false);
   const [activeFlares, setActiveFlares] = useState<Flare[]>([]);
   const [myActiveFlare, setMyActiveFlare] = useState<Flare | null>(null);

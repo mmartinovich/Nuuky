@@ -10,7 +10,11 @@ const INVITES_REFRESH_THROTTLE_MS = 2000; // Only refresh every 2 seconds
 
 export const useRoomInvites = () => {
   const lastInvitesRefreshRef = useRef(0);
-  const { currentUser, roomInvites, setRoomInvites, addRoomInvite, removeRoomInvite } = useAppStore();
+  const currentUser = useAppStore((s) => s.currentUser);
+  const roomInvites = useAppStore((s) => s.roomInvites);
+  const setRoomInvites = useAppStore((s) => s.setRoomInvites);
+  const addRoomInvite = useAppStore((s) => s.addRoomInvite);
+  const removeRoomInvite = useAppStore((s) => s.removeRoomInvite);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {

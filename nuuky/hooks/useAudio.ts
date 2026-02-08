@@ -23,16 +23,14 @@ export const useAudio = (
   onDataReceived?: DataReceivedCallback,
   otherParticipantCount?: number
 ) => {
-  const {
-    currentUser,
-    audioConnectionStatus,
-    setAudioConnectionStatus,
-    setAudioError,
-    addSpeakingParticipant,
-    removeSpeakingParticipant,
-    clearSpeakingParticipants,
-    speakingParticipants,
-  } = useAppStore();
+  const currentUser = useAppStore((s) => s.currentUser);
+  const audioConnectionStatus = useAppStore((s) => s.audioConnectionStatus);
+  const setAudioConnectionStatus = useAppStore((s) => s.setAudioConnectionStatus);
+  const setAudioError = useAppStore((s) => s.setAudioError);
+  const addSpeakingParticipant = useAppStore((s) => s.addSpeakingParticipant);
+  const removeSpeakingParticipant = useAppStore((s) => s.removeSpeakingParticipant);
+  const clearSpeakingParticipants = useAppStore((s) => s.clearSpeakingParticipants);
+  const speakingParticipants = useAppStore((s) => s.speakingParticipants);
 
   const isInitialized = useRef(false);
   const currentRoomId = useRef<string | null>(null);

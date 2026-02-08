@@ -72,28 +72,44 @@ serve(async (req) => {
 
     let totalNotificationsSent = 0;
 
-    // For each inactive user, find their anchors and notify them
+    // Batch-fetch all anchors for inactive users in a single query (avoids N+1)
+    const inactiveUserIds = inactiveUsers.map((u: { id: string }) => u.id);
+    const { data: allAnchors, error: anchorsError } = await supabase
+      .from('anchors')
+      .select(`
+        user_id,
+        anchor_id,
+        anchor:anchor_id (
+          id,
+          display_name,
+          fcm_token
+        )
+      `)
+      .in('user_id', inactiveUserIds);
+
+    if (anchorsError) {
+      console.error('Error fetching anchors for inactive users:', anchorsError);
+      throw anchorsError;
+    }
+
+    // Group anchors by user_id
+    const anchorsByUserId = new Map<string, Anchor[]>();
+    if (allAnchors) {
+      for (const anchor of allAnchors as Anchor[]) {
+        const existing = anchorsByUserId.get(anchor.user_id);
+        if (existing) {
+          existing.push(anchor);
+        } else {
+          anchorsByUserId.set(anchor.user_id, [anchor]);
+        }
+      }
+    }
+
+    // For each inactive user, notify their anchors
     for (const user of inactiveUsers) {
       console.log(`Processing inactive user: ${user.display_name} (${user.id})`);
 
-      // Get this user's anchors
-      const { data: anchors, error: anchorsError } = await supabase
-        .from('anchors')
-        .select(`
-          user_id,
-          anchor_id,
-          anchor:anchor_id (
-            id,
-            display_name,
-            fcm_token
-          )
-        `)
-        .eq('user_id', user.id);
-
-      if (anchorsError) {
-        console.error(`Error fetching anchors for user ${user.id}:`, anchorsError);
-        continue;
-      }
+      const anchors = anchorsByUserId.get(user.id);
 
       if (!anchors || anchors.length === 0) {
         console.log(`User ${user.display_name} has no anchors`);
@@ -103,7 +119,7 @@ serve(async (req) => {
       console.log(`Found ${anchors.length} anchor(s) for ${user.display_name}`);
 
       // Send notification to each anchor
-      for (const anchorRelation of anchors as Anchor[]) {
+      for (const anchorRelation of anchors) {
         const anchor = anchorRelation.anchor;
 
         if (!anchor.fcm_token) {

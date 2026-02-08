@@ -11,7 +11,7 @@ const HEARTBEAT_INTERVAL = 60000; // 60 seconds - optimized for battery
 const OFFLINE_TIMEOUT = 120000; // 2 minutes of inactivity = offline
 
 export const usePresence = () => {
-  const { currentUser } = useAppStore();
+  const currentUser = useAppStore((s) => s.currentUser);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);

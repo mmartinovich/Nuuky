@@ -9,8 +9,8 @@ import {
   Platform,
   Alert,
   Animated,
-  Image,
 } from "react-native";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as AppleAuthentication from "expo-apple-authentication";
@@ -263,7 +263,7 @@ export default function LoginScreen() {
         <View style={styles.content}>
           {/* Title - Centered */}
           <View style={styles.header}>
-            <Image source={require("../../assets/wordmark.png")} style={styles.wordmark} resizeMode="contain" />
+            <Image source={require("../../assets/wordmark.png")} style={styles.wordmark} contentFit="contain" />
             <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>Feel connected without{"\n"}the pressure of communicating</Text>
           </View>
         </View>

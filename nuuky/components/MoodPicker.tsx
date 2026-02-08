@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Pressable, Modal, Image, ScrollView, TextInput, Dimensions } from 'react-native';
-import { Image as CachedImage } from 'expo-image';
+import { View, Text, StyleSheet, TouchableOpacity, Pressable, Modal, ScrollView, TextInput, Dimensions } from 'react-native';
+import { Image } from 'expo-image';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -81,7 +81,7 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
       setEditText(customMood?.text ?? '');
       // Prefetch selfie image so it's ready immediately
       if (moodSelfie?.image_url) {
-        CachedImage.prefetch(moodSelfie.image_url);
+        Image.prefetch(moodSelfie.image_url);
       }
     } else {
       progress.value = 0;
@@ -212,7 +212,7 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                     ]}
                   >
                     <View style={styles.imageWrapper}>
-                      <Image source={getMoodImage(mood)} style={styles.moodImage} />
+                      <Image source={getMoodImage(mood)} style={styles.moodImage} contentFit="contain" />
                     </View>
                     <View style={styles.moodText}>
                       <Text style={[styles.moodLabel, { color: theme.colors.text.primary }]}>{label}</Text>
@@ -265,7 +265,7 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                   <View style={styles.imageWrapperSmall}>
                     {customMood && !isEditing ? (
                       isSelfieActive && moodSelfie?.image_url ? (
-                        <CachedImage source={{ uri: moodSelfie.image_url }} style={styles.selfieImage} cachePolicy="memory-disk" contentFit="cover" />
+                        <Image source={{ uri: moodSelfie.image_url }} style={styles.selfieImage} cachePolicy="memory-disk" contentFit="cover" />
                       ) : (
                         <Text style={{ fontSize: 42 }}>{customMood.emoji}</Text>
                       )
@@ -444,7 +444,6 @@ const styles = StyleSheet.create({
   moodImage: {
     width: 56,
     height: 56,
-    resizeMode: 'contain',
   },
   moodText: {
     flex: 1,

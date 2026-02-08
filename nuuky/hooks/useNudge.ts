@@ -9,7 +9,7 @@ import { useAppStore } from '../stores/appStore';
 const USE_MOCK_DATA = false;
 
 export const useNudge = () => {
-  const { currentUser } = useAppStore();
+  const currentUser = useAppStore((s) => s.currentUser);
   const [loading, setLoading] = useState(false);
 
   const sendNudge = async (friendId: string, friendName: string): Promise<boolean> => {

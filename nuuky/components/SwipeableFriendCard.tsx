@@ -28,7 +28,7 @@ interface SwipeableFriendCardProps {
   streak?: Streak;
 }
 
-export const SwipeableFriendCard: React.FC<SwipeableFriendCardProps> = ({
+export const SwipeableFriendCard: React.FC<SwipeableFriendCardProps> = React.memo(({
   friendship,
   onPress,
   onRemove,
@@ -206,7 +206,7 @@ export const SwipeableFriendCard: React.FC<SwipeableFriendCardProps> = ({
       </TouchableOpacity>
     </ReanimatedSwipeable>
   );
-};
+});
 
 function RightActionButton({
   drag,

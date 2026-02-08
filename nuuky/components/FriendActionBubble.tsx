@@ -187,7 +187,7 @@ const SoundWave = ({ delay, side }: { delay: number; side: 'left' | 'right' }) =
   );
 };
 
-export function FriendActionBubble({
+export const FriendActionBubble = React.memo(function FriendActionBubble({
   friend,
   position,
   onDismiss,
@@ -646,7 +646,7 @@ export function FriendActionBubble({
       </Animated.View>
     </>
   );
-}
+});
 
 const styles = StyleSheet.create({
   backdrop: {

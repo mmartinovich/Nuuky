@@ -780,8 +780,9 @@ export default function QuantumOrbitScreen() {
       />
 
 
-      <MoodPicker
-        visible={modals.showMoodPicker}
+      {modals.showMoodPicker && (
+        <MoodPicker
+          visible={true}
         currentMood={currentMood}
         onSelectMood={changeMood}
         onClose={modals.closeMoodPicker}
@@ -800,21 +801,26 @@ export default function QuantumOrbitScreen() {
         onPickFromLibrary={pickFromLibrary}
         onDeleteSelfie={deleteSelfie}
         selfieLoading={selfieLoading}
-      />
+        />
+      )}
 
-      <RoomListModal
-        visible={modals.showRoomList}
-        onClose={modals.closeRoomList}
-        rooms={activeRooms}
-        onJoinRoom={modals.handleJoinRoom}
-        onCreateRoom={modals.openCreateRoom}
-      />
+      {modals.showRoomList && (
+        <RoomListModal
+          visible={true}
+          onClose={modals.closeRoomList}
+          rooms={activeRooms}
+          onJoinRoom={modals.handleJoinRoom}
+          onCreateRoom={modals.openCreateRoom}
+        />
+      )}
 
-      <CreateRoomModal visible={modals.showCreateRoom} onClose={modals.closeCreateRoom} onCreate={modals.handleCreateRoom} />
+      {modals.showCreateRoom && (
+        <CreateRoomModal visible={true} onClose={modals.closeCreateRoom} onCreate={modals.handleCreateRoom} />
+      )}
 
-      {defaultRoom && (
+      {defaultRoom && modals.showRoomSettings && (
         <RoomSettingsModal
-          visible={modals.showRoomSettings}
+          visible={true}
           roomName={defaultRoom.name || "Room"}
           roomId={defaultRoom.id}
           isCreator={defaultRoom.creator_id === currentUser?.id}
@@ -848,8 +854,9 @@ export default function QuantumOrbitScreen() {
     </RNAnimated.View>
 
       {/* Sound Reactions - outside animated container for proper z-index */}
-      <SoundReactionPicker
-        visible={modals.showSoundPicker}
+      {modals.showSoundPicker && (
+        <SoundReactionPicker
+          visible={true}
         onSelect={modals.handleSoundSelect}
         onClose={modals.closeSoundPicker}
         canSend={soundReactions.canSend}
@@ -860,9 +867,10 @@ export default function QuantumOrbitScreen() {
         anchorPosition={micButtonPosition}
         accent={accent}
         theme={theme}
-        onPreview={playPreview}
-        onPreviewEnd={stopPreview}
-      />
+          onPreview={playPreview}
+          onPreviewEnd={stopPreview}
+        />
+      )}
 
       <SoundReactionToast
         reactions={soundReactions.receivedReactions}
@@ -870,8 +878,9 @@ export default function QuantumOrbitScreen() {
         theme={theme}
       />
 
-      <LofiMusicMenu
-        visible={modals.showLofiMenu}
+      {modals.showLofiMenu && (
+        <LofiMusicMenu
+          visible={true}
         onClose={modals.closeLofiMenu}
         isPlaying={lofiMusic.isPlaying}
         currentTrack={lofiMusic.currentTrack}
@@ -884,20 +893,25 @@ export default function QuantumOrbitScreen() {
         onPause={lofiMusic.pause}
         onToggleAutoPlay={lofiMusic.toggleAutoPlay}
         onVolumeChange={lofiMusic.setVolume}
-        onSelectTrack={lofiMusic.selectTrack}
-      />
+          onSelectTrack={lofiMusic.selectTrack}
+        />
+      )}
 
-      <NotificationsModal
-        visible={modals.showNotificationsModal}
-        onClose={modals.closeNotifications}
-        onOpenPhotoNudge={modals.openPhotoNudge}
-      />
+      {modals.showNotificationsModal && (
+        <NotificationsModal
+          visible={true}
+          onClose={modals.closeNotifications}
+          onOpenPhotoNudge={modals.openPhotoNudge}
+        />
+      )}
 
-      <PhotoNudgeViewer
-        visible={modals.showPhotoNudge}
-        photoNudge={modals.activePhotoNudge}
-        onClose={modals.closePhotoNudge}
-      />
+      {modals.showPhotoNudge && (
+        <PhotoNudgeViewer
+          visible={true}
+          photoNudge={modals.activePhotoNudge}
+          onClose={modals.closePhotoNudge}
+        />
+      )}
     </>
   );
 }

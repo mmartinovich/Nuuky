@@ -1,5 +1,6 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { spacing, radius, typography } from "../lib/theme";
 import { AudioConnectionBadge } from "./AudioConnectionBadge";
@@ -40,7 +41,7 @@ export const TopHeader = React.memo(function TopHeader({
     : (defaultRoom?.name || 'Room');
   return (
     <View style={styles.topHeader} pointerEvents="box-none">
-      <Image source={require("../assets/wordmark.png")} style={styles.wordmarkSmall} resizeMode="contain" />
+      <Image source={require("../assets/wordmark.png")} style={styles.wordmarkSmall} contentFit="contain" />
 
       {/* Music Button - Left side */}
       {onMusicPress && (

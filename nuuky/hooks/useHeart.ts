@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase';
 import { useAppStore } from '../stores/appStore';
 
 export const useHeart = () => {
-  const { currentUser } = useAppStore();
+  const currentUser = useAppStore((s) => s.currentUser);
   const [loading, setLoading] = useState(false);
 
   const sendHeart = async (friendId: string, friendName: string): Promise<boolean> => {

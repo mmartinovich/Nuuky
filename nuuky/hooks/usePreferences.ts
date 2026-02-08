@@ -6,7 +6,7 @@ import { useAppStore } from '../stores/appStore';
 import { UserPreferences } from '../types';
 
 export const usePreferences = () => {
-  const { currentUser } = useAppStore();
+  const currentUser = useAppStore((s) => s.currentUser);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(true);
   const preferencesRef = useRef(preferences);

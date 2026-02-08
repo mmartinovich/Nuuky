@@ -94,7 +94,8 @@ serve(async (req) => {
     let streaksProcessed = 0;
     let streaksFading = 0;
 
-    // Process each streak
+    // First pass: identify fading streaks that need notifications
+    const fadingStreaks: StreakRow[] = [];
     for (const streak of streaks as StreakRow[]) {
       streaksProcessed++;
 
@@ -118,24 +119,45 @@ serve(async (req) => {
         continue;
       }
 
-      // Fetch both users' details
-      const { data: users, error: usersError } = await supabase
+      fadingStreaks.push(streak);
+    }
+
+    // Batch-fetch all users involved in fading streaks (avoids N+1)
+    const userIdsSet = new Set<string>();
+    for (const streak of fadingStreaks) {
+      userIdsSet.add(streak.user1_id);
+      userIdsSet.add(streak.user2_id);
+    }
+    const uniqueUserIds = Array.from(userIdsSet);
+
+    const usersMap = new Map<string, User>();
+    if (uniqueUserIds.length > 0) {
+      const { data: allUsers, error: usersError } = await supabase
         .from('users')
         .select('id, display_name, fcm_token')
-        .in('id', [streak.user1_id, streak.user2_id]);
+        .in('id', uniqueUserIds);
 
       if (usersError) {
-        console.error(`Error fetching users for streak ${streak.id}:`, usersError);
-        continue;
+        console.error('Error fetching users for fading streaks:', usersError);
+        throw usersError;
       }
 
-      if (!users || users.length !== 2) {
+      if (allUsers) {
+        for (const u of allUsers as User[]) {
+          usersMap.set(u.id, u);
+        }
+      }
+    }
+
+    // Process each fading streak using the pre-fetched user data
+    for (const streak of fadingStreaks) {
+      const user1 = usersMap.get(streak.user1_id);
+      const user2 = usersMap.get(streak.user2_id);
+
+      if (!user1 || !user2) {
         console.log(`Could not find both users for streak ${streak.id}`);
         continue;
       }
-
-      const user1 = users.find((u: User) => u.id === streak.user1_id) as User;
-      const user2 = users.find((u: User) => u.id === streak.user2_id) as User;
 
       // Send notification to both users
       for (const [currentUser, otherUser] of [[user1, user2], [user2, user1]] as [User, User][]) {

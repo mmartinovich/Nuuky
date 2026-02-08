@@ -9,7 +9,9 @@ import { PresetMood } from '../types';
 const USE_MOCK_DATA = false;
 
 export const useMood = () => {
-  const { currentUser, updateUserMood, setActiveCustomMood } = useAppStore();
+  const currentUser = useAppStore((s) => s.currentUser);
+  const updateUserMood = useAppStore((s) => s.updateUserMood);
+  const setActiveCustomMood = useAppStore((s) => s.setActiveCustomMood);
   const [loading, setLoading] = useState(false);
 
   const changeMood = async (mood: PresetMood): Promise<boolean> => {

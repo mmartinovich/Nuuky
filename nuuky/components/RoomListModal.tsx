@@ -84,7 +84,7 @@ export const RoomListModal: React.FC<RoomListModalProps> = ({
   );
 };
 
-const RoomCard: React.FC<{ room: Room; onJoin: () => void }> = ({ room, onJoin }) => {
+const RoomCard: React.FC<{ room: Room; onJoin: () => void }> = React.memo(({ room, onJoin }) => {
   const { theme } = useTheme();
   const participantCount = room.participants?.length || 0;
   const participantAvatars = room.participants?.slice(0, 3) || [];
@@ -141,7 +141,7 @@ const RoomCard: React.FC<{ room: Room; onJoin: () => void }> = ({ room, onJoin }
       </View>
     </BlurView>
   );
-};
+});
 
 const styles = StyleSheet.create({
   overlay: {

@@ -10,16 +10,14 @@ import { AppNotification } from '../types';
 export const useNotifications = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const {
-    currentUser,
-    notifications,
-    unreadNotificationCount,
-    setNotifications,
-    addNotification,
-    markNotificationRead,
-    markAllNotificationsRead,
-    removeNotification,
-  } = useAppStore();
+  const currentUser = useAppStore((s) => s.currentUser);
+  const notifications = useAppStore((s) => s.notifications);
+  const unreadNotificationCount = useAppStore((s) => s.unreadNotificationCount);
+  const setNotifications = useAppStore((s) => s.setNotifications);
+  const addNotification = useAppStore((s) => s.addNotification);
+  const markNotificationRead = useAppStore((s) => s.markNotificationRead);
+  const markAllNotificationsRead = useAppStore((s) => s.markAllNotificationsRead);
+  const removeNotification = useAppStore((s) => s.removeNotification);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);

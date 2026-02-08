@@ -41,7 +41,7 @@ function sameUTCDay(a: Date, b: Date): boolean {
 const STREAK_REFRESH_THROTTLE_MS = 5000;
 
 export const useStreaks = () => {
-  const { currentUser } = useAppStore();
+  const currentUser = useAppStore((s) => s.currentUser);
   const [streaks, setStreaks] = useState<Streak[]>([]);
   const isMountedRef = useRef(true);
   const lastStreakRefreshRef = useRef(0);
