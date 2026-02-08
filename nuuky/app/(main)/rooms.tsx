@@ -106,9 +106,10 @@ export default function RoomsScreen() {
 
   const hasRooms = myRooms.length > 0;
 
-  // Separate home room (permanently pinned) from other rooms
+  // Separate into: home room, my created rooms, and other people's rooms
   const homeRoom = myRooms.find(room => isHomeRoom(room.id));
-  const otherRooms = myRooms.filter(room => !isHomeRoom(room.id));
+  const myCreatedRooms = myRooms.filter(room => !isHomeRoom(room.id) && room.creator_id === currentUser?.id);
+  const otherRooms = myRooms.filter(room => !isHomeRoom(room.id) && room.creator_id !== currentUser?.id);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.bg.primary }]}>
@@ -143,7 +144,30 @@ export default function RoomsScreen() {
                 </View>
               )}
 
-              {/* Other Rooms Section - swipeable */}
+              {/* My Created Rooms Section */}
+              {myCreatedRooms.length > 0 && (
+                <View style={styles.section}>
+                  <View style={styles.sectionHeader}>
+                    <Text style={[styles.sectionTitle, { color: theme.colors.text.tertiary }]}>MY ROOMS</Text>
+                  </View>
+                  <View style={styles.roomsList}>
+                    {myCreatedRooms.map((room) => (
+                      <SwipeableRoomCard
+                        key={room.id}
+                        room={room}
+                        onPress={() => handleRoomPress(room.id)}
+                        isCreator={true}
+                        isDefault={isDefaultRoom(room.id)}
+                        creatorName={room.creator?.display_name}
+                        onDelete={handleDeleteRoom}
+                        onLeave={handleLeaveRoom}
+                      />
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Other People's Rooms Section */}
               {otherRooms.length > 0 && (
                 <View style={styles.section}>
                   <View style={styles.sectionHeader}>
@@ -155,7 +179,7 @@ export default function RoomsScreen() {
                         key={room.id}
                         room={room}
                         onPress={() => handleRoomPress(room.id)}
-                        isCreator={room.creator_id === currentUser?.id}
+                        isCreator={false}
                         isDefault={isDefaultRoom(room.id)}
                         creatorName={room.creator?.display_name}
                         onDelete={handleDeleteRoom}

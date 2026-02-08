@@ -75,15 +75,10 @@ describe('theme', () => {
       expect(theme.colors.text.primary).toBe('#ffffff');
     });
 
-    test('returns light theme colors', () => {
-      const theme = getTheme('light');
-      expect(theme.colors.bg.primary).toBe('#F8F6FF');
-      expect(theme.colors.text.primary).toBe('#1a1a2e');
-    });
-
-    test('both themes share mood colors', () => {
+    test('getTheme returns same colors regardless of mode parameter', () => {
       const dark = getTheme('dark');
       const light = getTheme('light');
+      expect(dark.colors.bg.primary).toBe(light.colors.bg.primary);
       expect(dark.colors.mood.good.base).toBe(light.colors.mood.good.base);
     });
   });

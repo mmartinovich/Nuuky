@@ -40,10 +40,6 @@ describe('useOrbitGestures', () => {
     expect(result.current.orbitAngle).toBeDefined();
     expect(result.current.orbitAngleValueRef).toBeDefined();
     expect(typeof result.current.isSpinning).toBe('boolean');
-    expect(result.current.boltPositionsRef).toBeDefined();
-    expect(typeof result.current.boltTick).toBe('number');
-    expect(typeof result.current.setBoltTick).toBe('function');
-    expect(result.current.computeBoltPositionsRef).toBeDefined();
   });
 
   test('isSpinning is false initially', () => {
@@ -51,30 +47,9 @@ describe('useOrbitGestures', () => {
     expect(result.current.isSpinning).toBe(false);
   });
 
-  test('boltTick starts at 0', () => {
-    const { result } = renderHook(() => useOrbitGestures());
-    expect(result.current.boltTick).toBe(0);
-  });
-
-  test('setBoltTick updates tick', () => {
-    const { result } = renderHook(() => useOrbitGestures());
-    act(() => { result.current.setBoltTick(5); });
-    expect(result.current.boltTick).toBe(5);
-  });
-
   test('cleanup on unmount does not throw', () => {
     const { unmount } = renderHook(() => useOrbitGestures());
     expect(() => unmount()).not.toThrow();
-  });
-
-  test('computeBoltPositionsRef is initially null', () => {
-    const { result } = renderHook(() => useOrbitGestures());
-    expect(result.current.computeBoltPositionsRef.current).toBeNull();
-  });
-
-  test('boltPositionsRef is initially empty array', () => {
-    const { result } = renderHook(() => useOrbitGestures());
-    expect(result.current.boltPositionsRef.current).toEqual([]);
   });
 
   test('onStartShouldSetPanResponder returns false', () => {

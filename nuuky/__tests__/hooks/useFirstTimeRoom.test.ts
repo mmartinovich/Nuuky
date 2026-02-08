@@ -13,9 +13,15 @@ jest.mock('../../lib/supabase', () => ({
   },
 }));
 
-jest.mock('../../stores/appStore', () => ({
-  useAppStore: jest.fn(() => ({ currentUser: { id: 'u1' } })),
-}));
+jest.mock('../../stores/appStore', () => {
+  const store = {
+    currentUser: { id: 'u1' },
+    myRooms: [],
+  };
+  const useAppStore = jest.fn((selector?: any) => selector ? selector(store) : store);
+  useAppStore.getState = jest.fn(() => store);
+  return { useAppStore };
+});
 
 jest.mock('../../lib/logger', () => ({ logger: { error: jest.fn() } }));
 

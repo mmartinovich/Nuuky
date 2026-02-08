@@ -215,12 +215,6 @@ describe('appStore', () => {
     expect(useAppStore.getState().unreadNotificationCount).toBe(0);
   });
 
-  // === Theme ===
-  test('setThemeMode', () => {
-    act(() => { useAppStore.getState().setThemeMode('light'); });
-    expect(useAppStore.getState().themeMode).toBe('light');
-  });
-
   // === Network ===
   test('setIsOnline', () => {
     act(() => { useAppStore.getState().setIsOnline(false); });
@@ -286,13 +280,12 @@ describe('appStore', () => {
   });
 
   // === Logout ===
-  test('logout clears all user data but preserves theme', () => {
+  test('logout clears all user data', () => {
     act(() => {
       useAppStore.getState().setCurrentUser(mockUser());
       useAppStore.getState().setFriends([mockFriendship()]);
       useAppStore.getState().setMyRooms([mockRoom()]);
       useAppStore.getState().setNotifications([mockNotification()]);
-      useAppStore.getState().setThemeMode('light');
       useAppStore.getState().logout();
     });
 
@@ -306,6 +299,5 @@ describe('appStore', () => {
     expect(state.unreadNotificationCount).toBe(0);
     expect(state.customMoods).toEqual([]);
     expect(state.audioConnectionStatus).toBe('disconnected');
-    expect(state.themeMode).toBe('light'); // preserved
   });
 });

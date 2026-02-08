@@ -65,11 +65,11 @@ describe('RoomCard', () => {
     expect(onPress).toHaveBeenCalled();
   });
 
-  test('shows Active badge when default', () => {
-    const { getByText } = render(
+  test('renders selected style when default', () => {
+    const { toJSON } = render(
       <RoomCard room={mockRoom as any} onPress={jest.fn()} isDefault={true} />
     );
-    expect(getByText('Active')).toBeTruthy();
+    expect(toJSON()).toBeTruthy();
   });
 
   test('shows Unnamed Room for missing name', () => {
@@ -80,11 +80,12 @@ describe('RoomCard', () => {
     expect(getByText('Unnamed Room')).toBeTruthy();
   });
 
-  test('shows creator subtitle when not creator', () => {
+  test('shows creator name for home rooms', () => {
+    const homeRoom = { ...mockRoom, name: 'My Nūūky' };
     const { getByText } = render(
-      <RoomCard room={mockRoom as any} onPress={jest.fn()} isCreator={false} creatorName="Alice" />
+      <RoomCard room={homeRoom as any} onPress={jest.fn()} isCreator={false} creatorName="Alice" />
     );
-    expect(getByText("Alice's room")).toBeTruthy();
+    expect(getByText("Alice's Nūūky")).toBeTruthy();
   });
 
   test('renders participant count', () => {

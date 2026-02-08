@@ -361,6 +361,7 @@ describe('useRoom', () => {
           select: jest.fn().mockReturnThis(),
           insert: jest.fn().mockReturnThis(),
           eq: jest.fn().mockReturnThis(),
+          gt: jest.fn().mockReturnThis(),
           maybeSingle: jest.fn().mockResolvedValue({ data: { id: 'inv1' }, error: null }),
         };
       }

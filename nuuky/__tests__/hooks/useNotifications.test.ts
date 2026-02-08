@@ -24,6 +24,7 @@ jest.mock('../../lib/logger', () => ({
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn() }),
+  usePathname: () => '/(main)',
 }));
 
 jest.mock('react-native', () => ({

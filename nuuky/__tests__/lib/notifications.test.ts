@@ -216,13 +216,13 @@ describe('notifications', () => {
       expect(result.shouldSetBadge).toBe(false);
     });
 
-    test('regular notification returns shouldShowAlert true', async () => {
+    test('regular notification returns shouldShowAlert false (in-app banner handles display)', async () => {
       const result = await capturedNotificationHandler.handleNotification({
         request: { content: { data: {} } },
       });
-      expect(result.shouldShowAlert).toBe(true);
-      expect(result.shouldPlaySound).toBe(true);
-      expect(result.shouldSetBadge).toBe(true);
+      expect(result.shouldShowAlert).toBe(false);
+      expect(result.shouldPlaySound).toBe(false);
+      expect(result.shouldSetBadge).toBe(false);
     });
   });
 

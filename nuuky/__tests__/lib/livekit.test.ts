@@ -128,7 +128,7 @@ describe('livekit', () => {
 
   test('requestLiveKitToken returns data on success', async () => {
     mockGetSession.mockResolvedValue({
-      data: { session: { access_token: 'tok' } },
+      data: { session: { access_token: 'tok', user: { id: 'test-user-id' } } },
     });
     mockInvoke.mockResolvedValue({ data: { token: 'lk-token', url: 'wss://test' }, error: null });
 
@@ -138,7 +138,7 @@ describe('livekit', () => {
 
   test('requestLiveKitToken uses cache for same room', async () => {
     mockGetSession.mockResolvedValue({
-      data: { session: { access_token: 'tok' } },
+      data: { session: { access_token: 'tok', user: { id: 'test-user-id' } } },
     });
     mockInvoke.mockResolvedValue({ data: { token: 'lk-token', url: 'wss://test' }, error: null });
 
@@ -151,7 +151,7 @@ describe('livekit', () => {
 
   test('requestLiveKitToken handles invoke error', async () => {
     mockGetSession.mockResolvedValue({
-      data: { session: { access_token: 'tok' } },
+      data: { session: { access_token: 'tok', user: { id: 'test-user-id' } } },
     });
     mockInvoke.mockResolvedValue({ data: null, error: { message: 'fail' } });
 
@@ -191,7 +191,7 @@ describe('livekit', () => {
 
   test('connectToAudioRoom succeeds with valid token', async () => {
     mockGetSession.mockResolvedValue({
-      data: { session: { access_token: 'tok' } },
+      data: { session: { access_token: 'tok', user: { id: 'test-user-id' } } },
     });
     mockInvoke.mockResolvedValue({ data: { token: 'lk-token', url: 'wss://test' }, error: null });
 
@@ -252,7 +252,7 @@ describe('livekit', () => {
 
   test('connectToAudioRoom reuses existing room', async () => {
     mockGetSession.mockResolvedValue({
-      data: { session: { access_token: 'tok' } },
+      data: { session: { access_token: 'tok', user: { id: 'test-user-id' } } },
     });
     mockInvoke.mockResolvedValue({ data: { token: 'lk-token', url: 'wss://test' }, error: null });
 
@@ -274,7 +274,7 @@ describe('livekit', () => {
 
   test('requestLiveKitToken different room bypasses cache', async () => {
     mockGetSession.mockResolvedValue({
-      data: { session: { access_token: 'tok' } },
+      data: { session: { access_token: 'tok', user: { id: 'test-user-id' } } },
     });
     mockInvoke.mockResolvedValue({ data: { token: 'lk-token2', url: 'wss://test2' }, error: null });
 

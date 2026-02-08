@@ -66,7 +66,7 @@ describe('useAudio', () => {
     const { result } = renderHook(() => useAudio('room1'));
     let ok = false;
     await act(async () => { ok = await result.current.connect(); });
-    expect(mockConnect).toHaveBeenCalledWith('room1');
+    expect(mockConnect).toHaveBeenCalledWith('room1', false);
     expect(ok).toBe(true);
   });
 
@@ -77,11 +77,12 @@ describe('useAudio', () => {
     expect(ok).toBe(false);
   });
 
-  test('connect enables mic when already connected', async () => {
+  test('connect returns true when already connected', async () => {
     mockIsConnected.mockReturnValue(true);
     const { result } = renderHook(() => useAudio('room1'));
-    await act(async () => { await result.current.connect(); });
-    expect(mockSetMic).toHaveBeenCalledWith(true);
+    let ok = false;
+    await act(async () => { ok = await result.current.connect(); });
+    expect(ok).toBe(true);
     expect(mockConnect).not.toHaveBeenCalled();
   });
 

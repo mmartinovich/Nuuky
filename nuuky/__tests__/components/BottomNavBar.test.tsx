@@ -59,15 +59,13 @@ describe('BottomNavBar', () => {
     expect(onPress).toHaveBeenCalled();
   });
 
-  test('calls onMicToggle', () => {
-    const onPress = jest.fn();
-    const { getByLabelText } = render(<BottomNavBar {...defaultProps} onMicToggle={onPress} />);
-    fireEvent.press(getByLabelText('Unmute microphone'));
-    expect(onPress).toHaveBeenCalled();
+  test('renders mic button with correct label when muted', () => {
+    const { getByLabelText } = render(<BottomNavBar {...defaultProps} isMuted={true} />);
+    expect(getByLabelText('Unmute microphone. Swipe up for sound reactions')).toBeTruthy();
   });
 
-  test('shows mute label when unmuted', () => {
+  test('renders mic button with correct label when unmuted', () => {
     const { getByLabelText } = render(<BottomNavBar {...defaultProps} isMuted={false} />);
-    expect(getByLabelText('Mute microphone')).toBeTruthy();
+    expect(getByLabelText('Mute microphone. Swipe up for sound reactions')).toBeTruthy();
   });
 });

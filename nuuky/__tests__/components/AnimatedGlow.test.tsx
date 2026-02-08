@@ -14,20 +14,20 @@ jest.mock('react-native-svg', () => {
   };
 });
 
-let mockIsDark = true;
-jest.mock('../../hooks/useTheme', () => ({
-  useTheme: () => ({ isDark: mockIsDark }),
+let mockLowPowerMode = false;
+jest.mock('../../stores/appStore', () => ({
+  useLowPowerMode: () => mockLowPowerMode,
 }));
 
 describe('AnimatedGlow', () => {
-  test('renders in dark mode', () => {
-    mockIsDark = true;
+  test('renders when low power mode is off', () => {
+    mockLowPowerMode = false;
     const { toJSON } = render(<AnimatedGlow />);
     expect(toJSON()).toBeTruthy();
   });
 
-  test('returns null in light mode', () => {
-    mockIsDark = false;
+  test('returns null in low power mode', () => {
+    mockLowPowerMode = true;
     const { toJSON } = render(<AnimatedGlow />);
     expect(toJSON()).toBeNull();
   });

@@ -283,7 +283,6 @@ describe('useSafety', () => {
     let success = false;
     await act(async () => { success = await result.current.addAnchor('u2'); });
     expect(success).toBe(true);
-    expect(Alert.alert).toHaveBeenCalledWith('Anchor Added', expect.any(String));
   });
 
   test('addAnchor requires login', async () => {

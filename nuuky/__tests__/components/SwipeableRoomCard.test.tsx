@@ -38,6 +38,7 @@ jest.mock('expo-blur', () => ({ BlurView: ({ children }: any) => <>{children}</>
 jest.mock('expo-linear-gradient', () => ({ LinearGradient: ({ children }: any) => <>{children}</> }));
 jest.mock('../../hooks/useTheme', () => ({
   useTheme: () => ({
+    accent: { primary: '#3FCBFF', soft: 'rgba(63,203,255,0.15)', glow: '#3FCBFF', gradient: ['#3FCBFF', '#00b8d4'], textOnPrimary: '#000' },
     theme: {
       colors: {
         text: { primary: '#fff', secondary: '#aaa', tertiary: '#666' },

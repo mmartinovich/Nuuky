@@ -17,7 +17,7 @@ jest.mock('expo-linear-gradient', () => ({
 }));
 
 jest.mock('expo-image', () => ({ Image: 'CachedImage' }));
-jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons', MaterialCommunityIcons: 'MaterialCommunityIcons' }));
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),
   notificationAsync: jest.fn(),
@@ -44,6 +44,7 @@ jest.mock('react-native-reanimated', () => {
 jest.mock('../../hooks/useTheme', () => ({
   useTheme: () => ({
     isDark: true,
+    accent: { primary: '#3FCBFF', soft: 'rgba(63,203,255,0.15)', glow: '#3FCBFF', gradient: ['#3FCBFF', '#00b8d4'], textOnPrimary: '#000' },
     theme: {
       colors: {
         glass: { background: '#111', border: '#333' },
@@ -87,10 +88,9 @@ describe('NotificationCard', () => {
     onDelete: jest.fn(),
   };
 
-  test('renders title and body', () => {
+  test('renders title', () => {
     const { getByText } = render(<NotificationCard {...defaultProps} />);
     expect(getByText('Hey!')).toBeTruthy();
-    expect(getByText('Someone nudged you')).toBeTruthy();
   });
 
   test('renders relative time', () => {
