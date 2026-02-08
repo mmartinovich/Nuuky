@@ -94,6 +94,9 @@ export const SoundReactionPicker: React.FC<SoundReactionPickerProps> = ({
     if (visible) {
       setShouldRender(true);
 
+      // Stop any in-flight animations before opening
+      animValues.forEach((anim) => anim.stopAnimation());
+
       // Reset and animate open
       animValues.forEach((anim, index) => {
         anim.setValue(0);
@@ -118,13 +121,16 @@ export const SoundReactionPicker: React.FC<SoundReactionPickerProps> = ({
         clearTimeout(closeTimerRef.current);
       }
 
-      // Animate closed
+      // Stop any in-flight animations before closing
+      animValues.forEach((anim) => anim.stopAnimation());
+
+      // Animate closed - converge back to mute button
       const animations = animValues.map((anim, index) => {
         return Animated.spring(anim, {
           toValue: 0,
-          tension: 350 - (index * 10),
-          friction: 12,
-          delay: index * 25,
+          tension: 300,
+          friction: 14,
+          delay: (animValues.length - 1 - index) * 25,
           useNativeDriver: true,
         });
       });

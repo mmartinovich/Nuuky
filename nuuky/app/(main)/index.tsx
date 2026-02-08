@@ -854,9 +854,8 @@ export default function QuantumOrbitScreen() {
     </RNAnimated.View>
 
       {/* Sound Reactions - outside animated container for proper z-index */}
-      {modals.showSoundPicker && (
         <SoundReactionPicker
-          visible={true}
+          visible={modals.showSoundPicker}
         onSelect={modals.handleSoundSelect}
         onClose={modals.closeSoundPicker}
         canSend={soundReactions.canSend}
@@ -870,7 +869,6 @@ export default function QuantumOrbitScreen() {
           onPreview={playPreview}
           onPreviewEnd={stopPreview}
         />
-      )}
 
       <SoundReactionToast
         reactions={soundReactions.receivedReactions}
