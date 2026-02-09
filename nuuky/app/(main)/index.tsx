@@ -700,7 +700,7 @@ export default function QuantumOrbitScreen() {
         moodSelfie={activeSelfie}
         isCustomMoodActive={!!activeCustomMood}
         showHint={showHint}
-        statusText={activeCustomMood?.text || currentVibe}
+        statusText={activeCustomMood ? (activeCustomMood.text || undefined) : currentVibe}
       />
 
       {/* Orbit Particles */}

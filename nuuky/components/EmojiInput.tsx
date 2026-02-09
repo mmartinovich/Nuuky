@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, ScrollView, TextInput, Keyboard, ActionSheetIOS, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image as CachedImage } from 'expo-image';
@@ -34,7 +34,6 @@ export const EmojiInput: React.FC<EmojiInputProps> = ({
 }) => {
   const { theme } = useTheme();
   const inputRef = useRef<TextInput>(null);
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
   const hasSelfie = !!selfieUrl;
 
@@ -44,9 +43,9 @@ export const EmojiInput: React.FC<EmojiInputProps> = ({
       const matches = [...text.matchAll(emojiRegex)];
       const lastEmoji = matches[matches.length - 1]?.[0];
       if (lastEmoji) {
+        if (hasSelfie) onDeleteSelfie?.();
         onChangeEmoji(lastEmoji);
         Keyboard.dismiss();
-        setIsKeyboardOpen(false);
         return;
       }
     }
@@ -56,10 +55,7 @@ export const EmojiInput: React.FC<EmojiInputProps> = ({
   };
 
   const handleOpenKeyboard = () => {
-    setIsKeyboardOpen(true);
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 100);
+    inputRef.current?.focus();
   };
 
   const handlePhotoPress = () => {
@@ -161,13 +157,16 @@ export const EmojiInput: React.FC<EmojiInputProps> = ({
               style={[
                 styles.emojiButton,
                 { backgroundColor: theme.colors.glass.background },
-                value === emoji && !hasSelfie && {
+                value === emoji && {
                   backgroundColor: theme.colors.accent.primary + '4D',
                   borderWidth: 2,
                   borderColor: theme.colors.accent.primary,
                 },
               ]}
-              onPress={() => onChangeEmoji(emoji)}
+              onPress={() => {
+                if (hasSelfie) onDeleteSelfie?.();
+                onChangeEmoji(emoji);
+              }}
               activeOpacity={0.7}
             >
               <Text style={styles.emojiText}>{emoji}</Text>
@@ -176,18 +175,13 @@ export const EmojiInput: React.FC<EmojiInputProps> = ({
         </ScrollView>
       </View>
 
-      {isKeyboardOpen && (
-        <TextInput
-          ref={inputRef}
-          style={[styles.keyboardInput, { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border, color: theme.colors.text.primary }]}
-          onChangeText={handleChangeText}
-          autoCorrect={false}
-          placeholder="Tap 🌐 for emojis"
-          placeholderTextColor={theme.colors.text.tertiary}
-          autoFocus
-          onBlur={() => setIsKeyboardOpen(false)}
-        />
-      )}
+      <TextInput
+        ref={inputRef}
+        style={styles.hiddenInput}
+        onChangeText={handleChangeText}
+        autoCorrect={false}
+        caretHidden
+      />
     </View>
   );
 };
@@ -211,13 +205,11 @@ const styles = StyleSheet.create({
   selectedEmoji: {
     fontSize: 32,
   },
-  keyboardInput: {
-    marginTop: spacing.xs,
-    height: 40,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    fontSize: 16,
+  hiddenInput: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0,
   },
   emojiGrid: {
     flexDirection: 'row',

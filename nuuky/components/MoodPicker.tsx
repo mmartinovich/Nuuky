@@ -35,7 +35,7 @@ interface MoodPickerProps {
   customMood?: CustomMood | null;
   isCustomMoodActive?: boolean;
   onSelectCustomMood?: () => void;
-  onSaveCustomMood?: (emoji: string, text: string, color: string) => void;
+  onSaveCustomMood?: (emoji: string, text: string, color: string) => void | Promise<void>;
   originPoint?: { x: number; y: number };
   moodSelfie?: MoodSelfie | null;
   onCaptureSelfie?: () => Promise<boolean>;
@@ -105,18 +105,18 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
     setIsEditing(true);
   }, [customMood]);
 
-  const handleSaveCustom = useCallback(() => {
+  const handleSaveCustom = useCallback(async () => {
     const cleanedEmoji = editEmoji.trim();
     const cleanedText = editText.trim();
-    if (!cleanedEmoji || !cleanedText) return;
+    if (!cleanedEmoji) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onSaveCustomMood?.(cleanedEmoji, cleanedText, CUSTOM_MOOD_NEUTRAL_COLOR);
+    await onSaveCustomMood?.(cleanedEmoji, cleanedText, CUSTOM_MOOD_NEUTRAL_COLOR);
     setIsEditing(false);
     handleClose();
   }, [editEmoji, editText, onSaveCustomMood, handleClose]);
 
-  const canSave = editEmoji.trim().length > 0 && editText.trim().length > 0;
+  const canSave = editEmoji.trim().length > 0;
 
   // Check if selfie is active (not expired)
   const isSelfieActive = moodSelfie && new Date(moodSelfie.expires_at) > new Date();
@@ -124,20 +124,14 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
   const handleCaptureSelfie = useCallback(async (): Promise<boolean> => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const success = await onCaptureSelfie?.();
-    if (success) {
-      handleClose();
-    }
     return success ?? false;
-  }, [onCaptureSelfie, handleClose]);
+  }, [onCaptureSelfie]);
 
   const handlePickFromLibrary = useCallback(async (): Promise<boolean> => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const success = await onPickFromLibrary?.();
-    if (success) {
-      handleClose();
-    }
     return success ?? false;
-  }, [onPickFromLibrary, handleClose]);
+  }, [onPickFromLibrary]);
 
   const handleDeleteSelfie = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -277,7 +271,7 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                   </View>
                   <View style={styles.moodText}>
                     <Text style={[styles.moodLabel, { color: theme.colors.text.primary }]}>
-                      {customMood && !isEditing ? customMood.text : 'Custom mood'}
+                      {customMood && !isEditing ? (customMood.text || 'Custom mood') : 'Custom mood'}
                     </Text>
                     <Text style={[styles.moodDescription, { color: theme.colors.text.tertiary }]}>
                       {customMood && !isEditing ? 'Hold to edit' : 'Pick your own emoji & message'}

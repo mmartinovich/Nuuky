@@ -61,13 +61,7 @@ export const useCustomMood = () => {
       return null;
     }
 
-    // Validate text (already cleaned by CustomMoodEditor)
-    if (!text || text.trim().length < 1) {
-      Alert.alert('Missing Message', 'Please add a status message');
-      return null;
-    }
-
-    if (text.length > 50) {
+    if (text && text.length > 50) {
       Alert.alert('Message Too Long', 'Status message must be 50 characters or less');
       return null;
     }
@@ -109,23 +103,14 @@ export const useCustomMood = () => {
         .insert({
           user_id: currentUser.id,
           emoji,
-          text,
+          text: text || '',
           color,
         })
         .select()
         .single();
 
       if (error) {
-        // Check if error is due to 1-mood limit
-        if (error.message.includes('Maximum 1 custom mood')) {
-          Alert.alert(
-            'Mood Limit Reached',
-            'You can only have 1 custom mood. Delete your current one to create another.'
-          );
-        } else {
-          throw error;
-        }
-        return null;
+        throw error;
       }
 
       const newMood = data as CustomMood;
