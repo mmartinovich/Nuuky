@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SoundReactionType, PhotoNudge } from '../types';
+import { SoundReactionType, PhotoNudge, VoiceMoment } from '../types';
 
 interface UseHomeModalsOptions {
   onSoundSelect: (soundId: SoundReactionType) => Promise<{ success: boolean; error?: string }>;
@@ -11,6 +11,7 @@ interface UseHomeModalsOptions {
   audioConnect: () => void;
   defaultRoom: any;
   fetchPhotoNudge: (id: string) => Promise<PhotoNudge | null>;
+  fetchVoiceMoment: (id: string) => Promise<VoiceMoment | null>;
 }
 
 export function useHomeModals({
@@ -21,6 +22,7 @@ export function useHomeModals({
   audioConnect,
   defaultRoom,
   fetchPhotoNudge,
+  fetchVoiceMoment,
 }: UseHomeModalsOptions) {
   const router = useRouter();
 
@@ -33,6 +35,8 @@ export function useHomeModals({
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showPhotoNudge, setShowPhotoNudge] = useState(false);
   const [activePhotoNudge, setActivePhotoNudge] = useState<PhotoNudge | null>(null);
+  const [showVoiceMoment, setShowVoiceMoment] = useState(false);
+  const [activeVoiceMoment, setActiveVoiceMoment] = useState<VoiceMoment | null>(null);
 
   const openMoodPicker = useCallback(() => setShowMoodPicker(true), []);
   const closeMoodPicker = useCallback(() => setShowMoodPicker(false), []);
@@ -102,6 +106,24 @@ export function useHomeModals({
     }
   }, [fetchPhotoNudge]);
 
+  const openVoiceMoment = useCallback((vm: VoiceMoment) => {
+    setActiveVoiceMoment(vm);
+    setShowVoiceMoment(true);
+  }, []);
+
+  const closeVoiceMoment = useCallback(() => {
+    setShowVoiceMoment(false);
+    setActiveVoiceMoment(null);
+  }, []);
+
+  const openVoiceMomentById = useCallback(async (id: string) => {
+    const vm = await fetchVoiceMoment(id);
+    if (vm) {
+      setActiveVoiceMoment(vm);
+      setShowVoiceMoment(true);
+    }
+  }, [fetchVoiceMoment]);
+
   return {
     // Modal visibility state
     showMoodPicker,
@@ -113,6 +135,8 @@ export function useHomeModals({
     showNotificationsModal,
     showPhotoNudge,
     activePhotoNudge,
+    showVoiceMoment,
+    activeVoiceMoment,
 
     // Open/close handlers
     openMoodPicker,
@@ -132,6 +156,9 @@ export function useHomeModals({
     openPhotoNudge,
     closePhotoNudge,
     openPhotoNudgeById,
+    openVoiceMoment,
+    closeVoiceMoment,
+    openVoiceMomentById,
 
     // Action handlers
     handleSoundSelect,

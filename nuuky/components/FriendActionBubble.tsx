@@ -15,6 +15,7 @@ interface FriendActionBubbleProps {
   onNudge: () => void;
   onCallMe: () => void;
   onPhotoNudge: () => void;
+  onVoiceMoment?: () => void;
   onInteraction?: () => void;
 }
 
@@ -148,18 +149,20 @@ export const FriendActionBubble = React.memo(function FriendActionBubble({
   onNudge,
   onCallMe,
   onPhotoNudge,
+  onVoiceMoment,
   onInteraction,
 }: FriendActionBubbleProps) {
   const scaleAnim = useRef(new Animated.Value(0.3)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
   // Track which button was sent for checkmark feedback
-  const [sentAction, setSentAction] = useState<'nudge' | 'call' | 'photo' | null>(null);
+  const [sentAction, setSentAction] = useState<'nudge' | 'call' | 'photo' | 'voice' | null>(null);
 
   // Show particle/ripple effects
   const [showNudgeRipples, setShowNudgeRipples] = useState(false);
   const [showCallWaves, setShowCallWaves] = useState(false);
   const [showCameraFlash, setShowCameraFlash] = useState(false);
+  const [showVoiceWaves, setShowVoiceWaves] = useState(false);
 
   // Button animation values
   const nudgeScale = useRef(new Animated.Value(1)).current;
@@ -172,6 +175,9 @@ export const FriendActionBubble = React.memo(function FriendActionBubble({
 
   const photoScale = useRef(new Animated.Value(1)).current;
   const photoRotate = useRef(new Animated.Value(0)).current;
+
+  const voiceScale = useRef(new Animated.Value(1)).current;
+  const voiceRotate = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Snappy Apple-style spring animation
@@ -191,7 +197,7 @@ export const FriendActionBubble = React.memo(function FriendActionBubble({
   }, []);
 
   // Calculate bubble position - center above friend, clear of avatar
-  const bubbleWidth = 195; // 3 buttons
+  const bubbleWidth = 260; // 4 buttons
   const avatarRadius = 35; // Approximate avatar radius
   const bubbleX = Math.max(
     16,
@@ -341,6 +347,30 @@ export const FriendActionBubble = React.memo(function FriendActionBubble({
     });
   };
 
+  const handleVoicePress = () => {
+    if (sentAction) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+
+    // Show sound wave effect
+    setShowVoiceWaves(true);
+    setTimeout(() => setShowVoiceWaves(false), 800);
+
+    // Pulse + slight tilt animation
+    Animated.parallel([
+      Animated.sequence([
+        Animated.timing(voiceScale, { toValue: 1.3, duration: 80, easing: Easing.out(Easing.back(2)), useNativeDriver: true }),
+        Animated.timing(voiceScale, { toValue: 1, duration: 150, useNativeDriver: true }),
+      ]),
+      Animated.sequence([
+        Animated.timing(voiceRotate, { toValue: 1, duration: 80, useNativeDriver: true }),
+        Animated.timing(voiceRotate, { toValue: -1, duration: 120, useNativeDriver: true }),
+        Animated.timing(voiceRotate, { toValue: 0, duration: 80, useNativeDriver: true }),
+      ]),
+    ]).start(() => {
+      onVoiceMoment?.();
+      onInteraction?.();
+    });
+  };
 
   const handleDismiss = () => {
     Animated.parallel([
@@ -504,6 +534,40 @@ export const FriendActionBubble = React.memo(function FriendActionBubble({
               </View>
               <Text style={styles.actionLabel}>{sentAction === 'photo' ? 'Sent!' : 'Moment'}</Text>
             </TouchableOpacity>
+
+            {/* Voice button */}
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleVoicePress}
+              activeOpacity={0.6}
+              accessibilityLabel="Send voice moment"
+              accessibilityRole="button"
+            >
+              <View style={styles.iconWrapper}>
+                {showVoiceWaves && (
+                  <>
+                    <SoundWave delay={0} side="right" />
+                    <SoundWave delay={120} side="left" />
+                  </>
+                )}
+                <Animated.View
+                  style={{
+                    transform: [
+                      { scale: voiceScale },
+                      {
+                        rotate: voiceRotate.interpolate({
+                          inputRange: [-1, 1],
+                          outputRange: ['-8deg', '8deg'],
+                        }),
+                      },
+                    ],
+                  }}
+                >
+                  <Ionicons name="mic-outline" size={20} color="#F97316" />
+                </Animated.View>
+              </View>
+              <Text style={styles.actionLabel}>Voice</Text>
+            </TouchableOpacity>
             </View>
           </View>
         </BlurView>
@@ -520,7 +584,7 @@ const styles = StyleSheet.create({
   bubbleContainer: {
     position: 'absolute',
     zIndex: 1001,
-    width: 195,
+    width: 260,
   },
   blurWrapper: {
     borderRadius: 18,

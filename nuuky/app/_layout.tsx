@@ -149,6 +149,17 @@ export default function RootLayout() {
           router.push("/(main)");
         }
         break;
+      case "voice_moment":
+      case "voice_moment_reaction":
+        if (data?.voice_moment_id) {
+          router.push({
+            pathname: "/(main)",
+            params: { voice_moment_id: data.voice_moment_id },
+          });
+        } else if (currentPath !== "/" && currentPath !== "/(main)") {
+          router.push("/(main)");
+        }
+        break;
       case "friend_request":
       case "friend_accepted":
         if (currentPath !== "/(main)/friends") {
@@ -212,6 +223,11 @@ export default function RootLayout() {
             case 'call_me':
               icon = 'call';
               color = '#10B981';
+              break;
+            case 'voice_moment':
+            case 'voice_moment_reaction':
+              icon = 'mic';
+              color = '#F97316';
               break;
           }
 

@@ -3,7 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { verifyCronSecret, AuthError, authErrorResponse } from '../_shared/auth.ts';
 
 /**
- * Cleanup expired photo nudges and their storage files.
+ * Cleanup expired photo nudges, voice moments, and their storage files.
  * This function should be run hourly via cron.
  *
  * To set up cron, add to Supabase dashboard or use:
@@ -33,7 +33,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log('Starting cleanup of expired photo nudges...');
+    console.log('Starting cleanup of expired photo nudges and voice moments...');
 
     // Get all expired photo nudges
     const { data: expiredNudges, error: fetchError } = await supabase
@@ -46,14 +46,31 @@ serve(async (req) => {
       throw fetchError;
     }
 
-    if (!expiredNudges || expiredNudges.length === 0) {
-      console.log('No expired photo nudges to clean up');
+    // Get all expired voice moments
+    const { data: expiredVoiceMoments, error: vmFetchError } = await supabase
+      .from('voice_moments')
+      .select('id, audio_url, sender_id')
+      .lt('expires_at', new Date().toISOString());
+
+    if (vmFetchError) {
+      console.error('Error fetching expired voice moments:', vmFetchError);
+    }
+
+    const hasExpiredNudges = expiredNudges && expiredNudges.length > 0;
+    const hasExpiredVoiceMoments = expiredVoiceMoments && expiredVoiceMoments.length > 0;
+
+    if (!hasExpiredNudges && !hasExpiredVoiceMoments) {
+      console.log('No expired items to clean up');
       return new Response(
-        JSON.stringify({ message: 'No expired photo nudges', cleaned: 0 }),
+        JSON.stringify({ message: 'No expired items', cleaned: 0 }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
+    let photosCleaned = 0;
+    let voiceMomentsCleaned = 0;
+
+    if (hasExpiredNudges) {
     console.log(`Found ${expiredNudges.length} expired photo nudges to clean up`);
 
     // Extract storage paths from image URLs
@@ -127,13 +144,86 @@ serve(async (req) => {
       console.error('Error cleaning up rate limits:', rateLimitError);
     }
 
-    console.log(`✓ Cleanup complete: ${expiredNudges.length} photo nudges removed`);
+    photosCleaned = expiredNudges.length;
+    console.log(`✓ Photo nudges cleanup: ${photosCleaned} removed`);
+    } // end hasExpiredNudges
+
+    // --- Voice moments cleanup ---
+    if (hasExpiredVoiceMoments) {
+      console.log(`Found ${expiredVoiceMoments.length} expired voice moments to clean up`);
+
+      const voiceStoragePaths: string[] = [];
+      for (const vm of expiredVoiceMoments) {
+        try {
+          const url = new URL(vm.audio_url);
+          const pathParts = url.pathname.split('/');
+          const bucketIndex = pathParts.indexOf('voice-moments');
+          if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
+            const filePath = pathParts.slice(bucketIndex + 1).join('/');
+            voiceStoragePaths.push(filePath);
+          }
+        } catch (e) {
+          console.error(`Failed to parse URL for voice moment ${vm.id}:`, e);
+        }
+      }
+
+      if (voiceStoragePaths.length > 0) {
+        const { error: vmStorageError } = await supabase.storage
+          .from('voice-moments')
+          .remove(voiceStoragePaths);
+
+        if (vmStorageError) {
+          console.error('Error deleting voice moment storage files:', vmStorageError);
+        } else {
+          console.log(`Successfully deleted ${voiceStoragePaths.length} voice moment files`);
+        }
+      }
+
+      const vmExpiredIds = expiredVoiceMoments.map(vm => vm.id);
+      const { error: vmDeleteError } = await supabase
+        .from('voice_moments')
+        .delete()
+        .in('id', vmExpiredIds);
+
+      if (vmDeleteError) {
+        console.error('Error deleting expired voice moments:', vmDeleteError);
+      }
+
+      // Clean up voice moment notifications
+      const { error: vmNotifError } = await supabase
+        .from('notifications')
+        .delete()
+        .in('type', ['voice_moment', 'voice_moment_reaction'])
+        .in('source_id', vmExpiredIds);
+
+      if (vmNotifError) {
+        console.error('Error deleting voice moment notifications:', vmNotifError);
+      }
+
+      // Clean up voice moment rate limits
+      const twoDaysAgoVm = new Date();
+      twoDaysAgoVm.setDate(twoDaysAgoVm.getDate() - 2);
+
+      const { error: vmRateLimitError } = await supabase
+        .from('voice_moment_limits')
+        .delete()
+        .lt('date', twoDaysAgoVm.toISOString().split('T')[0]);
+
+      if (vmRateLimitError) {
+        console.error('Error cleaning up voice moment rate limits:', vmRateLimitError);
+      }
+
+      voiceMomentsCleaned = expiredVoiceMoments.length;
+      console.log(`✓ Voice moments cleanup: ${voiceMomentsCleaned} removed`);
+    }
+
+    console.log(`✓ Cleanup complete: ${photosCleaned} photo nudges, ${voiceMomentsCleaned} voice moments removed`);
 
     return new Response(
       JSON.stringify({
         message: 'Cleanup complete',
-        cleaned: expiredNudges.length,
-        storageFilesDeleted: storagePaths.length,
+        photosCleaned,
+        voiceMomentsCleaned,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );

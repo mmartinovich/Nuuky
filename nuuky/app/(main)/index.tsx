@@ -89,7 +89,9 @@ import { OrbitEmptyState } from "../../components/OrbitEmptyState";
 import { useInvite } from "../../hooks/useInvite";
 import { useMoodSelfie } from "../../hooks/useMoodSelfie";
 import { usePhotoNudge } from "../../hooks/usePhotoNudge";
+import { useVoiceMoment } from "../../hooks/useVoiceMoment";
 import { PhotoNudgeViewer } from "../../components/PhotoNudgeViewer";
+import { VoiceMomentPlayer } from "../../components/VoiceMomentPlayer";
 import { useHomeModals } from "../../hooks/useHomeModals";
 
 const { width, height } = Dimensions.get("window");
@@ -98,7 +100,7 @@ const CENTER_Y = height / 2 - 20;
 
 export default function QuantumOrbitScreen() {
   const router = useRouter();
-  const { photo_nudge_id } = useLocalSearchParams<{ photo_nudge_id?: string }>();
+  const { photo_nudge_id, voice_moment_id } = useLocalSearchParams<{ photo_nudge_id?: string; voice_moment_id?: string }>();
   const insets = useSafeAreaInsets();
   const lastPresenceRefreshRef = useRef(0);
   const { theme, accent } = useTheme();
@@ -182,6 +184,9 @@ export default function QuantumOrbitScreen() {
   // Photo nudge
   const { fetchPhotoNudge } = usePhotoNudge();
 
+  // Voice moment
+  const { fetchVoiceMoment } = useVoiceMoment();
+
   // Store ref for the audio callback
   useEffect(() => {
     soundReactionsRef.current = soundReactions;
@@ -221,6 +226,7 @@ export default function QuantumOrbitScreen() {
     audioConnect,
     defaultRoom,
     fetchPhotoNudge,
+    fetchVoiceMoment,
   });
 
   // Open photo nudge viewer when navigated with photo_nudge_id param (from notification tap)
@@ -230,6 +236,14 @@ export default function QuantumOrbitScreen() {
       router.setParams({ photo_nudge_id: undefined });
     }
   }, [photo_nudge_id, currentUser?.id]);
+
+  // Open voice moment player when navigated with voice_moment_id param (from notification tap)
+  useEffect(() => {
+    if (voice_moment_id && currentUser) {
+      modals.openVoiceMomentById(voice_moment_id);
+      router.setParams({ voice_moment_id: undefined });
+    }
+  }, [voice_moment_id, currentUser?.id]);
 
   const [loading, setLoading] = useState(true);
   const [showHint, setShowHint] = useState(true);
@@ -581,6 +595,19 @@ export default function QuantumOrbitScreen() {
     setSelectedFriend(null);
   }, [selectedFriend, router]);
 
+  const handleVoiceMoment = useCallback(() => {
+    if (!selectedFriend) return;
+    router.push({
+      pathname: "/(main)/voice-moment-recorder",
+      params: {
+        friendId: selectedFriend.id,
+        friendName: selectedFriend.display_name,
+        friendAvatarUrl: selectedFriend.avatar_url || "",
+      },
+    });
+    setSelectedFriend(null);
+  }, [selectedFriend, router]);
+
   const handleOrbPress = useCallback(() => {
     if (showHint) {
       saveInteractionState();
@@ -734,6 +761,7 @@ export default function QuantumOrbitScreen() {
           onNudge={handleNudge}
           onCallMe={handleCallMe}
           onPhotoNudge={handlePhotoNudge}
+          onVoiceMoment={handleVoiceMoment}
           onInteraction={handleStreakInteraction}
         />
       )}
@@ -900,6 +928,14 @@ export default function QuantumOrbitScreen() {
           visible={true}
           photoNudge={modals.activePhotoNudge}
           onClose={modals.closePhotoNudge}
+        />
+      )}
+
+      {modals.showVoiceMoment && (
+        <VoiceMomentPlayer
+          visible={true}
+          voiceMoment={modals.activeVoiceMoment}
+          onClose={modals.closeVoiceMoment}
         />
       )}
     </>

@@ -153,6 +153,23 @@ export interface PhotoNudge {
   sender?: User;
 }
 
+// Voice Moment types (ephemeral audio with 24h expiration)
+export type VoiceMomentReaction = 'heart' | 'laugh' | 'wow' | 'applause' | 'aww' | 'party';
+
+export interface VoiceMoment {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  audio_url: string;
+  duration_ms: number;
+  caption?: string;
+  expires_at: string;
+  viewed_at?: string;
+  reaction?: VoiceMomentReaction;
+  created_at: string;
+  sender?: User;
+}
+
 // Anchor types
 export interface Anchor {
   id: string;
@@ -232,7 +249,7 @@ export interface LiveKitTokenResponse {
 }
 
 // Notification types
-export type NotificationType = "nudge" | "flare" | "friend_request" | "friend_accepted" | "room_invite" | "call_me" | "photo_nudge" | "photo_like" | "streak_fading";
+export type NotificationType = "nudge" | "flare" | "friend_request" | "friend_accepted" | "room_invite" | "call_me" | "photo_nudge" | "photo_like" | "streak_fading" | "voice_moment" | "voice_moment_reaction";
 
 export interface NotificationData {
   sender_id?: string;
@@ -246,6 +263,7 @@ export interface NotificationData {
   room_name?: string;
   invite_id?: string;
   photo_nudge_id?: string;
+  voice_moment_id?: string;
 }
 
 export interface AppNotification {
