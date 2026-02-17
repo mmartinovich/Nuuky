@@ -14,55 +14,9 @@ interface FriendActionBubbleProps {
   onDismiss: () => void;
   onNudge: () => void;
   onCallMe: () => void;
-  onHeart: () => void;
   onPhotoNudge: () => void;
   onInteraction?: () => void;
 }
-
-// Small particle heart that flies outward
-const HeartParticle = ({ delay, angle, color }: { delay: number; angle: number; color: string }) => {
-  const progress = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(progress, {
-      toValue: 1,
-      duration: 600,
-      delay,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  }, []);
-
-  const distance = 30;
-  const translateX = progress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, Math.cos(angle) * distance],
-  });
-  const translateY = progress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, Math.sin(angle) * distance - 10], // slight upward bias
-  });
-  const scale = progress.interpolate({
-    inputRange: [0, 0.3, 1],
-    outputRange: [0, 1, 0],
-  });
-  const opacity = progress.interpolate({
-    inputRange: [0, 0.2, 0.8, 1],
-    outputRange: [0, 1, 1, 0],
-  });
-
-  return (
-    <Animated.View
-      style={{
-        position: 'absolute',
-        transform: [{ translateX }, { translateY }, { scale }],
-        opacity,
-      }}
-    >
-      <Ionicons name="heart" size={10} color={color} />
-    </Animated.View>
-  );
-};
 
 // Expanding ripple ring
 const RippleRing = ({ delay, color }: { delay: number; color: string }) => {
@@ -193,7 +147,6 @@ export const FriendActionBubble = React.memo(function FriendActionBubble({
   onDismiss,
   onNudge,
   onCallMe,
-  onHeart,
   onPhotoNudge,
   onInteraction,
 }: FriendActionBubbleProps) {
@@ -201,12 +154,11 @@ export const FriendActionBubble = React.memo(function FriendActionBubble({
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
   // Track which button was sent for checkmark feedback
-  const [sentAction, setSentAction] = useState<'nudge' | 'call' | 'heart' | 'photo' | null>(null);
+  const [sentAction, setSentAction] = useState<'nudge' | 'call' | 'photo' | null>(null);
 
   // Show particle/ripple effects
   const [showNudgeRipples, setShowNudgeRipples] = useState(false);
   const [showCallWaves, setShowCallWaves] = useState(false);
-  const [showHeartParticles, setShowHeartParticles] = useState(false);
   const [showCameraFlash, setShowCameraFlash] = useState(false);
 
   // Button animation values
@@ -217,9 +169,6 @@ export const FriendActionBubble = React.memo(function FriendActionBubble({
   const callRotate = useRef(new Animated.Value(0)).current;
   const callScale = useRef(new Animated.Value(1)).current;
   const callTranslateY = useRef(new Animated.Value(0)).current;
-
-  const heartScale = useRef(new Animated.Value(1)).current;
-  const heartRotate = useRef(new Animated.Value(0)).current;
 
   const photoScale = useRef(new Animated.Value(1)).current;
   const photoRotate = useRef(new Animated.Value(0)).current;
@@ -242,7 +191,7 @@ export const FriendActionBubble = React.memo(function FriendActionBubble({
   }, []);
 
   // Calculate bubble position - center above friend, clear of avatar
-  const bubbleWidth = 240; // Wider to fit 4 buttons
+  const bubbleWidth = 195; // 3 buttons
   const avatarRadius = 35; // Approximate avatar radius
   const bubbleX = Math.max(
     16,
@@ -363,51 +312,6 @@ export const FriendActionBubble = React.memo(function FriendActionBubble({
     });
   };
 
-  const handleHeartPress = () => {
-    if (sentAction) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-
-    // Show heart particles
-    setShowHeartParticles(true);
-    setTimeout(() => setShowHeartParticles(false), 900);
-
-    // Realistic heartbeat: quick double-pump (lub-dub) + slight tilt
-    Animated.parallel([
-      // Double-pump heartbeat
-      Animated.sequence([
-        // First pump (lub)
-        Animated.timing(heartScale, { toValue: 1.4, duration: 80, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-        Animated.timing(heartScale, { toValue: 1, duration: 80, useNativeDriver: true }),
-        // Brief pause between beats
-        Animated.delay(60),
-        // Second pump (dub) - slightly smaller
-        Animated.timing(heartScale, { toValue: 1.25, duration: 70, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-        Animated.timing(heartScale, { toValue: 1, duration: 70, useNativeDriver: true }),
-        // Hold
-        Animated.delay(40),
-        // Final big pop before swap
-        Animated.timing(heartScale, { toValue: 1.6, duration: 80, easing: Easing.out(Easing.back(3)), useNativeDriver: true }),
-        // Squish to zero to hide icon for swap
-        Animated.timing(heartScale, { toValue: 0, duration: 100, easing: Easing.in(Easing.ease), useNativeDriver: true }),
-      ]),
-      // Slight tilt during heartbeat
-      Animated.sequence([
-        Animated.timing(heartRotate, { toValue: 1, duration: 80, useNativeDriver: true }),
-        Animated.timing(heartRotate, { toValue: -1, duration: 160, useNativeDriver: true }),
-        Animated.timing(heartRotate, { toValue: 0, duration: 80, useNativeDriver: true }),
-      ]),
-    ]).start(() => {
-      setSentAction('heart');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      onHeart();
-      onInteraction?.();
-      // Pop checkmark back in
-      Animated.spring(heartScale, { toValue: 1, tension: 300, friction: 10, useNativeDriver: true }).start(() => {
-        resetAfterSent(heartScale);
-      });
-    });
-  };
-
   const handlePhotoPress = () => {
     if (sentAction) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -452,9 +356,6 @@ export const FriendActionBubble = React.memo(function FriendActionBubble({
       }),
     ]).start(onDismiss);
   };
-
-  // Particle angles for heart burst (6 particles evenly distributed)
-  const heartParticleAngles = [0, Math.PI / 3, (2 * Math.PI) / 3, Math.PI, (4 * Math.PI) / 3, (5 * Math.PI) / 3];
 
   return (
     <>
@@ -565,49 +466,12 @@ export const FriendActionBubble = React.memo(function FriendActionBubble({
               <Text style={styles.actionLabel}>{sentAction === 'call' ? 'Sent!' : 'Call me'}</Text>
             </TouchableOpacity>
 
-            {/* Heart button */}
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={handleHeartPress}
-              activeOpacity={0.6}
-              accessibilityLabel="Send heart"
-              accessibilityRole="button"
-            >
-              <View style={styles.iconWrapper}>
-                {/* Heart particle burst */}
-                {showHeartParticles &&
-                  heartParticleAngles.map((angle, i) => (
-                    <HeartParticle key={i} delay={i * 30} angle={angle} color={i % 2 === 0 ? '#EF4444' : '#F87171'} />
-                  ))}
-                <Animated.View
-                  style={{
-                    transform: [
-                      { scale: heartScale },
-                      {
-                        rotate: heartRotate.interpolate({
-                          inputRange: [-1, 1],
-                          outputRange: ['-8deg', '8deg'],
-                        }),
-                      },
-                    ],
-                  }}
-                >
-                  {sentAction === 'heart' ? (
-                    <MaterialCommunityIcons name="heart-multiple" size={26} color="#EF4444" />
-                  ) : (
-                    <Ionicons name="heart" size={20} color="#EF4444" />
-                  )}
-                </Animated.View>
-              </View>
-              <Text style={styles.actionLabel}>{sentAction === 'heart' ? 'Sent!' : 'Heart'}</Text>
-            </TouchableOpacity>
-
             {/* Photo button */}
             <TouchableOpacity
               style={styles.actionButton}
               onPress={handlePhotoPress}
               activeOpacity={0.6}
-              accessibilityLabel="Send photo"
+              accessibilityLabel="Send moment"
               accessibilityRole="button"
             >
               <View style={styles.iconWrapper}>
@@ -638,7 +502,7 @@ export const FriendActionBubble = React.memo(function FriendActionBubble({
                   )}
                 </Animated.View>
               </View>
-              <Text style={styles.actionLabel}>{sentAction === 'photo' ? 'Sent!' : 'Photo'}</Text>
+              <Text style={styles.actionLabel}>{sentAction === 'photo' ? 'Sent!' : 'Moment'}</Text>
             </TouchableOpacity>
             </View>
           </View>
@@ -656,7 +520,7 @@ const styles = StyleSheet.create({
   bubbleContainer: {
     position: 'absolute',
     zIndex: 1001,
-    width: 240,
+    width: 195,
   },
   blurWrapper: {
     borderRadius: 18,

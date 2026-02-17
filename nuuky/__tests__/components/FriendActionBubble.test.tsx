@@ -21,7 +21,7 @@ const defaultProps = {
   onDismiss: jest.fn(),
   onNudge: jest.fn(),
   onCallMe: jest.fn(),
-  onHeart: jest.fn(),
+  onPhotoNudge: jest.fn(),
 };
 
 describe('FriendActionBubble', () => {
@@ -29,14 +29,14 @@ describe('FriendActionBubble', () => {
     const { getByText } = render(<FriendActionBubble {...defaultProps} />);
     expect(getByText('Nudge')).toBeTruthy();
     expect(getByText('Call me')).toBeTruthy();
-    expect(getByText('Heart')).toBeTruthy();
+    expect(getByText('Moment')).toBeTruthy();
   });
 
   test('renders accessibility labels', () => {
     const { getByLabelText } = render(<FriendActionBubble {...defaultProps} />);
     expect(getByLabelText('Nudge friend')).toBeTruthy();
     expect(getByLabelText('Request a call')).toBeTruthy();
-    expect(getByLabelText('Send heart')).toBeTruthy();
+    expect(getByLabelText('Send moment')).toBeTruthy();
   });
 
   test('nudge press triggers haptic and callback', () => {
@@ -52,13 +52,6 @@ describe('FriendActionBubble', () => {
   test('call press triggers haptic', () => {
     const { getByLabelText } = render(<FriendActionBubble {...defaultProps} />);
     fireEvent.press(getByLabelText('Request a call'));
-    const Haptics = require('expo-haptics');
-    expect(Haptics.impactAsync).toHaveBeenCalled();
-  });
-
-  test('heart press triggers haptic', () => {
-    const { getByLabelText } = render(<FriendActionBubble {...defaultProps} />);
-    fireEvent.press(getByLabelText('Send heart'));
     const Haptics = require('expo-haptics');
     expect(Haptics.impactAsync).toHaveBeenCalled();
   });

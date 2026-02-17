@@ -56,7 +56,6 @@ import { useMood } from "../../hooks/useMood";
 import { useCustomMood } from "../../hooks/useCustomMood";
 import { useNudge } from "../../hooks/useNudge";
 import { useCallMe } from "../../hooks/useCallMe";
-import { useHeart } from "../../hooks/useHeart";
 import { useFlare } from "../../hooks/useFlare";
 import { useStreaks } from "../../hooks/useStreaks";
 import { usePresence } from "../../hooks/usePresence";
@@ -113,7 +112,6 @@ export default function QuantumOrbitScreen() {
   const { customMoods, createCustomMood, selectCustomMood, deleteCustomMood } = useCustomMood();
   const { sendNudge } = useNudge();
   const { sendCallMe } = useCallMe();
-  const { sendHeart } = useHeart();
   const { sendFlare, activeFlares, myActiveFlare } = useFlare();
   const { streaks, recordInteraction } = useStreaks();
   const { updateActivity } = usePresence();
@@ -568,11 +566,6 @@ export default function QuantumOrbitScreen() {
     }
   }, [selectedFriend, sendCallMe]);
 
-  const handleHeart = useCallback(async () => {
-    if (!selectedFriend) return;
-    await sendHeart(selectedFriend.id, selectedFriend.display_name);
-  }, [selectedFriend, sendHeart]);
-
   const handlePhotoNudge = useCallback(() => {
     if (!selectedFriend) return;
     // Navigate to photo nudge camera with friend info
@@ -740,7 +733,6 @@ export default function QuantumOrbitScreen() {
           onDismiss={handleDismissBubble}
           onNudge={handleNudge}
           onCallMe={handleCallMe}
-          onHeart={handleHeart}
           onPhotoNudge={handlePhotoNudge}
           onInteraction={handleStreakInteraction}
         />

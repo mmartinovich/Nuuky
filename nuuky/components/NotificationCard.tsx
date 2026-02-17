@@ -75,12 +75,6 @@ const getNotificationStyle = (type: NotificationType) => {
         iconSet: 'ionicons' as const,
         color: '#A855F7',
       };
-    case 'heart':
-      return {
-        icon: 'heart' as const,
-        iconSet: 'ionicons' as const,
-        color: '#EF4444',
-      };
     case 'photo_nudge':
       return {
         icon: 'camera' as const,
