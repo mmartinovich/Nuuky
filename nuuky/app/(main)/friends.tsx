@@ -120,6 +120,8 @@ export default function FriendsScreen() {
   const scrubberIndicatorScale = useSharedValue(0.5);
   const lastScrubLetter = useRef<string | null>(null);
 
+  const scrubberHeightRef = useRef(0);
+
   const scrubberIndicatorStyle = useAnimatedStyle(() => ({
     opacity: scrubberIndicatorOpacity.value,
     transform: [{ scale: scrubberIndicatorScale.value }],
@@ -406,14 +408,15 @@ export default function FriendsScreen() {
   }, [handleLetterPress]);
 
   const scrubberGesture = useMemo(() => {
-    const LETTER_HEIGHT = 18;
-
     return Gesture.Pan()
       .onStart(() => {
         runOnJS(handleScrubStart)();
       })
       .onUpdate((event) => {
-        const index = Math.floor(event.y / LETTER_HEIGHT);
+        const letterHeight = scrubberHeightRef.current > 0
+          ? scrubberHeightRef.current / scrubberLetters.length
+          : 18;
+        const index = Math.floor(event.y / letterHeight);
         const clampedIndex = Math.max(0, Math.min(index, scrubberLetters.length - 1));
         const letter = scrubberLetters[clampedIndex];
         if (letter) {
@@ -559,7 +562,7 @@ export default function FriendsScreen() {
         {/* Content based on active tab */}
         {activeTab === 'friends' ? (
           // ============ MY FRIENDS TAB ============
-          <>
+          <View style={{ flex: 1 }}>
             <SectionList
               ref={sectionListRef}
               style={styles.scrollView}
@@ -581,11 +584,6 @@ export default function FriendsScreen() {
               windowSize={10}
               initialNumToRender={10}
               ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-              getItemLayout={(data, index) => ({
-                length: 76 + 8,
-                offset: (76 + 8) * index,
-                index,
-              })}
               ListHeaderComponent={
                 initialLoading ? (
                   <View style={styles.loadingContainer}>
@@ -679,7 +677,10 @@ export default function FriendsScreen() {
 
                 {/* Scrubber strip */}
                 <GestureDetector gesture={scrubberGesture}>
-                  <View style={[styles.alphabetScrubber, { bottom: insets.bottom + 100 }]}>
+                  <View
+                    style={[styles.alphabetScrubber, { bottom: insets.bottom + 16 }]}
+                    onLayout={(e) => { scrubberHeightRef.current = e.nativeEvent.layout.height; }}
+                  >
                     {scrubberLetters.map(letter => (
                       <TouchableOpacity
                         key={letter}
@@ -705,7 +706,7 @@ export default function FriendsScreen() {
                 </GestureDetector>
               </>
             )}
-          </>
+          </View>
         ) : (
           // ============ ADD FRIENDS TAB ============
           <ScrollView
@@ -1038,8 +1039,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: spacing.lg,
-    paddingRight: 36,
+    paddingLeft: spacing.screenPadding || 24,
+    paddingRight: 40,
   },
   addContent: {
     paddingHorizontal: spacing.lg,
@@ -1053,6 +1054,7 @@ const styles = StyleSheet.create({
   // Friends Controls
   friendsControls: {
     marginBottom: 16,
+    marginRight: -40 + (spacing.screenPadding || 24),
   },
   searchBar: {
     flexDirection: "row",
@@ -1143,14 +1145,15 @@ const styles = StyleSheet.create({
   alphabetScrubber: {
     position: 'absolute',
     right: 4,
-    top: 180,
+    top: 4,
     width: 28,
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    zIndex: 20,
   },
   letterButton: {
     width: 28,
-    height: 18,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },

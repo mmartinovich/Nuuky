@@ -97,7 +97,7 @@ const CameraFlash = ({ delay }: { delay: number }) => {
 };
 
 // Sound wave arc for call
-const SoundWave = ({ delay, side }: { delay: number; side: 'left' | 'right' }) => {
+const SoundWave = ({ delay, side, color = '#22C55E' }: { delay: number; side: 'left' | 'right'; color?: string }) => {
   const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -134,7 +134,7 @@ const SoundWave = ({ delay, side }: { delay: number; side: 'left' | 'right' }) =
         borderWidth: 2,
         borderLeftWidth: side === 'right' ? 0 : 2,
         borderRightWidth: side === 'left' ? 0 : 2,
-        borderColor: '#22C55E',
+        borderColor: color,
         transform: [{ translateX }, { scale }],
         opacity,
       }}
@@ -546,8 +546,8 @@ export const FriendActionBubble = React.memo(function FriendActionBubble({
               <View style={styles.iconWrapper}>
                 {showVoiceWaves && (
                   <>
-                    <SoundWave delay={0} side="right" />
-                    <SoundWave delay={120} side="left" />
+                    <SoundWave delay={0} side="right" color="#FB7185" />
+                    <SoundWave delay={120} side="left" color="#FB7185" />
                   </>
                 )}
                 <Animated.View
@@ -563,7 +563,7 @@ export const FriendActionBubble = React.memo(function FriendActionBubble({
                     ],
                   }}
                 >
-                  <Ionicons name="mic-outline" size={20} color="#F97316" />
+                  <Ionicons name="mic-outline" size={20} color="#FB7185" />
                 </Animated.View>
               </View>
               <Text style={styles.actionLabel}>Voice</Text>
