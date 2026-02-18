@@ -563,6 +563,55 @@ export default function FriendsScreen() {
         {activeTab === 'friends' ? (
           // ============ MY FRIENDS TAB ============
           <View style={{ flex: 1 }}>
+            {/* Search + sort controls — outside the SectionList so scrubber aligns below them */}
+            {!initialLoading && friends.length > 0 && (
+              <View style={styles.friendsControls}>
+                {/* Search Bar */}
+                <View style={[styles.searchBar, { borderColor: theme.colors.glass.border, backgroundColor: theme.colors.glass.background }]}>
+                  <Ionicons name="search" size={18} color={theme.colors.text.tertiary} />
+                  <TextInput
+                    style={[styles.searchInput, { color: theme.colors.text.primary }]}
+                    placeholder="Filter friends..."
+                    placeholderTextColor={theme.colors.text.tertiary}
+                    value={searchQuery}
+                    onChangeText={handleSearchQueryChange}
+                    autoCorrect={false}
+                    autoCapitalize="none"
+                  />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => { setSearchQuery(""); setDebouncedSearchQuery(""); if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); }} activeOpacity={0.7}>
+                      <Ionicons name="close-circle" size={18} color={theme.colors.text.tertiary} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* Sort Mode Toggle */}
+                <View style={styles.sortControls}>
+                  {(['alpha', 'online', 'recent'] as const).map((mode) => (
+                    <TouchableOpacity
+                      key={mode}
+                      style={[
+                        styles.sortButton,
+                        { borderColor: theme.colors.glass.border },
+                        sortMode === mode && { backgroundColor: accent.primary, borderColor: accent.primary }
+                      ]}
+                      onPress={() => handleSortChange(mode)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[
+                        styles.sortButtonText,
+                        { color: sortMode === mode ? '#000' : theme.colors.text.tertiary }
+                      ]}>
+                        {mode === 'alpha' ? 'A-Z' : mode === 'online' ? 'Online' : 'Recent'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* List area — scrubber is anchored relative to this view */}
+            <View style={{ flex: 1 }}>
             <SectionList
               ref={sectionListRef}
               style={styles.scrollView}
@@ -589,50 +638,6 @@ export default function FriendsScreen() {
                   <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={theme.colors.text.secondary} />
                   </View>
-                ) : friends.length > 0 ? (
-                  <View style={styles.friendsControls}>
-                    {/* Search Bar */}
-                    <View style={[styles.searchBar, { borderColor: theme.colors.glass.border, backgroundColor: theme.colors.glass.background }]}>
-                      <Ionicons name="search" size={18} color={theme.colors.text.tertiary} />
-                      <TextInput
-                        style={[styles.searchInput, { color: theme.colors.text.primary }]}
-                        placeholder="Filter friends..."
-                        placeholderTextColor={theme.colors.text.tertiary}
-                        value={searchQuery}
-                        onChangeText={handleSearchQueryChange}
-                        autoCorrect={false}
-                        autoCapitalize="none"
-                      />
-                      {searchQuery.length > 0 && (
-                        <TouchableOpacity onPress={() => { setSearchQuery(""); setDebouncedSearchQuery(""); if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); }} activeOpacity={0.7}>
-                          <Ionicons name="close-circle" size={18} color={theme.colors.text.tertiary} />
-                        </TouchableOpacity>
-                      )}
-                    </View>
-
-                    {/* Sort Mode Toggle */}
-                    <View style={styles.sortControls}>
-                      {(['alpha', 'online', 'recent'] as const).map((mode) => (
-                        <TouchableOpacity
-                          key={mode}
-                          style={[
-                            styles.sortButton,
-                            { borderColor: theme.colors.glass.border },
-                            sortMode === mode && { backgroundColor: accent.primary, borderColor: accent.primary }
-                          ]}
-                          onPress={() => handleSortChange(mode)}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={[
-                            styles.sortButtonText,
-                            { color: sortMode === mode ? '#000' : theme.colors.text.tertiary }
-                          ]}>
-                            {mode === 'alpha' ? 'A-Z' : mode === 'online' ? 'Online' : 'Recent'}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
                 ) : null
               }
               ListEmptyComponent={
@@ -658,7 +663,7 @@ export default function FriendsScreen() {
               }
             />
 
-            {/* Alphabet Scrubber */}
+            {/* Alphabet Scrubber — top: 0 is relative to the list-area View, not the whole tab */}
             {sortMode === 'alpha' && friends.length > 5 && !debouncedSearchQuery.trim() && (
               <>
                 {/* Large letter indicator */}
@@ -678,7 +683,7 @@ export default function FriendsScreen() {
                 {/* Scrubber strip */}
                 <GestureDetector gesture={scrubberGesture}>
                   <View
-                    style={[styles.alphabetScrubber, { bottom: insets.bottom + 16 }]}
+                    style={[styles.alphabetScrubber, { top: 0, bottom: insets.bottom + 16 }]}
                     onLayout={(e) => { scrubberHeightRef.current = e.nativeEvent.layout.height; }}
                   >
                     {scrubberLetters.map(letter => (
@@ -706,6 +711,7 @@ export default function FriendsScreen() {
                 </GestureDetector>
               </>
             )}
+            </View>
           </View>
         ) : (
           // ============ ADD FRIENDS TAB ============
@@ -1054,7 +1060,7 @@ const styles = StyleSheet.create({
   // Friends Controls
   friendsControls: {
     marginBottom: 16,
-    marginRight: -40 + (spacing.screenPadding || 24),
+    marginHorizontal: spacing.screenPadding || 24,
   },
   searchBar: {
     flexDirection: "row",
@@ -1145,7 +1151,6 @@ const styles = StyleSheet.create({
   alphabetScrubber: {
     position: 'absolute',
     right: 4,
-    top: 4,
     width: 28,
     justifyContent: 'space-between',
     alignItems: 'center',
