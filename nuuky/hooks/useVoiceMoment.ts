@@ -278,7 +278,7 @@ export const useVoiceMoment = () => {
       }
 
       try {
-        await supabase.functions.invoke('send-voice-moment-notification', {
+        const { error: notifError } = await supabase.functions.invoke('send-voice-moment-notification', {
           body: {
             receiver_id: receiverId,
             sender_id: currentUser.id,
@@ -286,6 +286,9 @@ export const useVoiceMoment = () => {
             caption: caption?.trim() || null,
           },
         });
+        if (notifError) {
+          logger.error('Failed to send voice moment notification:', notifError);
+        }
       } catch (notifError) {
         logger.error('Failed to send voice moment notification:', notifError);
       }
@@ -434,7 +437,7 @@ export const useVoiceMoment = () => {
       // Send notification when reacting (not when removing)
       if (newReaction && voiceMoment.sender_id) {
         try {
-          await supabase.functions.invoke('send-voice-moment-reaction-notification', {
+          const { error: reactionNotifError } = await supabase.functions.invoke('send-voice-moment-reaction-notification', {
             body: {
               receiver_id: voiceMoment.sender_id,
               sender_id: currentUser.id,
@@ -442,6 +445,9 @@ export const useVoiceMoment = () => {
               reaction_type: newReaction,
             },
           });
+          if (reactionNotifError) {
+            logger.error('Failed to send voice moment reaction notification:', reactionNotifError);
+          }
         } catch (notifError) {
           logger.error('Failed to send voice moment reaction notification:', notifError);
         }

@@ -920,6 +920,7 @@ export default function QuantumOrbitScreen() {
           visible={true}
           onClose={modals.closeNotifications}
           onOpenPhotoNudge={modals.openPhotoNudge}
+          onOpenVoiceMoment={modals.openVoiceMomentById}
         />
       )}
 

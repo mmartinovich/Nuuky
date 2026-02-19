@@ -35,12 +35,14 @@ interface NotificationsModalProps {
   visible: boolean;
   onClose: () => void;
   onOpenPhotoNudge?: (photoNudge: PhotoNudge) => void;
+  onOpenVoiceMoment?: (voiceMomentId: string) => void;
 }
 
 export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   visible,
   onClose,
   onOpenPhotoNudge,
+  onOpenVoiceMoment,
 }) => {
   const insets = useSafeAreaInsets();
   const { theme, accent } = useTheme();
@@ -81,6 +83,9 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
 
   // Pending photo nudge to open after close animation (use ref to avoid stale closure)
   const pendingPhotoNudgeRef = useRef<PhotoNudge | null>(null);
+
+  // Pending voice moment to open after close animation
+  const pendingVoiceMomentIdRef = useRef<string | null>(null);
 
   // Pre-fetch photo nudges when modal opens
   // Use ref to read current cache without causing re-runs when cache updates
@@ -146,10 +151,19 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
     }
   }, [onOpenPhotoNudge]);
 
+  const openPendingVoiceMoment = useCallback(() => {
+    if (pendingVoiceMomentIdRef.current && onOpenVoiceMoment) {
+      const id = pendingVoiceMomentIdRef.current;
+      pendingVoiceMomentIdRef.current = null;
+      onOpenVoiceMoment(id);
+    }
+  }, [onOpenVoiceMoment]);
+
   const closeAndOpenViewer = useCallback(() => {
     onClose();
     openPendingPhotoNudge();
-  }, [onClose, openPendingPhotoNudge]);
+    openPendingVoiceMoment();
+  }, [onClose, openPendingPhotoNudge, openPendingVoiceMoment]);
 
   const handleClose = () => {
     if (selectionMode) {
@@ -294,6 +308,15 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                         handleClose();
                       }
                     });
+                    return;
+                  }
+                  // Handle voice moment directly without navigation
+                  if ((notification.type === 'voice_moment' || notification.type === 'voice_moment_reaction') && notification.data?.voice_moment_id && onOpenVoiceMoment) {
+                    if (!notification.is_read) {
+                      markAsRead(notification.id);
+                    }
+                    pendingVoiceMomentIdRef.current = notification.data.voice_moment_id;
+                    handleClose();
                     return;
                   }
                   handleNotificationTap(notification);
