@@ -1108,7 +1108,10 @@
       .feature-card:nth-child(5) { grid-column: span 2; }
       .feature-inner--wide { gap: 24px; }
       .vis-orbit { width: 140px; height: 140px; }
-      .phone-frame { width: 290px; height: 600px; }
+      .phone-frame { width: 260px; height: 540px; }
+      .phone-fan { height: 580px; }
+      .phone-frame--left { transform: translateX(calc(-50% - 160px)) rotate(-12deg); }
+      .phone-frame--right { transform: translateX(calc(-50% + 160px)) rotate(12deg); }
       .mood-img-wrapper { width: 120px; height: 120px; }
     }
 
@@ -1135,9 +1138,12 @@
       .vis-moods { gap: 4px; }
       .vis-mood-char { width: 44px; height: 44px; }
 
-      .phone-frame { width: 260px; height: 540px; border-radius: 32px; }
-      .phone-screen { border-radius: 24px; }
-      .phone-notch { width: 110px; height: 28px; border-radius: 0 0 16px 16px; }
+      .phone-fan { height: 480px; }
+      .phone-frame { width: 200px; height: 420px; border-radius: 28px; }
+      .phone-frame--left { transform: translateX(calc(-50% - 110px)) rotate(-10deg); }
+      .phone-frame--right { transform: translateX(calc(-50% + 110px)) rotate(10deg); }
+      .phone-screen { border-radius: 20px; }
+      .phone-notch { width: 100px; height: 24px; border-radius: 0 0 14px 14px; }
 
       .moods-grid { grid-template-columns: repeat(2, 1fr); gap: 32px 16px; }
       .mood-img-wrapper { width: 110px; height: 110px; }
