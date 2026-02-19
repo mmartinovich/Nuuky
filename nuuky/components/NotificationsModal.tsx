@@ -312,6 +312,11 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                   }
                   // Handle voice moment directly without navigation
                   if ((notification.type === 'voice_moment' || notification.type === 'voice_moment_reaction') && notification.data?.voice_moment_id && onOpenVoiceMoment) {
+                    // Voice moments expire 24h after creation
+                    const voiceMomentExpired = new Date(notification.created_at).getTime() + 24 * 60 * 60 * 1000 < Date.now();
+                    if (voiceMomentExpired) {
+                      return; // Don't open expired voice moments
+                    }
                     if (!notification.is_read) {
                       markAsRead(notification.id);
                     }
@@ -332,11 +337,14 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                 onEnterSelectionMode={() => enterSelectionMode(notification.id)}
                 cardStyle={true}
                 isExpired={
-                  notification.type === 'photo_nudge' &&
+                  (notification.type === 'photo_nudge' &&
                   notification.data?.photo_nudge_id &&
                   photoNudgeCache[notification.data.photo_nudge_id]
                     ? new Date(photoNudgeCache[notification.data.photo_nudge_id].expires_at) < new Date()
-                    : false
+                    : false) ||
+                  ((notification.type === 'voice_moment' || notification.type === 'voice_moment_reaction')
+                    ? new Date(notification.created_at).getTime() + 24 * 60 * 60 * 1000 < Date.now()
+                    : false)
                 }
               />
             </React.Fragment>

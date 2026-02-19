@@ -87,6 +87,18 @@ const getNotificationStyle = (type: NotificationType) => {
         iconSet: 'ionicons' as const,
         color: '#EC4899', // Pink to distinguish from regular heart
       };
+    case 'voice_moment':
+      return {
+        icon: 'mic' as const,
+        iconSet: 'ionicons' as const,
+        color: '#F97316',
+      };
+    case 'voice_moment_reaction':
+      return {
+        icon: 'mic' as const,
+        iconSet: 'ionicons' as const,
+        color: '#F97316',
+      };
     default:
       return {
         icon: 'notifications' as const,
@@ -176,8 +188,8 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
   const handlePress = () => {
     if (selectionMode) {
       onToggleSelect?.();
-    } else if (isExpired && notification.type === 'photo_nudge') {
-      // Don't navigate for expired photo nudges
+    } else if (isExpired && (notification.type === 'photo_nudge' || notification.type === 'voice_moment' || notification.type === 'voice_moment_reaction')) {
+      // Don't navigate for expired photo nudges or voice moments
       return;
     } else {
       onPress();
@@ -321,6 +333,12 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
                 {notification.type === 'photo_nudge' && (
                   <Text style={[styles.photoHint, { color: isExpired ? theme.colors.text.tertiary : notificationStyle.color }]}>
                     {isExpired ? 'Expired' : 'Tap to view photo'}
+                  </Text>
+                )}
+                {/* Voice moment hint */}
+                {(notification.type === 'voice_moment' || notification.type === 'voice_moment_reaction') && (
+                  <Text style={[styles.photoHint, { color: isExpired ? theme.colors.text.tertiary : notificationStyle.color }]}>
+                    {isExpired ? 'Expired' : 'Tap to listen'}
                   </Text>
                 )}
               </View>
