@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nuuky - A Calm Way to Feel Close to Friends</title>
   <meta name="description" content="Feel connected without the pressure of messaging, posting, or performing. Nuuky is an ambient presence platform for introverts and anxious texters.">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Nuuky - A Calm Way to Feel Close to Friends">
+  <meta property="og:description" content="Feel connected without the pressure of messaging, posting, or performing.">
+  <meta property="og:image" content="assets/og-image.png">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400&display=swap" rel="stylesheet">
@@ -840,11 +849,8 @@
       position: relative;
       display: flex;
       justify-content: center;
-      align-items: flex-start;
-      height: 680px;
+      align-items: flex-end;
     }
-
-    .phone-container { position: relative; display: flex; justify-content: center; }
 
     .phone-glow {
       position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.25; pointer-events: none;
@@ -853,81 +859,72 @@
     .phone-glow-pink { width: 250px; height: 250px; background: #ff1aff; bottom: -20px; right: -60px; }
     .phone-glow-green { width: 200px; height: 200px; background: #32D583; top: 50%; left: 50%; transform: translate(-50%, -50%); }
 
+    /* iPhone 16 frame */
     .phone-frame {
-      width: 320px; height: 660px; background: #111; border-radius: 40px;
-      border: 3px solid #2a2a2a; position: relative; overflow: hidden;
-      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+      width: 280px; height: 600px; background: #0a0a0a; border-radius: 52px;
+      border: 2px solid #3a3a3a; position: relative; overflow: hidden;
+      box-shadow:
+        0 30px 80px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255,255,255,0.08),
+        inset 0 -1px 0 rgba(255,255,255,0.03);
       animation: float 6s ease-in-out infinite;
     }
 
-    /* Fan positioning */
-    .phone-frame--left {
-      position: absolute;
-      left: 50%;
-      transform: translateX(calc(-50% - 200px)) rotate(-12deg);
+    /* Fan positioning - all in flow, negative margins for overlap */
+    .phone-frame--far-left,
+    .phone-frame--left,
+    .phone-frame--center,
+    .phone-frame--right {
       transform-origin: bottom center;
+      transition: opacity 0.3s ease;
+      flex-shrink: 0;
+    }
+    .phone-frame--far-left {
+      transform: rotate(-14deg);
+      margin-right: -60px;
       z-index: 1;
-      opacity: 0.75;
+      opacity: 0.5;
+    }
+    .phone-frame--left {
+      transform: rotate(-6deg);
+      margin-right: -40px;
+      z-index: 2;
+      opacity: 0.8;
     }
     .phone-frame--center {
-      position: relative;
       z-index: 3;
     }
     .phone-frame--right {
-      position: absolute;
-      left: 50%;
-      transform: translateX(calc(-50% + 200px)) rotate(12deg);
-      transform-origin: bottom center;
-      z-index: 1;
-      opacity: 0.75;
+      transform: rotate(6deg);
+      margin-left: -40px;
+      z-index: 2;
+      opacity: 0.8;
     }
+    .phone-frame--far-left:hover,
     .phone-frame--left:hover,
     .phone-frame--right:hover {
       opacity: 1;
     }
 
+    /* Dynamic Island */
     .phone-notch {
-      position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-      width: 130px; height: 32px; background: #111; border-radius: 0 0 20px 20px; z-index: 3;
+      position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+      width: 120px; height: 36px; background: #000; border-radius: 20px; z-index: 3;
     }
 
     .phone-screen {
-      position: absolute; inset: 10px; border-radius: 32px;
+      position: absolute; inset: 4px; border-radius: 48px;
       background: linear-gradient(180deg, #0a0a20 0%, #050510 100%);
-      overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      overflow: hidden;
     }
 
-    .phone-orbit { position: relative; width: 160px; height: 160px; margin-bottom: 24px; }
-    .phone-orbit .po-center {
-      position: absolute; top: 50%; left: 50%; width: 32px; height: 32px;
-      transform: translate(-50%, -50%); border-radius: 50%;
-      background: radial-gradient(circle at 35% 35%, #3FCBFF, #0a0a20);
-      box-shadow: 0 0 20px rgba(63, 203, 255, 0.4); animation: breathe 4s ease-in-out infinite;
-    }
-    .phone-orbit .po-ring {
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      border: 1px solid rgba(255,255,255,0.06); border-radius: 50%;
-    }
-    .phone-orbit .po-ring:nth-child(2) { width: 80px; height: 80px; }
-    .phone-orbit .po-ring:nth-child(3) { width: 130px; height: 130px; }
-    .phone-orbit .po-sat {
-      position: absolute; top: 50%; left: 50%; width: 10px; height: 10px;
-      margin: -5px 0 0 -5px; border-radius: 50%;
-    }
-    .phone-orbit .po-sat:nth-child(4) {
-      background: #32D583; box-shadow: 0 0 8px rgba(50, 213, 131, 0.5);
-      animation: orbit 8s linear infinite; --orbit-radius: 40px;
-    }
-    .phone-orbit .po-sat:nth-child(5) {
-      background: #FF4D6D; box-shadow: 0 0 8px rgba(255, 77, 109, 0.5);
-      animation: orbit 12s linear infinite reverse; --orbit-radius: 65px;
-    }
-    .phone-orbit .po-sat:nth-child(6) {
-      background: #B06CF3; box-shadow: 0 0 8px rgba(176, 108, 243, 0.5);
-      animation: orbit 10s linear infinite; --orbit-radius: 52px;
+    .phone-screen img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      object-position: top center;
+      display: block;
     }
 
-    .phone-placeholder { font-size: 13px; font-weight: 400; color: rgba(255,255,255,0.35); text-align: center; }
 
     /* ========== Mood Characters Section ========== */
     .moods { padding-top: 20px; padding-bottom: 40px; }
@@ -1108,10 +1105,11 @@
       .feature-card:nth-child(5) { grid-column: span 2; }
       .feature-inner--wide { gap: 24px; }
       .vis-orbit { width: 140px; height: 140px; }
-      .phone-frame { width: 260px; height: 540px; }
-      .phone-fan { height: 580px; }
-      .phone-frame--left { transform: translateX(calc(-50% - 160px)) rotate(-12deg); }
-      .phone-frame--right { transform: translateX(calc(-50% + 160px)) rotate(12deg); }
+      .phone-frame { width: 220px; height: 480px; border-radius: 44px; }
+      .phone-screen { border-radius: 40px; }
+      .phone-frame--far-left { margin-right: -50px; }
+      .phone-frame--left { margin-right: -35px; }
+      .phone-frame--right { margin-left: -35px; }
       .mood-img-wrapper { width: 120px; height: 120px; }
     }
 
@@ -1138,12 +1136,12 @@
       .vis-moods { gap: 4px; }
       .vis-mood-char { width: 44px; height: 44px; }
 
-      .phone-fan { height: 480px; }
-      .phone-frame { width: 200px; height: 420px; border-radius: 28px; }
-      .phone-frame--left { transform: translateX(calc(-50% - 110px)) rotate(-10deg); }
-      .phone-frame--right { transform: translateX(calc(-50% + 110px)) rotate(10deg); }
+      .phone-frame { width: 140px; height: 300px; border-radius: 24px; }
+      .phone-frame--far-left { display: none; }
+      .phone-frame--left { margin-right: -30px; }
+      .phone-frame--right { margin-left: -30px; }
       .phone-screen { border-radius: 20px; }
-      .phone-notch { width: 100px; height: 24px; border-radius: 0 0 14px 14px; }
+      .phone-notch { width: 70px; height: 20px; border-radius: 12px; top: 8px; }
 
       .moods-grid { grid-template-columns: repeat(2, 1fr); gap: 32px 16px; }
       .mood-img-wrapper { width: 110px; height: 110px; }
@@ -1153,6 +1151,13 @@
       .store-btn { width: 100%; max-width: 260px; justify-content: center; }
 
       .mouse-glow { display: none; }
+
+      .ambient-orb { opacity: 0.07; }
+      .ambient-orb:nth-child(1) { width: 250px; height: 250px; top: 10%; left: 20%; }
+      .ambient-orb:nth-child(2) { width: 220px; height: 220px; top: 5%; right: 0%; }
+      .ambient-orb:nth-child(3) { width: 200px; height: 200px; top: 45%; left: 30%; }
+      .ambient-orb:nth-child(4) { width: 180px; height: 180px; top: 55%; right: 15%; }
+      .ambient-orb:nth-child(5) { width: 200px; height: 200px; top: 75%; left: 20%; }
     }
   </style>
 </head>
@@ -1181,7 +1186,7 @@
 
       <!-- Foreground content -->
       <div class="hero-content">
-        <img src="../nuuky/assets/wordmark.png" alt="Nuuky" class="hero-wordmark">
+        <img src="assets/wordmark.png" alt="Nuuky" class="hero-wordmark">
 
         <p class="hero-kicker">A calm way to</p>
 
@@ -1194,12 +1199,12 @@
           <div class="hero-orbit-ring hero-orbit-ring--outer"></div>
           <!-- Orbiting friends: wrapper = invisible circle that spins, img sits at top edge -->
           <div class="hero-orbit-track hero-orbit-track--inner" style="--dur: 16s; --dir: normal; --cdir: reverse; --glow: rgba(50,213,131,0.5);">
-            <img src="../nuuky/assets/good.png" alt="" loading="lazy">
+            <img src="assets/good.png" alt="" loading="lazy">
           </div>
           <div class="hero-orbit-track hero-orbit-track--outer" style="--dur: 24s; --dir: reverse; --cdir: normal; --glow: rgba(176,108,243,0.5);">
-            <img src="../nuuky/assets/down.png" alt="" loading="lazy">
+            <img src="assets/down.png" alt="" loading="lazy">
           </div>
-          <img src="../nuuky/assets/chill.png" alt="Nuuky character">
+          <img src="assets/chill.png" alt="Nuuky character">
         </div>
 
         <p class="hero-subtitle">Feel connected without the pressure of messaging, posting, or performing.</p>
@@ -1259,13 +1264,13 @@
                 <div class="vis-orbit-ring" style="--size: 160px;"></div>
                 <div class="vis-orbit-core"></div>
                 <div class="vis-orbit-friend" style="--radius: 50px; --dur: 10s; --start: 0deg; --glow: rgba(50,213,131,0.5);">
-                  <img src="../nuuky/assets/good.png" alt="" loading="lazy">
+                  <img src="assets/good.png" alt="" loading="lazy">
                 </div>
                 <div class="vis-orbit-friend" style="--radius: 80px; --dur: 14s; --start: 140deg; --glow: rgba(176,108,243,0.5);">
-                  <img src="../nuuky/assets/down.png" alt="" loading="lazy">
+                  <img src="assets/down.png" alt="" loading="lazy">
                 </div>
                 <div class="vis-orbit-friend" style="--radius: 50px; --dur: 8s; --start: 250deg; --glow: rgba(255,77,109,0.5);">
-                  <img src="../nuuky/assets/help.png" alt="" loading="lazy">
+                  <img src="assets/help.png" alt="" loading="lazy">
                 </div>
               </div>
             </div>
@@ -1318,28 +1323,28 @@
                 </div>
               </div>
               <h3 class="feature-title">Express Your Mood</h3>
-              <p class="feature-desc">Share how you're feeling with a single tap. Your orb's color changes to match -- no words needed.</p>
+              <p class="feature-desc">Share how you're feeling with a single tap. Your orb's color changes to match -- no words needed. Friends see your mood at a glance, so they know when to check in or give you space. Choose from four expressive characters or create your own custom mood.</p>
             </div>
             <div class="feature-visual">
               <div class="vis-moods vis-moods--labeled">
                 <div class="vis-mood-char">
                   <div class="vis-mood-glow" style="background: #32D583;"></div>
-                  <img src="../nuuky/assets/good.png" alt="Vibing" loading="lazy">
+                  <img src="assets/good.png" alt="Vibing" loading="lazy">
                   <span class="vis-mood-label" style="color: #32D583;">Vibing</span>
                 </div>
                 <div class="vis-mood-char">
                   <div class="vis-mood-glow" style="background: #3FCBFF;"></div>
-                  <img src="../nuuky/assets/chill.png" alt="Chillin" loading="lazy">
+                  <img src="assets/chill.png" alt="Chillin" loading="lazy">
                   <span class="vis-mood-label" style="color: #3FCBFF;">Chillin'</span>
                 </div>
                 <div class="vis-mood-char">
                   <div class="vis-mood-glow" style="background: #B06CF3;"></div>
-                  <img src="../nuuky/assets/down.png" alt="Meh" loading="lazy">
+                  <img src="assets/down.png" alt="Meh" loading="lazy">
                   <span class="vis-mood-label" style="color: #B06CF3;">Meh</span>
                 </div>
                 <div class="vis-mood-char">
                   <div class="vis-mood-glow" style="background: #FF4D6D;"></div>
-                  <img src="../nuuky/assets/help.png" alt="SOS" loading="lazy">
+                  <img src="assets/help.png" alt="SOS" loading="lazy">
                   <span class="vis-mood-label" style="color: #FF4D6D;">SOS</span>
                 </div>
               </div>
@@ -1360,7 +1365,7 @@
                 </svg>
               </div>
               <h3 class="feature-title">Photo Moments</h3>
-              <p class="feature-desc">Capture and share fleeting photo moments with your orbit. No likes, no comments -- just a glimpse into each other's day.</p>
+              <p class="feature-desc">Capture and share fleeting photo moments with your orbit. No likes, no comments -- just a glimpse into each other's day. Photos disappear after 24 hours, keeping things low-pressure and in the moment. It's the closest thing to being there without actually being there.</p>
             </div>
             <div class="feature-visual">
               <div class="vis-photos">
@@ -1413,46 +1418,6 @@
       </div>
     </section>
 
-    <!-- Mood Characters -->
-    <section class="moods">
-      <h2 class="section-title reveal">Meet the Moods</h2>
-      <p class="section-subtitle reveal">Share how you feel with a tap. Your orb transforms to match.</p>
-      <div class="moods-grid">
-        <div class="mood-card reveal">
-          <div class="mood-img-wrapper">
-            <div class="mood-img-glow" style="background: #32D583;"></div>
-            <img src="../nuuky/assets/good.png" alt="Good mood character - happy green monster" loading="lazy">
-          </div>
-          <span class="mood-label" style="color: #32D583;">Vibing</span>
-          <span class="mood-vibe">Feeling great</span>
-        </div>
-        <div class="mood-card reveal">
-          <div class="mood-img-wrapper">
-            <div class="mood-img-glow" style="background: #3FCBFF;"></div>
-            <img src="../nuuky/assets/chill.png" alt="Neutral mood character - relaxed blue monster" loading="lazy">
-          </div>
-          <span class="mood-label" style="color: #3FCBFF;">Chillin'</span>
-          <span class="mood-vibe">Just coasting</span>
-        </div>
-        <div class="mood-card reveal">
-          <div class="mood-img-wrapper">
-            <div class="mood-img-glow" style="background: #B06CF3;"></div>
-            <img src="../nuuky/assets/down.png" alt="Not great mood character - sad purple monster" loading="lazy">
-          </div>
-          <span class="mood-label" style="color: #B06CF3;">Meh...</span>
-          <span class="mood-vibe">Off today</span>
-        </div>
-        <div class="mood-card reveal">
-          <div class="mood-img-wrapper">
-            <div class="mood-img-glow" style="background: #FF4D6D;"></div>
-            <img src="../nuuky/assets/help.png" alt="Reach out mood character - distressed red monster" loading="lazy">
-          </div>
-          <span class="mood-label" style="color: #FF4D6D;">SOS</span>
-          <span class="mood-vibe">Need a hug</span>
-        </div>
-      </div>
-    </section>
-
     <!-- Phone Mockup Fan -->
     <section class="mockup-section">
       <div class="phone-fan reveal">
@@ -1460,35 +1425,27 @@
         <div class="phone-glow phone-glow-pink"></div>
         <div class="phone-glow phone-glow-green"></div>
 
-        <!-- Left phone -->
+        <!-- Left phone - Friends -->
         <div class="phone-frame phone-frame--left">
           <div class="phone-notch"></div>
           <div class="phone-screen">
-            <p class="phone-placeholder">Moods</p>
+            <img src="screenshots/left.png" alt="Friends screen" loading="lazy">
           </div>
         </div>
 
-        <!-- Center phone (main) -->
+        <!-- Center phone - Orbit -->
         <div class="phone-frame phone-frame--center">
           <div class="phone-notch"></div>
           <div class="phone-screen">
-            <div class="phone-orbit" aria-hidden="true">
-              <div class="po-center"></div>
-              <div class="po-ring"></div>
-              <div class="po-ring"></div>
-              <div class="po-sat"></div>
-              <div class="po-sat"></div>
-              <div class="po-sat"></div>
-            </div>
-            <p class="phone-placeholder">Your Orbit</p>
+            <img src="screenshots/center.png" alt="Your Orbit screen" loading="lazy">
           </div>
         </div>
 
-        <!-- Right phone -->
+        <!-- Right phone - Rooms -->
         <div class="phone-frame phone-frame--right">
           <div class="phone-notch"></div>
           <div class="phone-screen">
-            <p class="phone-placeholder">Voice Room</p>
+            <img src="screenshots/right.png" alt="Rooms screen" loading="lazy">
           </div>
         </div>
       </div>
