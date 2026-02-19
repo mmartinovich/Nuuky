@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -12,25 +12,27 @@ import {
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { Audio } from "expo-av";
 import { useTheme } from "../hooks/useTheme";
 import { useVoiceMoment } from "../hooks/useVoiceMoment";
 import { VoiceMoment, VoiceMomentReaction, User } from "../types";
-import { spacing, radius, typography } from "../lib/theme";
+import { spacing, radius, typography, colors } from "../lib/theme";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const REACTION_OPTIONS: { key: VoiceMomentReaction; emoji: string; label: string }[] = [
-  { key: "heart", emoji: "❤️", label: "Heart" },
-  { key: "laugh", emoji: "😂", label: "Laugh" },
-  { key: "wow", emoji: "😮", label: "Wow" },
-  { key: "applause", emoji: "👏", label: "Applause" },
-  { key: "aww", emoji: "🥺", label: "Aww" },
-  { key: "party", emoji: "🎉", label: "Party" },
+  { key: "heart", emoji: "\u2764\uFE0F", label: "Heart" },
+  { key: "laugh", emoji: "\uD83D\uDE02", label: "Laugh" },
+  { key: "wow", emoji: "\uD83D\uDE2E", label: "Wow" },
+  { key: "applause", emoji: "\uD83D\uDC4F", label: "Applause" },
+  { key: "aww", emoji: "\uD83E\uDD7A", label: "Aww" },
+  { key: "party", emoji: "\uD83C\uDF89", label: "Party" },
 ];
+
+const NUM_WAVEFORM_BARS = 24;
 
 interface VoiceMomentPlayerProps {
   visible: boolean;
@@ -56,32 +58,92 @@ export function VoiceMomentPlayer({
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const glowAnim = useRef(new Animated.Value(0.4)).current;
   const soundRef = useRef<Audio.Sound | null>(null);
   const progressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const styles = createStyles(theme);
+  // Waveform bar animations
+  const waveformAnims = useRef(
+    Array.from({ length: NUM_WAVEFORM_BARS }, () => new Animated.Value(0.3))
+  ).current;
 
-  // Pulse animation for playing state
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
+  // Waveform animation loop
   useEffect(() => {
     if (isPlaying) {
+      const animations = waveformAnims.map((anim, i) =>
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(anim, {
+              toValue: 0.3 + Math.random() * 0.7,
+              duration: 200 + Math.random() * 300,
+              useNativeDriver: true,
+              delay: i * 30,
+            }),
+            Animated.timing(anim, {
+              toValue: 0.15 + Math.random() * 0.3,
+              duration: 200 + Math.random() * 300,
+              useNativeDriver: true,
+            }),
+          ])
+        )
+      );
+      animations.forEach((a) => a.start());
+      return () => animations.forEach((a) => a.stop());
+    } else {
+      waveformAnims.forEach((anim) => {
+        Animated.timing(anim, {
+          toValue: 0.3,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
+      });
+    }
+  }, [isPlaying]);
+
+  // Glow animation for playing state
+  useEffect(() => {
+    if (isPlaying) {
+      const glow = Animated.loop(
+        Animated.sequence([
+          Animated.timing(glowAnim, {
+            toValue: 0.8,
+            duration: 1200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(glowAnim, {
+            toValue: 0.3,
+            duration: 1200,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      glow.start();
+
       const pulse = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
-            toValue: 1.08,
-            duration: 800,
+            toValue: 1.06,
+            duration: 1000,
             useNativeDriver: true,
           }),
           Animated.timing(pulseAnim, {
             toValue: 1,
-            duration: 800,
+            duration: 1000,
             useNativeDriver: true,
           }),
         ])
       );
       pulse.start();
-      return () => pulse.stop();
+
+      return () => {
+        glow.stop();
+        pulse.stop();
+      };
     } else {
       pulseAnim.setValue(1);
+      glowAnim.setValue(0.4);
     }
   }, [isPlaying]);
 
@@ -252,7 +314,7 @@ export function VoiceMomentPlayer({
       statusBarTranslucent
     >
       <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-        <BlurView intensity={80} style={StyleSheet.absoluteFill} tint="dark" />
+        <BlurView intensity={90} style={StyleSheet.absoluteFill} tint="dark" />
 
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
@@ -266,101 +328,168 @@ export function VoiceMomentPlayer({
             { transform: [{ scale: scaleAnim }] },
           ]}
         >
-          {/* Top gradient with sender info */}
+          {/* Glass border effect */}
           <LinearGradient
-            colors={["rgba(0,0,0,0.8)", "rgba(20,20,40,0.95)"]}
-            style={styles.cardInner}
+            colors={['rgba(0, 240, 255, 0.15)', 'rgba(181, 55, 242, 0.1)', 'rgba(0, 240, 255, 0.05)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.cardBorder}
           >
-            {/* Sender info */}
-            <View style={[styles.senderInfo, { marginTop: 20 }]}>
-              {senderAvatar ? (
-                <ExpoImage
-                  source={{ uri: senderAvatar }}
-                  style={styles.senderAvatar}
-                  contentFit="cover"
-                />
-              ) : (
-                <View style={[styles.senderAvatar, styles.senderAvatarPlaceholder]}>
-                  <Ionicons name="person" size={16} color={theme.colors.text.tertiary} />
-                </View>
-              )}
-              <View style={styles.senderText}>
-                <Text style={styles.senderName}>{senderName}</Text>
-                <Text style={styles.timeAgo}>{timeRemainingText}</Text>
-              </View>
-              <View style={styles.durationBadge}>
-                <Ionicons name="mic" size={12} color="rgba(255,255,255,0.6)" />
-                <Text style={styles.durationText}>{durationText}</Text>
-              </View>
-            </View>
-
-            {/* Audio visualization area */}
-            <View style={styles.audioArea}>
-              {loading ? (
-                <ActivityIndicator color="#FFFFFF" size="large" />
-              ) : (
-                <TouchableOpacity
-                  style={styles.playButton}
-                  onPress={togglePlayback}
-                  activeOpacity={0.7}
-                >
-                  <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-                    <View style={styles.playButtonInner}>
-                      <Ionicons
-                        name={isPlaying ? "pause" : "play"}
-                        size={40}
-                        color="#FFFFFF"
-                        style={isPlaying ? undefined : { marginLeft: 4 }}
+            <View style={styles.cardContent}>
+              <LinearGradient
+                colors={['#0a0a20', '#0d0d2b', '#0a0a20']}
+                style={styles.cardInner}
+              >
+                {/* Sender info */}
+                <View style={styles.senderInfo}>
+                  {senderAvatar ? (
+                    <View style={styles.avatarGlow}>
+                      <ExpoImage
+                        source={{ uri: senderAvatar }}
+                        style={styles.senderAvatar}
+                        contentFit="cover"
                       />
                     </View>
-                  </Animated.View>
-                </TouchableOpacity>
-              )}
-
-              {/* Progress bar */}
-              <View style={styles.progressBarContainer}>
-                <View style={styles.progressBarBg}>
-                  <View
-                    style={[
-                      styles.progressBarFill,
-                      { width: `${playbackProgress * 100}%` },
-                    ]}
-                  />
+                  ) : (
+                    <View style={styles.avatarGlow}>
+                      <View style={[styles.senderAvatar, styles.senderAvatarPlaceholder]}>
+                        <Ionicons name="person" size={16} color={theme.colors.text.tertiary} />
+                      </View>
+                    </View>
+                  )}
+                  <View style={styles.senderText}>
+                    <Text style={styles.senderName}>{senderName}</Text>
+                    <Text style={styles.timeAgo}>{timeRemainingText}</Text>
+                  </View>
+                  <View style={styles.durationBadge}>
+                    <Ionicons name="mic" size={12} color={colors.neon.cyan} />
+                    <Text style={styles.durationText}>{durationText}</Text>
+                  </View>
                 </View>
-              </View>
-            </View>
 
-            {/* Caption */}
-            {voiceMoment?.caption && (
-              <Text style={styles.caption}>{voiceMoment.caption}</Text>
-            )}
+                {/* Audio visualization area */}
+                <View style={styles.audioArea}>
+                  {loading ? (
+                    <ActivityIndicator color={colors.neon.cyan} size="large" />
+                  ) : (
+                    <>
+                      {/* Waveform bars */}
+                      <View style={styles.waveformContainer}>
+                        {waveformAnims.map((anim, i) => {
+                          const distFromCenter = Math.abs(i - NUM_WAVEFORM_BARS / 2) / (NUM_WAVEFORM_BARS / 2);
+                          const maxHeight = 40 * (1 - distFromCenter * 0.6);
+                          return (
+                            <Animated.View
+                              key={i}
+                              style={[
+                                styles.waveformBar,
+                                {
+                                  height: maxHeight,
+                                  transform: [{ scaleY: anim }],
+                                  opacity: playbackProgress > 0
+                                    ? i / NUM_WAVEFORM_BARS <= playbackProgress ? 1 : 0.3
+                                    : isPlaying ? 1 : 0.4,
+                                },
+                              ]}
+                            />
+                          );
+                        })}
+                      </View>
 
-            {/* Reactions row */}
-            <View style={styles.reactionsRow}>
-              {REACTION_OPTIONS.map((option) => (
+                      {/* Play/Pause button */}
+                      <TouchableOpacity
+                        style={styles.playButton}
+                        onPress={togglePlayback}
+                        activeOpacity={0.7}
+                      >
+                        <Animated.View style={[styles.playButtonGlow, { opacity: glowAnim }]} />
+                        <Animated.View
+                          style={[
+                            styles.playButtonOuter,
+                            { transform: [{ scale: pulseAnim }] },
+                          ]}
+                        >
+                          <LinearGradient
+                            colors={['rgba(0, 240, 255, 0.15)', 'rgba(181, 55, 242, 0.15)']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={styles.playButtonInner}
+                          >
+                            <Ionicons
+                              name={isPlaying ? "pause" : "play"}
+                              size={32}
+                              color="#FFFFFF"
+                              style={isPlaying ? undefined : { marginLeft: 3 }}
+                            />
+                          </LinearGradient>
+                        </Animated.View>
+                      </TouchableOpacity>
+
+                      {/* Progress bar */}
+                      <View style={styles.progressBarContainer}>
+                        <View style={styles.progressBarBg}>
+                          <LinearGradient
+                            colors={[colors.neon.cyan, colors.neon.purple]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={[
+                              styles.progressBarFill,
+                              { width: `${playbackProgress * 100}%` },
+                            ]}
+                          />
+                        </View>
+                        {/* Glow dot at progress position */}
+                        {playbackProgress > 0 && playbackProgress < 1 && (
+                          <View
+                            style={[
+                              styles.progressDot,
+                              { left: `${playbackProgress * 100}%` },
+                            ]}
+                          />
+                        )}
+                      </View>
+                    </>
+                  )}
+                </View>
+
+                {/* Caption */}
+                {voiceMoment?.caption && (
+                  <Text style={styles.caption}>{voiceMoment.caption}</Text>
+                )}
+
+                {/* Reactions row */}
+                <View style={styles.reactionsRow}>
+                  {REACTION_OPTIONS.map((option) => {
+                    const isActive = activeReaction === option.key;
+                    return (
+                      <TouchableOpacity
+                        key={option.key}
+                        style={[
+                          styles.reactionButton,
+                          isActive && styles.reactionButtonActive,
+                        ]}
+                        onPress={() => handleReact(option.key)}
+                        activeOpacity={0.7}
+                        disabled={reacting}
+                      >
+                        <Text style={[styles.reactionEmoji, isActive && styles.reactionEmojiActive]}>
+                          {option.emoji}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* Close button */}
                 <TouchableOpacity
-                  key={option.key}
-                  style={[
-                    styles.reactionButton,
-                    activeReaction === option.key && styles.reactionButtonActive,
-                  ]}
-                  onPress={() => handleReact(option.key)}
+                  style={styles.closeButton}
+                  onPress={handleClose}
                   activeOpacity={0.7}
-                  disabled={reacting}
                 >
-                  <Text style={styles.reactionEmoji}>{option.emoji}</Text>
+                  <Ionicons name="close" size={20} color="rgba(255,255,255,0.6)" />
                 </TouchableOpacity>
-              ))}
+              </LinearGradient>
             </View>
-
-            {/* Close button */}
-            <TouchableOpacity
-              style={[styles.closeButton, { marginBottom: 20 }]}
-              onPress={handleClose}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="close" size={24} color="#FFFFFF" />
-            </TouchableOpacity>
           </LinearGradient>
         </Animated.View>
       </Animated.View>
@@ -374,28 +503,44 @@ const createStyles = (theme: ReturnType<typeof useTheme>["theme"]) =>
       flex: 1,
       justifyContent: "center",
       alignItems: "center",
-      backgroundColor: "rgba(0,0,0,0.5)",
     },
     card: {
-      width: SCREEN_WIDTH - 48,
+      width: SCREEN_WIDTH - 40,
       borderRadius: radius.xl,
       overflow: "hidden",
-      backgroundColor: "#000000",
+    },
+    cardBorder: {
+      borderRadius: radius.xl,
+      padding: 1,
+    },
+    cardContent: {
+      borderRadius: radius.xl - 1,
+      overflow: "hidden",
     },
     cardInner: {
       paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.md,
+      paddingTop: 24,
+      paddingBottom: 20,
     },
+
+    // Sender
     senderInfo: {
       flexDirection: "row",
       alignItems: "center",
     },
+    avatarGlow: {
+      borderRadius: 22,
+      shadowColor: colors.neon.cyan,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+    },
     senderAvatar: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 42,
+      height: 42,
+      borderRadius: 21,
       borderWidth: 2,
-      borderColor: "rgba(255,255,255,0.3)",
+      borderColor: 'rgba(0, 240, 255, 0.3)',
     },
     senderAvatarPlaceholder: {
       backgroundColor: theme.colors.glass.background,
@@ -403,103 +548,177 @@ const createStyles = (theme: ReturnType<typeof useTheme>["theme"]) =>
       alignItems: "center",
     },
     senderText: {
-      marginLeft: spacing.sm,
+      marginLeft: spacing.sm + 2,
       flex: 1,
     },
     senderName: {
       fontSize: typography.size.md,
+      fontFamily: typography.displayBold,
       fontWeight: "700",
       color: "#FFFFFF",
     },
     timeAgo: {
       fontSize: typography.size.xs,
-      color: "rgba(255,255,255,0.7)",
+      fontFamily: typography.body,
+      color: "rgba(255,255,255,0.5)",
       marginTop: 2,
     },
     durationBadge: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: "rgba(255,255,255,0.1)",
-      borderRadius: 12,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
+      backgroundColor: "rgba(0, 240, 255, 0.08)",
+      borderRadius: 10,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
       gap: 4,
+      borderWidth: 1,
+      borderColor: "rgba(0, 240, 255, 0.15)",
     },
     durationText: {
       fontSize: typography.size.xs,
-      color: "rgba(255,255,255,0.6)",
+      fontFamily: typography.body,
+      color: "rgba(0, 240, 255, 0.8)",
     },
+
+    // Audio area
     audioArea: {
       alignItems: "center",
       justifyContent: "center",
-      paddingVertical: spacing["3xl"],
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.lg,
     },
+
+    // Waveform
+    waveformContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      height: 44,
+      gap: 2.5,
+      marginBottom: spacing.lg,
+      width: "100%",
+      paddingHorizontal: spacing.sm,
+    },
+    waveformBar: {
+      flex: 1,
+      borderRadius: 2,
+      backgroundColor: colors.neon.cyan,
+    },
+
+    // Play button
     playButton: {
       marginBottom: spacing.xl,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    playButtonGlow: {
+      position: "absolute",
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      backgroundColor: colors.neon.cyan,
+      shadowColor: colors.neon.cyan,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.5,
+      shadowRadius: 24,
+    },
+    playButtonOuter: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      borderWidth: 2,
+      borderColor: 'rgba(0, 240, 255, 0.4)',
+      overflow: "hidden",
     },
     playButtonInner: {
-      width: 88,
-      height: 88,
-      borderRadius: 44,
-      backgroundColor: "rgba(249,115,22,0.3)",
-      borderWidth: 3,
-      borderColor: "#F97316",
+      flex: 1,
       justifyContent: "center",
       alignItems: "center",
     },
+
+    // Progress bar
     progressBarContainer: {
       width: "100%",
-      paddingHorizontal: spacing.md,
+      paddingHorizontal: spacing.xs,
+      position: "relative",
     },
     progressBarBg: {
-      height: 4,
-      backgroundColor: "rgba(255,255,255,0.15)",
+      height: 3,
+      backgroundColor: "rgba(255,255,255,0.08)",
       borderRadius: 2,
       overflow: "hidden",
     },
     progressBarFill: {
       height: "100%",
-      backgroundColor: "#F97316",
       borderRadius: 2,
     },
+    progressDot: {
+      position: "absolute",
+      top: -3,
+      width: 9,
+      height: 9,
+      borderRadius: 5,
+      backgroundColor: colors.neon.cyan,
+      marginLeft: -4.5,
+      shadowColor: colors.neon.cyan,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.8,
+      shadowRadius: 6,
+    },
+
+    // Caption
     caption: {
       fontSize: typography.size.lg,
+      fontFamily: typography.displayMedium,
       fontWeight: "500",
       color: "#FFFFFF",
       textAlign: "center",
-      marginBottom: spacing.lg,
-      textShadowColor: "rgba(0,0,0,0.5)",
-      textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 4,
+      marginTop: spacing.lg,
+      marginBottom: spacing.md,
     },
+
+    // Reactions
     reactionsRow: {
       flexDirection: "row",
       justifyContent: "center",
-      gap: 8,
-      marginBottom: spacing.lg,
+      gap: 10,
+      marginTop: spacing.sm,
+      marginBottom: spacing.md,
     },
     reactionButton: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      backgroundColor: "rgba(255,255,255,0.1)",
+      width: 46,
+      height: 46,
+      borderRadius: 23,
+      backgroundColor: "rgba(255,255,255,0.06)",
       justifyContent: "center",
       alignItems: "center",
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.08)",
     },
     reactionButtonActive: {
-      backgroundColor: "rgba(249,115,22,0.3)",
-      borderWidth: 2,
-      borderColor: "#F97316",
+      backgroundColor: "rgba(0, 240, 255, 0.12)",
+      borderColor: "rgba(0, 240, 255, 0.4)",
+      shadowColor: colors.neon.cyan,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.4,
+      shadowRadius: 8,
     },
     reactionEmoji: {
+      fontSize: 20,
+    },
+    reactionEmojiActive: {
       fontSize: 22,
     },
+
+    // Close button
     closeButton: {
       alignSelf: "center",
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: "rgba(255,255,255,0.2)",
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: "rgba(255,255,255,0.06)",
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.1)",
       justifyContent: "center",
       alignItems: "center",
     },
