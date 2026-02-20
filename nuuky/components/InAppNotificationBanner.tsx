@@ -325,7 +325,8 @@ const styles = StyleSheet.create({
   swipeIndicator: {
     position: 'absolute',
     bottom: 6,
-    alignSelf: 'center',
+    left: '50%',
+    marginLeft: -16,
     width: 32,
     height: 3,
     borderRadius: 1.5,
