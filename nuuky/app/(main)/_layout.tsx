@@ -98,7 +98,9 @@ export default function MainLayout() {
         name="voice-moment-recorder"
         options={{
           headerShown: false,
-          animation: "slide_from_bottom",
+          presentation: "transparentModal",
+          animation: "fade",
+          contentStyle: { backgroundColor: "transparent" },
         }}
       />
       <Stack.Screen

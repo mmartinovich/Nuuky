@@ -200,19 +200,6 @@ serve(async (req) => {
         console.error('Error deleting voice moment notifications:', vmNotifError);
       }
 
-      // Clean up voice moment rate limits
-      const twoDaysAgoVm = new Date();
-      twoDaysAgoVm.setDate(twoDaysAgoVm.getDate() - 2);
-
-      const { error: vmRateLimitError } = await supabase
-        .from('voice_moment_limits')
-        .delete()
-        .lt('date', twoDaysAgoVm.toISOString().split('T')[0]);
-
-      if (vmRateLimitError) {
-        console.error('Error cleaning up voice moment rate limits:', vmRateLimitError);
-      }
-
       voiceMomentsCleaned = expiredVoiceMoments.length;
       console.log(`✓ Voice moments cleanup: ${voiceMomentsCleaned} removed`);
     }

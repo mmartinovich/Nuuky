@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Modal,
   Animated,
-  Dimensions,
   ActivityIndicator,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
@@ -18,9 +17,6 @@ import * as Haptics from "expo-haptics";
 import { useTheme } from "../hooks/useTheme";
 import { usePhotoNudge } from "../hooks/usePhotoNudge";
 import { PhotoNudge, User } from "../types";
-import { spacing, radius, typography } from "../lib/theme";
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 interface PhotoNudgeViewerProps {
   visible: boolean;
@@ -34,7 +30,7 @@ export function PhotoNudgeViewer({
   onClose,
 }: PhotoNudgeViewerProps) {
   const insets = useSafeAreaInsets();
-  const { theme } = useTheme();
+  const { theme, accent } = useTheme();
   const { markAsViewed, reactWithHeart, getTimeRemaining } = usePhotoNudge();
 
   const [isReacted, setIsReacted] = useState(false);
@@ -44,8 +40,6 @@ export function PhotoNudgeViewer({
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const heartScale = useRef(new Animated.Value(1)).current;
-
-  const styles = createStyles(theme);
 
   // Animation on open
   useEffect(() => {
@@ -122,8 +116,6 @@ export function PhotoNudgeViewer({
   }, [photoNudge?.id, isReacted, reacting, reactWithHeart]);
 
   const timeRemaining = photoNudge ? getTimeRemaining(photoNudge.expires_at) : null;
-
-  // Format time remaining text
   const timeRemainingText = timeRemaining
     ? timeRemaining.expired
       ? "Expired"
@@ -132,7 +124,6 @@ export function PhotoNudgeViewer({
       : `${timeRemaining.minutes}m left`
     : "";
 
-  // Get sender info
   const sender = photoNudge?.sender as User | undefined;
   const senderName = sender?.display_name || "Someone";
   const senderAvatar = sender?.avatar_url;
@@ -145,217 +136,266 @@ export function PhotoNudgeViewer({
       onRequestClose={handleClose}
       statusBarTranslucent
     >
-      <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-        {/* Background blur */}
-        <BlurView intensity={80} style={StyleSheet.absoluteFill} tint="dark" />
+      <View style={styles.fullScreen}>
+        {/* Backdrop */}
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeAnim }]}>
+          <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFill}>
+            <TouchableOpacity
+              style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.4)' }]}
+              activeOpacity={1}
+              onPress={handleClose}
+            />
+          </BlurView>
+        </Animated.View>
 
-        {/* Dismiss on background tap */}
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
-          activeOpacity={1}
-          onPress={handleClose}
-        />
-
-        {/* Photo card */}
+        {/* Content */}
         <Animated.View
           style={[
-            styles.photoCard,
+            styles.fullScreenContent,
             {
+              opacity: fadeAnim,
               transform: [{ scale: scaleAnim }],
             },
           ]}
         >
-          {/* Photo */}
-          {photoNudge && (
-            <ExpoImage
-              source={{ uri: photoNudge.image_url }}
-              style={styles.photo}
-              contentFit="cover"
-              onLoadEnd={() => setLoading(false)}
-            />
-          )}
-
-          {/* Loading indicator */}
-          {(loading || !photoNudge) && (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator color="#FFFFFF" size="large" />
-            </View>
-          )}
-
-          {/* Top gradient with sender info */}
-          {photoNudge && (
-            <LinearGradient
-              colors={["rgba(0,0,0,0.6)", "transparent"]}
-              style={[styles.topGradient, { paddingTop: 20 }]}
-            >
-              <View style={styles.senderInfo}>
-                {senderAvatar ? (
-                  <ExpoImage
-                    source={{ uri: senderAvatar }}
-                    style={styles.senderAvatar}
-                    contentFit="cover"
-                  />
-                ) : (
-                  <View style={[styles.senderAvatar, styles.senderAvatarPlaceholder]}>
-                    <Ionicons name="person" size={16} color={theme.colors.text.tertiary} />
-                  </View>
-                )}
-                <View style={styles.senderText}>
-                  <Text style={styles.senderName}>{senderName}</Text>
-                  <Text style={styles.timeAgo}>{timeRemainingText}</Text>
-                </View>
-              </View>
-            </LinearGradient>
-          )}
-
-          {/* Bottom gradient with caption and reaction */}
-          {photoNudge && (
-            <LinearGradient
-              colors={["transparent", "rgba(0,0,0,0.7)"]}
-              style={styles.bottomGradient}
-            >
-              {/* Caption */}
-              {photoNudge.caption && (
-                <Text style={styles.caption}>{photoNudge.caption}</Text>
+          {/* Borderless photo with overlays */}
+          <View style={[styles.photoWrapper, { marginTop: insets.top + 110, marginBottom: insets.bottom + 24 }]}>
+            <View style={styles.photoCard}>
+              {photoNudge && (
+                <ExpoImage
+                  source={{ uri: photoNudge.image_url }}
+                  style={styles.photo}
+                  contentFit="cover"
+                  onLoadEnd={() => setLoading(false)}
+                />
               )}
 
-              {/* Actions */}
-              <View style={[styles.actions, { paddingBottom: 20 }]}>
-                {/* Heart reaction button */}
-                <TouchableOpacity
-                  style={[styles.reactionButton, isReacted && styles.reactionButtonActive]}
-                  onPress={handleReact}
-                  activeOpacity={0.7}
-                  disabled={reacting}
-                >
-                  <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-                    <Ionicons
-                      name={isReacted ? "heart" : "heart-outline"}
-                      size={28}
-                      color={isReacted ? "#EF4444" : "#FFFFFF"}
-                    />
-                  </Animated.View>
-                </TouchableOpacity>
+              {/* Loading indicator */}
+              {(loading || !photoNudge) && (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator color={accent.primary} size="large" />
+                </View>
+              )}
 
-                {/* Close button */}
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={handleClose}
-                  activeOpacity={0.7}
+              {/* Top gradient - sender info */}
+              {photoNudge && (
+                <LinearGradient
+                  colors={['rgba(0,0,0,0.6)', 'transparent']}
+                  style={styles.topGradient}
                 >
-                  <Ionicons name="close" size={24} color="#FFFFFF" />
-                </TouchableOpacity>
-              </View>
-            </LinearGradient>
-          )}
+                  <View style={styles.senderRow}>
+                    {senderAvatar ? (
+                      <ExpoImage
+                        source={{ uri: senderAvatar }}
+                        style={styles.senderAvatar}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <View style={[styles.senderAvatar, styles.senderAvatarPlaceholder]}>
+                        <Ionicons name="person" size={16} color="rgba(255,255,255,0.7)" />
+                      </View>
+                    )}
+                    <View style={styles.senderText}>
+                      <Text style={styles.senderName}>{senderName}</Text>
+                      <Text style={styles.timeAgo}>{timeRemainingText}</Text>
+                    </View>
+                  </View>
+                </LinearGradient>
+              )}
+
+              {/* Bottom gradient - caption + reaction */}
+              {photoNudge && (
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.7)']}
+                  style={styles.bottomGradient}
+                >
+                  {photoNudge.caption && (
+                    <Text style={styles.caption}>{photoNudge.caption}</Text>
+                  )}
+
+                  <View style={styles.actions}>
+                    <TouchableOpacity
+                      style={[
+                        styles.heartButton,
+                        isReacted && styles.heartButtonActive,
+                      ]}
+                      onPress={handleReact}
+                      activeOpacity={0.7}
+                      disabled={reacting}
+                    >
+                      <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+                        <Ionicons
+                          name={isReacted ? "heart" : "heart-outline"}
+                          size={28}
+                          color={isReacted ? "#EF4444" : "#FFFFFF"}
+                        />
+                      </Animated.View>
+                    </TouchableOpacity>
+                  </View>
+                </LinearGradient>
+              )}
+            </View>
+          </View>
+
+          {/* Header with gradient fade - absolute positioned on top */}
+          <LinearGradient
+            colors={['rgba(0,0,0,0.95)', 'rgba(0,0,0,0.85)', 'rgba(0,0,0,0.5)', 'transparent']}
+            locations={[0, 0.4, 0.7, 1]}
+            style={[styles.headerOverlay, { paddingTop: insets.top + 8 }]}
+            pointerEvents="box-none"
+          >
+            <View style={styles.header} pointerEvents="box-none">
+              <TouchableOpacity
+                style={[styles.closeButton, { backgroundColor: theme.colors.glass.background }]}
+                onPress={handleClose}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close" size={22} color={theme.colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
+              Photo Moment
+            </Text>
+          </LinearGradient>
         </Animated.View>
-      </Animated.View>
+      </View>
     </Modal>
   );
 }
 
-const createStyles = (theme: ReturnType<typeof useTheme>["theme"]) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      backgroundColor: "rgba(0,0,0,0.5)",
-    },
-    photoCard: {
-      width: SCREEN_WIDTH - 32,
-      height: SCREEN_HEIGHT * 0.7,
-      borderRadius: radius.xl,
-      overflow: "hidden",
-      backgroundColor: "#000000",
-    },
-    photo: {
-      width: "100%",
-      height: "100%",
-    },
-    loadingContainer: {
-      ...StyleSheet.absoluteFillObject,
-      justifyContent: "center",
-      alignItems: "center",
-      backgroundColor: "rgba(0,0,0,0.3)",
-    },
-    topGradient: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      paddingHorizontal: spacing.md,
-      paddingBottom: spacing.xl,
-    },
-    senderInfo: {
-      flexDirection: "row",
-      alignItems: "center",
-    },
-    senderAvatar: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      borderWidth: 2,
-      borderColor: "rgba(255,255,255,0.3)",
-    },
-    senderAvatarPlaceholder: {
-      backgroundColor: theme.colors.glass.background,
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    senderText: {
-      marginLeft: spacing.sm,
-    },
-    senderName: {
-      fontSize: typography.size.md,
-      fontWeight: "700",
-      color: "#FFFFFF",
-    },
-    timeAgo: {
-      fontSize: typography.size.xs,
-      color: "rgba(255,255,255,0.7)",
-      marginTop: 2,
-    },
-    bottomGradient: {
-      position: "absolute",
-      bottom: 0,
-      left: 0,
-      right: 0,
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing["3xl"],
-    },
-    caption: {
-      fontSize: typography.size.lg,
-      fontWeight: "500",
-      color: "#FFFFFF",
-      marginBottom: spacing.md,
-      textShadowColor: "rgba(0,0,0,0.5)",
-      textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 4,
-    },
-    actions: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      paddingTop: spacing.md,
-    },
-    reactionButton: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      backgroundColor: "rgba(255,255,255,0.2)",
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    reactionButtonActive: {
-      backgroundColor: "rgba(239,68,68,0.2)",
-    },
-    closeButton: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: "rgba(255,255,255,0.2)",
-      justifyContent: "center",
-      alignItems: "center",
-    },
-  });
+const styles = StyleSheet.create({
+  fullScreen: {
+    flex: 1,
+  },
+  fullScreenContent: {
+    flex: 1,
+  },
+
+  // Header
+  headerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 24,
+    paddingBottom: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+  },
+
+  // Photo
+  photoWrapper: {
+    flex: 1,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  photoCard: {
+    width: '100%',
+    aspectRatio: 3 / 4,
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+  },
+  photo: {
+    width: '100%',
+    height: '100%',
+  },
+  loadingContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+
+  // Top gradient overlay
+  topGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 40,
+  },
+  senderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  senderAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  senderAvatarPlaceholder: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  senderText: {
+    flex: 1,
+  },
+  senderName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  timeAgo: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 2,
+  },
+
+  // Bottom gradient overlay
+  bottomGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+    paddingTop: 48,
+    paddingBottom: 20,
+  },
+  caption: {
+    fontSize: 17,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    marginBottom: 14,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  heartButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  heartButtonActive: {
+    backgroundColor: 'rgba(239,68,68,0.25)',
+  },
+});

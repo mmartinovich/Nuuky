@@ -55,6 +55,11 @@ export const useVoiceMoment = () => {
       if (recordingRef.current) {
         recordingRef.current.stopAndUnloadAsync().catch(() => {});
         recordingRef.current = null;
+        // Reset audio mode so playback works normally after unmount
+        Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+        }).catch(() => {});
       }
     };
   }, []);
@@ -110,8 +115,12 @@ export const useVoiceMoment = () => {
           if (timerRef.current) clearInterval(timerRef.current);
           timerRef.current = null;
           try {
-            await recording.stopAndUnloadAsync();
+            const status = await recording.getStatusAsync();
+            if (status.isRecording) {
+              await recording.stopAndUnloadAsync();
+            }
           } catch {}
+          recordingRef.current = null;
           setIsRecording(false);
           setRecordingDurationMs(MAX_DURATION_MS);
         }
@@ -135,7 +144,10 @@ export const useVoiceMoment = () => {
 
     try {
       const recording = recordingRef.current;
-      await recording.stopAndUnloadAsync();
+      const status = await recording.getStatusAsync();
+      if (status.isRecording) {
+        await recording.stopAndUnloadAsync();
+      }
       const uri = recording.getURI();
       const durationMs = Date.now() - startTimeRef.current;
 
@@ -265,16 +277,7 @@ export const useVoiceMoment = () => {
           message: error.message,
           details: error.details,
         });
-
-        if (error.message.includes('Voice moment limit exceeded')) {
-          Alert.alert(
-            'Limit Reached',
-            'You can only send 3 voice moments per friend per day. Try again tomorrow!'
-          );
-        } else {
-          throw error;
-        }
-        return false;
+        throw error;
       }
 
       try {

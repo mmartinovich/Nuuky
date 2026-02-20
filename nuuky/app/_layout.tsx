@@ -23,6 +23,7 @@ import { getAllMoodImages, getTheme } from "../lib/theme";
 import { useTheme } from "../hooks/useTheme";
 import { startNetworkMonitor, stopNetworkMonitor } from "../lib/network";
 import { OfflineBanner } from "../components/OfflineBanner";
+import * as Notifications from "expo-notifications";
 import {
   registerForPushNotificationsAsync,
   savePushTokenToUser,
@@ -106,6 +107,7 @@ function ThemedAppShell() {
 export default function RootLayout() {
   const currentUser = useAppStore((s) => s.currentUser);
   const setCurrentUser = useAppStore((s) => s.setCurrentUser);
+  const unreadNotificationCount = useAppStore((s) => s.unreadNotificationCount);
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
   const [fontsLoaded] = useFonts({
@@ -124,6 +126,11 @@ export default function RootLayout() {
   useEffect(() => {
     pathnameRef.current = pathname;
   }, [pathname]);
+
+  // Sync iOS app icon badge with unread notification count
+  useEffect(() => {
+    Notifications.setBadgeCountAsync(unreadNotificationCount).catch(() => {});
+  }, [unreadNotificationCount]);
 
   // Handle notification tap navigation
   const handleNotificationNavigation = (data: any) => {

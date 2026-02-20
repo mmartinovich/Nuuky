@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   Modal,
   Animated,
-  Dimensions,
+  ScrollView,
   ActivityIndicator,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
@@ -19,9 +19,7 @@ import { Audio } from "expo-av";
 import { useTheme } from "../hooks/useTheme";
 import { useVoiceMoment } from "../hooks/useVoiceMoment";
 import { VoiceMoment, VoiceMomentReaction, User } from "../types";
-import { spacing, radius, typography, colors } from "../lib/theme";
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+import { StaticWaveform, BAR_UNIT, WAVEFORM_H, generateWaveformBars } from "./Waveform";
 
 const REACTION_OPTIONS: { key: VoiceMomentReaction; emoji: string; label: string }[] = [
   { key: "heart", emoji: "\u2764\uFE0F", label: "Heart" },
@@ -31,8 +29,6 @@ const REACTION_OPTIONS: { key: VoiceMomentReaction; emoji: string; label: string
   { key: "aww", emoji: "\uD83E\uDD7A", label: "Aww" },
   { key: "party", emoji: "\uD83C\uDF89", label: "Party" },
 ];
-
-const NUM_WAVEFORM_BARS = 24;
 
 interface VoiceMomentPlayerProps {
   visible: boolean;
@@ -46,7 +42,7 @@ export function VoiceMomentPlayer({
   onClose,
 }: VoiceMomentPlayerProps) {
   const insets = useSafeAreaInsets();
-  const { theme } = useTheme();
+  const { theme, accent } = useTheme();
   const { markAsViewed, reactToVoiceMoment, getTimeRemaining } = useVoiceMoment();
 
   const [activeReaction, setActiveReaction] = useState<VoiceMomentReaction | null>(null);
@@ -55,97 +51,35 @@ export function VoiceMomentPlayer({
   const [loading, setLoading] = useState(true);
   const [reacting, setReacting] = useState(false);
 
+  const [waveformWidth, setWaveformWidth] = useState(0);
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const glowAnim = useRef(new Animated.Value(0.4)).current;
+  const modalScaleAnim = useRef(new Animated.Value(0.9)).current;
   const soundRef = useRef<Audio.Sound | null>(null);
   const progressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const loadGeneration = useRef(0);
 
-  // Waveform bar animations
-  const waveformAnims = useRef(
-    Array.from({ length: NUM_WAVEFORM_BARS }, () => new Animated.Value(0.3))
+  // Per-reaction scale animations
+  const reactionScales = useRef(
+    REACTION_OPTIONS.reduce((acc, opt) => {
+      acc[opt.key] = new Animated.Value(1);
+      return acc;
+    }, {} as Record<string, Animated.Value>)
   ).current;
 
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  // Generate deterministic waveform bars from voice moment ID
+  const barCount = waveformWidth > 0 ? Math.floor(waveformWidth / BAR_UNIT) : 0;
+  const waveformBars = React.useMemo(
+    () => generateWaveformBars(voiceMoment?.id || 'default', barCount),
+    [voiceMoment?.id, barCount]
+  );
 
-  // Waveform animation loop
-  useEffect(() => {
-    if (isPlaying) {
-      const animations = waveformAnims.map((anim, i) =>
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(anim, {
-              toValue: 0.3 + Math.random() * 0.7,
-              duration: 200 + Math.random() * 300,
-              useNativeDriver: true,
-              delay: i * 30,
-            }),
-            Animated.timing(anim, {
-              toValue: 0.15 + Math.random() * 0.3,
-              duration: 200 + Math.random() * 300,
-              useNativeDriver: true,
-            }),
-          ])
-        )
-      );
-      animations.forEach((a) => a.start());
-      return () => animations.forEach((a) => a.stop());
-    } else {
-      waveformAnims.forEach((anim) => {
-        Animated.timing(anim, {
-          toValue: 0.3,
-          duration: 300,
-          useNativeDriver: true,
-        }).start();
-      });
-    }
-  }, [isPlaying]);
-
-  // Glow animation for playing state
-  useEffect(() => {
-    if (isPlaying) {
-      const glow = Animated.loop(
-        Animated.sequence([
-          Animated.timing(glowAnim, {
-            toValue: 0.8,
-            duration: 1200,
-            useNativeDriver: true,
-          }),
-          Animated.timing(glowAnim, {
-            toValue: 0.3,
-            duration: 1200,
-            useNativeDriver: true,
-          }),
-        ])
-      );
-      glow.start();
-
-      const pulse = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.06,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-        ])
-      );
-      pulse.start();
-
-      return () => {
-        glow.stop();
-        pulse.stop();
-      };
-    } else {
-      pulseAnim.setValue(1);
-      glowAnim.setValue(0.4);
-    }
-  }, [isPlaying]);
+  const handleWaveformLayout = useCallback(
+    (e: { nativeEvent: { layout: { width: number } } }) => {
+      setWaveformWidth(e.nativeEvent.layout.width);
+    },
+    []
+  );
 
   // Load and auto-play audio
   useEffect(() => {
@@ -160,7 +94,7 @@ export function VoiceMomentPlayer({
           duration: 200,
           useNativeDriver: true,
         }),
-        Animated.spring(scaleAnim, {
+        Animated.spring(modalScaleAnim, {
           toValue: 1,
           tension: 200,
           friction: 20,
@@ -173,36 +107,46 @@ export function VoiceMomentPlayer({
         markAsViewed(voiceMoment.id);
       }
 
-      // Load audio
-      loadAudio(voiceMoment.audio_url);
+      // Load audio with generation guard
+      const gen = ++loadGeneration.current;
+      loadAudio(voiceMoment.audio_url, gen);
     } else {
       fadeAnim.setValue(0);
-      scaleAnim.setValue(0.9);
+      modalScaleAnim.setValue(0.9);
       cleanupAudio();
     }
 
     return () => {
+      loadGeneration.current++;
       cleanupAudio();
     };
   }, [visible, voiceMoment?.id]);
 
-  const loadAudio = async (uri: string) => {
+  const loadAudio = async (uri: string, gen: number) => {
     try {
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: false,
         playsInSilentModeIOS: true,
       });
 
+      if (gen !== loadGeneration.current) return;
+
       const { sound } = await Audio.Sound.createAsync(
         { uri },
-        { shouldPlay: true },
+        { shouldPlay: false, progressUpdateIntervalMillis: 50 },
         onPlaybackStatusUpdate
       );
 
+      if (gen !== loadGeneration.current) {
+        // Stale load - cleanup the orphaned sound
+        sound.unloadAsync().catch(() => {});
+        return;
+      }
+
       soundRef.current = sound;
       setLoading(false);
-      setIsPlaying(true);
     } catch (error) {
+      if (gen !== loadGeneration.current) return;
       console.error("Failed to load audio:", error);
       setLoading(false);
     }
@@ -245,7 +189,13 @@ export function VoiceMomentPlayer({
         setIsPlaying(false);
       } else {
         const status = await soundRef.current.getStatusAsync();
-        if (status.isLoaded && status.didJustFinish) {
+        if (!status.isLoaded) return;
+
+        const isAtEnd = status.durationMillis != null &&
+          status.positionMillis >= status.durationMillis - 100;
+
+        if (status.didJustFinish || isAtEnd) {
+          setPlaybackProgress(0);
           await soundRef.current.replayAsync();
         } else {
           await soundRef.current.playAsync();
@@ -264,7 +214,7 @@ export function VoiceMomentPlayer({
         duration: 150,
         useNativeDriver: true,
       }),
-      Animated.timing(scaleAnim, {
+      Animated.timing(modalScaleAnim, {
         toValue: 0.9,
         duration: 150,
         useNativeDriver: true,
@@ -281,12 +231,41 @@ export function VoiceMomentPlayer({
     setReacting(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
+    const isToggleOff = activeReaction === reaction;
+    const emojiScale = reactionScales[reaction];
+
+    // Bounce up immediately for responsiveness
+    Animated.spring(emojiScale, {
+      toValue: 1.4,
+      tension: 300,
+      friction: 6,
+      useNativeDriver: true,
+    }).start();
+
     const success = await reactToVoiceMoment(voiceMoment.id, reaction);
+
+    // Settle based on actual outcome
+    Animated.spring(emojiScale, {
+      toValue: success && !isToggleOff ? 1.08 : 1,
+      tension: 180,
+      friction: 10,
+      useNativeDriver: true,
+    }).start();
+
     if (success) {
-      setActiveReaction(activeReaction === reaction ? null : reaction);
+      // Reset previously selected emoji scale
+      if (activeReaction && activeReaction !== reaction) {
+        Animated.spring(reactionScales[activeReaction], {
+          toValue: 1,
+          tension: 180,
+          friction: 10,
+          useNativeDriver: true,
+        }).start();
+      }
+      setActiveReaction(isToggleOff ? null : reaction);
     }
     setReacting(false);
-  }, [voiceMoment?.id, activeReaction, reacting, reactToVoiceMoment]);
+  }, [voiceMoment?.id, activeReaction, reacting, reactToVoiceMoment, reactionScales]);
 
   const timeRemaining = voiceMoment ? getTimeRemaining(voiceMoment.expires_at) : null;
   const timeRemainingText = timeRemaining
@@ -313,413 +292,347 @@ export function VoiceMomentPlayer({
       onRequestClose={handleClose}
       statusBarTranslucent
     >
-      <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-        <BlurView intensity={90} style={StyleSheet.absoluteFill} tint="dark" />
+      <View style={styles.fullScreen}>
+        {/* Backdrop */}
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeAnim }]}>
+          <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFill}>
+            <TouchableOpacity
+              style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.4)' }]}
+              activeOpacity={1}
+              onPress={handleClose}
+            />
+          </BlurView>
+        </Animated.View>
 
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
-          activeOpacity={1}
-          onPress={handleClose}
-        />
-
+        {/* Content */}
         <Animated.View
           style={[
-            styles.card,
-            { transform: [{ scale: scaleAnim }] },
+            styles.fullScreenContent,
+            {
+              opacity: fadeAnim,
+              transform: [{ scale: modalScaleAnim }],
+            },
           ]}
         >
-          {/* Glass border effect */}
-          <LinearGradient
-            colors={['rgba(0, 240, 255, 0.15)', 'rgba(181, 55, 242, 0.1)', 'rgba(0, 240, 255, 0.05)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.cardBorder}
+          {/* ScrollView - underneath header */}
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={[
+              styles.contentContainer,
+              {
+                paddingTop: insets.top + 130,
+                paddingBottom: insets.bottom + 24,
+              },
+            ]}
+            showsVerticalScrollIndicator={false}
           >
-            <View style={styles.cardContent}>
-              <LinearGradient
-                colors={['#0a0a20', '#0d0d2b', '#0a0a20']}
-                style={styles.cardInner}
+            {/* Player Card */}
+            <View style={styles.section}>
+              <View
+                style={[
+                  styles.playerCard,
+                  { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border },
+                ]}
               >
-                {/* Sender info */}
-                <View style={styles.senderInfo}>
+                {/* Sender row */}
+                <View style={styles.senderRow}>
                   {senderAvatar ? (
-                    <View style={styles.avatarGlow}>
-                      <ExpoImage
-                        source={{ uri: senderAvatar }}
-                        style={styles.senderAvatar}
-                        contentFit="cover"
-                      />
-                    </View>
+                    <ExpoImage
+                      source={{ uri: senderAvatar }}
+                      style={[styles.senderAvatar, { borderColor: theme.colors.glass.border }]}
+                      contentFit="cover"
+                    />
                   ) : (
-                    <View style={styles.avatarGlow}>
-                      <View style={[styles.senderAvatar, styles.senderAvatarPlaceholder]}>
-                        <Ionicons name="person" size={16} color={theme.colors.text.tertiary} />
-                      </View>
+                    <View style={[styles.senderAvatar, styles.senderAvatarPlaceholder, { borderColor: theme.colors.glass.border, backgroundColor: theme.colors.glass.background }]}>
+                      <Ionicons name="person" size={18} color={theme.colors.text.tertiary} />
                     </View>
                   )}
                   <View style={styles.senderText}>
-                    <Text style={styles.senderName}>{senderName}</Text>
-                    <Text style={styles.timeAgo}>{timeRemainingText}</Text>
+                    <Text style={[styles.senderName, { color: theme.colors.text.primary }]}>
+                      {senderName}
+                    </Text>
+                    <Text style={[styles.timeAgo, { color: theme.colors.text.tertiary }]}>
+                      {timeRemainingText}
+                    </Text>
                   </View>
-                  <View style={styles.durationBadge}>
-                    <Ionicons name="mic" size={12} color={colors.neon.cyan} />
-                    <Text style={styles.durationText}>{durationText}</Text>
+                  <View style={[styles.durationBadge, { backgroundColor: accent.primary + '12', borderColor: accent.primary + '25' }]}>
+                    <Ionicons name="mic" size={12} color={accent.primary} />
+                    <Text style={[styles.durationText, { color: accent.primary }]}>
+                      {durationText}
+                    </Text>
                   </View>
                 </View>
 
-                {/* Audio visualization area */}
-                <View style={styles.audioArea}>
+                {/* Audio area */}
+                <View style={[styles.audioArea, { borderTopColor: theme.colors.glass.border }]}>
                   {loading ? (
-                    <ActivityIndicator color={colors.neon.cyan} size="large" />
+                    <ActivityIndicator color={accent.primary} size="large" />
                   ) : (
                     <>
-                      {/* Waveform bars */}
-                      <View style={styles.waveformContainer}>
-                        {waveformAnims.map((anim, i) => {
-                          const distFromCenter = Math.abs(i - NUM_WAVEFORM_BARS / 2) / (NUM_WAVEFORM_BARS / 2);
-                          const maxHeight = 40 * (1 - distFromCenter * 0.6);
-                          return (
-                            <Animated.View
-                              key={i}
-                              style={[
-                                styles.waveformBar,
-                                {
-                                  height: maxHeight,
-                                  transform: [{ scaleY: anim }],
-                                  opacity: playbackProgress > 0
-                                    ? i / NUM_WAVEFORM_BARS <= playbackProgress ? 1 : 0.3
-                                    : isPlaying ? 1 : 0.4,
-                                },
-                              ]}
-                            />
-                          );
-                        })}
+                      {/* Waveform */}
+                      <View
+                        style={styles.waveformContainer}
+                        onLayout={handleWaveformLayout}
+                      >
+                        <StaticWaveform
+                          data={waveformBars}
+                          containerWidth={waveformWidth}
+                          accentColor={accent.primary}
+                          height={WAVEFORM_H}
+                          progress={playbackProgress}
+                        />
                       </View>
 
                       {/* Play/Pause button */}
                       <TouchableOpacity
-                        style={styles.playButton}
+                        style={[
+                          styles.playButton,
+                          { backgroundColor: isPlaying ? accent.primary + '20' : accent.primary },
+                        ]}
                         onPress={togglePlayback}
                         activeOpacity={0.7}
                       >
-                        <Animated.View style={[styles.playButtonGlow, { opacity: glowAnim }]} />
-                        <Animated.View
-                          style={[
-                            styles.playButtonOuter,
-                            { transform: [{ scale: pulseAnim }] },
-                          ]}
-                        >
-                          <LinearGradient
-                            colors={['rgba(0, 240, 255, 0.15)', 'rgba(181, 55, 242, 0.15)']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                            style={styles.playButtonInner}
-                          >
-                            <Ionicons
-                              name={isPlaying ? "pause" : "play"}
-                              size={32}
-                              color="#FFFFFF"
-                              style={isPlaying ? undefined : { marginLeft: 3 }}
-                            />
-                          </LinearGradient>
-                        </Animated.View>
+                        <Ionicons
+                          name={isPlaying ? "pause" : "play"}
+                          size={28}
+                          color={isPlaying ? accent.primary : accent.textOnPrimary}
+                          style={isPlaying ? undefined : { marginLeft: 3 }}
+                        />
                       </TouchableOpacity>
 
-                      {/* Progress bar */}
-                      <View style={styles.progressBarContainer}>
-                        <View style={styles.progressBarBg}>
-                          <LinearGradient
-                            colors={[colors.neon.cyan, colors.neon.purple]}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={[
-                              styles.progressBarFill,
-                              { width: `${playbackProgress * 100}%` },
-                            ]}
-                          />
-                        </View>
-                        {/* Glow dot at progress position */}
-                        {playbackProgress > 0 && playbackProgress < 1 && (
-                          <View
-                            style={[
-                              styles.progressDot,
-                              { left: `${playbackProgress * 100}%` },
-                            ]}
-                          />
-                        )}
-                      </View>
                     </>
                   )}
                 </View>
-
-                {/* Caption */}
-                {voiceMoment?.caption && (
-                  <Text style={styles.caption}>{voiceMoment.caption}</Text>
-                )}
-
-                {/* Reactions row */}
-                <View style={styles.reactionsRow}>
-                  {REACTION_OPTIONS.map((option) => {
-                    const isActive = activeReaction === option.key;
-                    return (
-                      <TouchableOpacity
-                        key={option.key}
-                        style={[
-                          styles.reactionButton,
-                          isActive && styles.reactionButtonActive,
-                        ]}
-                        onPress={() => handleReact(option.key)}
-                        activeOpacity={0.7}
-                        disabled={reacting}
-                      >
-                        <Text style={[styles.reactionEmoji, isActive && styles.reactionEmojiActive]}>
-                          {option.emoji}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-
-                {/* Close button */}
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={handleClose}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="close" size={20} color="rgba(255,255,255,0.6)" />
-                </TouchableOpacity>
-              </LinearGradient>
+              </View>
             </View>
+
+            {/* Caption */}
+            {voiceMoment?.caption && (
+              <Text style={[styles.caption, { color: theme.colors.text.primary }]}>
+                {voiceMoment.caption}
+              </Text>
+            )}
+
+            {/* Reactions */}
+            <View style={styles.reactionsSection}>
+              <View style={styles.reactionsRow}>
+                {REACTION_OPTIONS.map((option) => {
+                  const isActive = activeReaction === option.key;
+                  const isLocked = activeReaction != null;
+                  return (
+                    <TouchableOpacity
+                      key={option.key}
+                      style={[styles.reactionTouchTarget, isLocked && !isActive && { opacity: 0.3 }]}
+                      onPress={() => handleReact(option.key)}
+                      activeOpacity={0.6}
+                      disabled={reacting || isLocked}
+                    >
+                      <Animated.Text
+                        style={[
+                          styles.reactionEmoji,
+                          { transform: [{ scale: reactionScales[option.key] }] },
+                        ]}
+                      >
+                        {option.emoji}
+                      </Animated.Text>
+                      <View
+                        style={[
+                          styles.reactionActiveDot,
+                          {
+                            backgroundColor: accent.primary,
+                            opacity: isActive ? 1 : 0,
+                            transform: [{ scale: isActive ? 1 : 0 }],
+                          },
+                        ]}
+                      />
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </ScrollView>
+
+          {/* Header with gradient fade - absolute positioned on top */}
+          <LinearGradient
+            colors={['rgba(0,0,0,0.95)', 'rgba(0,0,0,0.85)', 'rgba(0,0,0,0.5)', 'transparent']}
+            locations={[0, 0.4, 0.7, 1]}
+            style={[styles.headerOverlay, { paddingTop: insets.top + 8 }]}
+            pointerEvents="box-none"
+          >
+            <View style={styles.header} pointerEvents="box-none">
+              <TouchableOpacity
+                style={[styles.closeButton, { backgroundColor: theme.colors.glass.background }]}
+                onPress={handleClose}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close" size={22} color={theme.colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
+              Voice Moment
+            </Text>
           </LinearGradient>
         </Animated.View>
-      </Animated.View>
+      </View>
     </Modal>
   );
 }
 
-const createStyles = (theme: ReturnType<typeof useTheme>["theme"]) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    card: {
-      width: SCREEN_WIDTH - 40,
-      borderRadius: radius.xl,
-      overflow: "hidden",
-    },
-    cardBorder: {
-      borderRadius: radius.xl,
-      padding: 1,
-    },
-    cardContent: {
-      borderRadius: radius.xl - 1,
-      overflow: "hidden",
-    },
-    cardInner: {
-      paddingHorizontal: spacing.lg,
-      paddingTop: 24,
-      paddingBottom: 20,
-    },
+const styles = StyleSheet.create({
+  fullScreen: {
+    flex: 1,
+  },
+  fullScreenContent: {
+    flex: 1,
+  },
 
-    // Sender
-    senderInfo: {
-      flexDirection: "row",
-      alignItems: "center",
-    },
-    avatarGlow: {
-      borderRadius: 22,
-      shadowColor: colors.neon.cyan,
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-    },
-    senderAvatar: {
-      width: 42,
-      height: 42,
-      borderRadius: 21,
-      borderWidth: 2,
-      borderColor: 'rgba(0, 240, 255, 0.3)',
-    },
-    senderAvatarPlaceholder: {
-      backgroundColor: theme.colors.glass.background,
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    senderText: {
-      marginLeft: spacing.sm + 2,
-      flex: 1,
-    },
-    senderName: {
-      fontSize: typography.size.md,
-      fontFamily: typography.displayBold,
-      fontWeight: "700",
-      color: "#FFFFFF",
-    },
-    timeAgo: {
-      fontSize: typography.size.xs,
-      fontFamily: typography.body,
-      color: "rgba(255,255,255,0.5)",
-      marginTop: 2,
-    },
-    durationBadge: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: "rgba(0, 240, 255, 0.08)",
-      borderRadius: 10,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      gap: 4,
-      borderWidth: 1,
-      borderColor: "rgba(0, 240, 255, 0.15)",
-    },
-    durationText: {
-      fontSize: typography.size.xs,
-      fontFamily: typography.body,
-      color: "rgba(0, 240, 255, 0.8)",
-    },
+  // Header
+  headerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 24,
+    paddingBottom: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+    marginBottom: 20,
+  },
 
-    // Audio area
-    audioArea: {
-      alignItems: "center",
-      justifyContent: "center",
-      paddingTop: spacing.xl,
-      paddingBottom: spacing.lg,
-    },
+  // Scroll
+  scrollView: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingHorizontal: 24,
+  },
+  section: {
+    marginBottom: 24,
+  },
 
-    // Waveform
-    waveformContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      height: 44,
-      gap: 2.5,
-      marginBottom: spacing.lg,
-      width: "100%",
-      paddingHorizontal: spacing.sm,
-    },
-    waveformBar: {
-      flex: 1,
-      borderRadius: 2,
-      backgroundColor: colors.neon.cyan,
-    },
+  // Player card
+  playerCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
 
-    // Play button
-    playButton: {
-      marginBottom: spacing.xl,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    playButtonGlow: {
-      position: "absolute",
-      width: 100,
-      height: 100,
-      borderRadius: 50,
-      backgroundColor: colors.neon.cyan,
-      shadowColor: colors.neon.cyan,
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.5,
-      shadowRadius: 24,
-    },
-    playButtonOuter: {
-      width: 72,
-      height: 72,
-      borderRadius: 36,
-      borderWidth: 2,
-      borderColor: 'rgba(0, 240, 255, 0.4)',
-      overflow: "hidden",
-    },
-    playButtonInner: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-    },
+  // Sender row
+  senderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    gap: 12,
+  },
+  senderAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
+  },
+  senderAvatarPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  senderText: {
+    flex: 1,
+  },
+  senderName: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  timeAgo: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  durationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    gap: 4,
+    borderWidth: 1,
+  },
+  durationText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
 
-    // Progress bar
-    progressBarContainer: {
-      width: "100%",
-      paddingHorizontal: spacing.xs,
-      position: "relative",
-    },
-    progressBarBg: {
-      height: 3,
-      backgroundColor: "rgba(255,255,255,0.08)",
-      borderRadius: 2,
-      overflow: "hidden",
-    },
-    progressBarFill: {
-      height: "100%",
-      borderRadius: 2,
-    },
-    progressDot: {
-      position: "absolute",
-      top: -3,
-      width: 9,
-      height: 9,
-      borderRadius: 5,
-      backgroundColor: colors.neon.cyan,
-      marginLeft: -4.5,
-      shadowColor: colors.neon.cyan,
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.8,
-      shadowRadius: 6,
-    },
+  // Audio area
+  audioArea: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
+  },
 
-    // Caption
-    caption: {
-      fontSize: typography.size.lg,
-      fontFamily: typography.displayMedium,
-      fontWeight: "500",
-      color: "#FFFFFF",
-      textAlign: "center",
-      marginTop: spacing.lg,
-      marginBottom: spacing.md,
-    },
+  // Waveform
+  waveformContainer: {
+    width: '100%',
+    height: WAVEFORM_H,
+    marginBottom: 16,
+  },
 
-    // Reactions
-    reactionsRow: {
-      flexDirection: "row",
-      justifyContent: "center",
-      gap: 10,
-      marginTop: spacing.sm,
-      marginBottom: spacing.md,
-    },
-    reactionButton: {
-      width: 46,
-      height: 46,
-      borderRadius: 23,
-      backgroundColor: "rgba(255,255,255,0.06)",
-      justifyContent: "center",
-      alignItems: "center",
-      borderWidth: 1,
-      borderColor: "rgba(255,255,255,0.08)",
-    },
-    reactionButtonActive: {
-      backgroundColor: "rgba(0, 240, 255, 0.12)",
-      borderColor: "rgba(0, 240, 255, 0.4)",
-      shadowColor: colors.neon.cyan,
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.4,
-      shadowRadius: 8,
-    },
-    reactionEmoji: {
-      fontSize: 20,
-    },
-    reactionEmojiActive: {
-      fontSize: 22,
-    },
+  // Play button
+  playButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
 
-    // Close button
-    closeButton: {
-      alignSelf: "center",
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: "rgba(255,255,255,0.06)",
-      borderWidth: 1,
-      borderColor: "rgba(255,255,255,0.1)",
-      justifyContent: "center",
-      alignItems: "center",
-    },
-  });
+
+  // Caption
+  caption: {
+    fontSize: 17,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 24,
+    paddingHorizontal: 8,
+  },
+
+  // Reactions
+  reactionsSection: {
+    marginBottom: 24,
+  },
+  reactionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    paddingVertical: 8,
+  },
+  reactionTouchTarget: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    height: 58,
+  },
+  reactionEmoji: {
+    fontSize: 30,
+  },
+  reactionActiveDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    marginTop: 6,
+  },
+});

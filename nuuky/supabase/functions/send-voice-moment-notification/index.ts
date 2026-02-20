@@ -102,15 +102,25 @@ serve(async (req) => {
       priority: 'high' as const,
     };
 
-    const sent = await sendExpoNotification(receiver.fcm_token, notification);
+    // Push notification is best-effort - don't fail the whole request if it doesn't send
+    let sent = false;
+    try {
+      sent = await sendExpoNotification(receiver.fcm_token, notification);
+    } catch (pushError) {
+      console.error('Push notification error:', pushError);
+    }
 
-    await sendSilentNotification(receiver.fcm_token, {
-      sync_type: 'sync_notifications',
-      notification_type: 'voice_moment',
-      sender_id: sender_id,
-      sender_name: sender.display_name,
-      voice_moment_id: voice_moment_id,
-    });
+    try {
+      await sendSilentNotification(receiver.fcm_token, {
+        sync_type: 'sync_notifications',
+        notification_type: 'voice_moment',
+        sender_id: sender_id,
+        sender_name: sender.display_name,
+        voice_moment_id: voice_moment_id,
+      });
+    } catch (silentError) {
+      console.error('Silent notification error:', silentError);
+    }
 
     const { error: notificationError } = await supabase
       .from('notifications')
@@ -128,19 +138,11 @@ serve(async (req) => {
       console.error('Failed to insert notification:', notificationError);
     }
 
-    if (sent) {
-      console.log(`✓ Voice moment notification sent to ${receiver.display_name}`);
-      return new Response(
-        JSON.stringify({ message: 'Notification sent', sent: true }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      );
-    } else {
-      console.error(`✗ Failed to send voice moment notification to ${receiver.display_name}`);
-      return new Response(
-        JSON.stringify({ message: 'Failed to send notification', sent: false }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+    console.log(`Voice moment notification: push=${sent}, db=${!notificationError}`);
+    return new Response(
+      JSON.stringify({ message: 'Processed', sent, saved: !notificationError }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
 
   } catch (error) {
     if (error instanceof AuthError) {
