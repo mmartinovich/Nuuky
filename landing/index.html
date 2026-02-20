@@ -331,6 +331,8 @@
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       cursor: pointer;
+      position: relative;
+      z-index: 100;
     }
 
     @supports not (backdrop-filter: blur(20px)) {
@@ -469,25 +471,23 @@
     .feature-card:nth-child(4),
     .feature-card:nth-child(5) { grid-column: span 2; }
 
-    /* Animated conic-gradient border - visible on hover */
+    /* Mouse-tracking gradient border - visible on hover */
     .feature-card::before {
       content: '';
       position: absolute;
       inset: 0;
       border-radius: inherit;
       padding: 1px;
-      background: conic-gradient(
-        from var(--border-angle),
-        transparent 25%,
-        var(--accent, #3FCBFF) 50%,
-        transparent 75%
+      background: radial-gradient(
+        500px circle at var(--mouse-x) var(--mouse-y),
+        var(--accent, #3FCBFF),
+        transparent 60%
       );
       -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
       -webkit-mask-composite: xor;
       mask-composite: exclude;
       opacity: 0;
       transition: opacity 0.5s ease;
-      animation: rotate-border 4s linear infinite;
     }
 
     .feature-card:hover::before { opacity: 1; }
@@ -819,6 +819,60 @@
       50% { transform: scaleY(0.5); opacity: 0.35; }
     }
 
+    /* ---- Nudge visual ---- */
+    .vis-nudge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .vis-nudge-orb {
+      position: relative;
+      width: 48px; height: 48px;
+      flex-shrink: 0;
+    }
+    .vis-nudge-orb img {
+      width: 100%; height: 100%;
+      object-fit: contain;
+      border-radius: 50%;
+      position: relative;
+      z-index: 1;
+    }
+    .vis-nudge-trail {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      justify-content: center;
+    }
+    .vis-nudge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #ff1aff;
+      opacity: 0.3;
+      animation: nudge-travel 1.8s ease-in-out infinite;
+    }
+    .vis-nudge-dot:nth-child(1) { animation-delay: 0s; }
+    .vis-nudge-dot:nth-child(2) { animation-delay: 0.25s; }
+    .vis-nudge-dot:nth-child(3) { animation-delay: 0.5s; }
+    @keyframes nudge-travel {
+      0%, 100% { opacity: 0.15; transform: scale(0.8); }
+      50% { opacity: 0.8; transform: scale(1.3); box-shadow: 0 0 8px rgba(255, 26, 255, 0.6); }
+    }
+    .vis-nudge-ripple {
+      position: absolute;
+      inset: -8px;
+      border: 1.5px solid rgba(255, 26, 255, 0.4);
+      border-radius: 50%;
+      animation: nudge-ripple 2s ease-out infinite 0.6s;
+    }
+    .vis-nudge-ripple--2 {
+      animation-delay: 1.2s;
+    }
+    @keyframes nudge-ripple {
+      0% { transform: scale(0.8); opacity: 0.6; }
+      100% { transform: scale(1.8); opacity: 0; }
+    }
+
     /* ---- Pause all card animations until hover ---- */
     .feature-card .icon-orbit .orb-dot,
     .feature-card .icon-pulse .pulse-ring,
@@ -826,7 +880,9 @@
     .feature-card .vis-orbit-core,
     .feature-card .vis-bars span,
     .feature-card .vis-vm-wave span,
-    .feature-card .vis-mood-char img {
+    .feature-card .vis-mood-char img,
+    .feature-card .vis-nudge-dot,
+    .feature-card .vis-nudge-ripple {
       animation-play-state: paused !important;
     }
     .feature-card:hover .icon-orbit .orb-dot,
@@ -835,7 +891,9 @@
     .feature-card:hover .vis-orbit-core,
     .feature-card:hover .vis-bars span,
     .feature-card:hover .vis-vm-wave span,
-    .feature-card:hover .vis-mood-char img {
+    .feature-card:hover .vis-mood-char img,
+    .feature-card:hover .vis-nudge-dot,
+    .feature-card:hover .vis-nudge-ripple {
       animation-play-state: running !important;
     }
 
@@ -1290,6 +1348,21 @@
             </div>
             <h3 class="feature-title">Silent Nudges</h3>
             <p class="feature-desc">Send a gentle "thinking of you" signal. No reply expected, no read receipts.</p>
+            <div class="vis-nudge" style="margin-top: 24px;">
+              <div class="vis-nudge-orb vis-nudge-orb--sender">
+                <img src="assets/chill.png" alt="" loading="lazy">
+              </div>
+              <div class="vis-nudge-trail">
+                <span class="vis-nudge-dot"></span>
+                <span class="vis-nudge-dot"></span>
+                <span class="vis-nudge-dot"></span>
+              </div>
+              <div class="vis-nudge-orb vis-nudge-orb--receiver">
+                <img src="assets/good.png" alt="" loading="lazy">
+                <div class="vis-nudge-ripple"></div>
+                <div class="vis-nudge-ripple vis-nudge-ripple--2"></div>
+              </div>
+            </div>
           </div>
         </div>
 
