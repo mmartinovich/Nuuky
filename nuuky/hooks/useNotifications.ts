@@ -175,7 +175,6 @@ export const useNotifications = () => {
         }
         break;
       case 'voice_moment':
-      case 'voice_moment_reaction':
         // Navigate to home with voice_moment_id param to open the player
         if (notification.data?.voice_moment_id) {
           router.push({
@@ -183,6 +182,12 @@ export const useNotifications = () => {
             params: { voice_moment_id: notification.data.voice_moment_id },
           });
         } else if (pathname !== '/' && pathname !== '/(main)') {
+          router.push('/(main)');
+        }
+        break;
+      case 'voice_moment_reaction':
+        // Reaction notifications are informational - just navigate home
+        if (pathname !== '/' && pathname !== '/(main)') {
           router.push('/(main)');
         }
         break;

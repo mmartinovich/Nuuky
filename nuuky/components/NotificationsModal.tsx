@@ -310,8 +310,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                     });
                     return;
                   }
-                  // Handle voice moment directly without navigation
-                  if ((notification.type === 'voice_moment' || notification.type === 'voice_moment_reaction') && notification.data?.voice_moment_id && onOpenVoiceMoment) {
+                  // Handle voice moment directly without navigation (reactions are informational only)
+                  if (notification.type === 'voice_moment' && notification.data?.voice_moment_id && onOpenVoiceMoment) {
                     // Voice moments expire 24h after creation
                     const voiceMomentExpired = new Date(notification.created_at).getTime() + 24 * 60 * 60 * 1000 < Date.now();
                     if (voiceMomentExpired) {
