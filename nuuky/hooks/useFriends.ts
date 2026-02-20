@@ -53,7 +53,8 @@ export const useFriends = () => {
               id,
               emoji,
               text,
-              color
+              color,
+              image_url
             ),
             mood_selfie:mood_selfie_id (
               id,
@@ -117,7 +118,8 @@ export const useFriends = () => {
                 id,
                 emoji,
                 text,
-                color
+                color,
+                image_url
               ),
               mood_selfie:mood_selfie_id (
                 id,

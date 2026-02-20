@@ -120,6 +120,7 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, onLongPress
             if (!user) return null;
             const moodColors = getMoodColor(user.mood);
             const isOnline = isUserTrulyOnline(user.is_online, user.last_seen_at);
+            const displayImageUrl = user.custom_mood?.image_url || user.avatar_url;
 
             return (
               <View
@@ -129,9 +130,9 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, onLongPress
                   { marginLeft: index > 0 ? -10 : 0, zIndex: 10 - index }
                 ]}
               >
-                {user.avatar_url ? (
+                {displayImageUrl ? (
                   <CachedImage
-                    source={{ uri: user.avatar_url }}
+                    source={{ uri: displayImageUrl }}
                     style={[
                       styles.avatar,
                       dynamicStyles.avatar,
@@ -162,6 +163,7 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, onLongPress
           {displayedAway.map((participant, index) => {
             const user = participant.user;
             if (!user) return null;
+            const awayDisplayImageUrl = user.custom_mood?.image_url || user.avatar_url;
 
             return (
               <View
@@ -171,9 +173,9 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, onLongPress
                   { marginLeft: index > 0 ? -8 : 0, zIndex: 5 - index, opacity: 0.45 }
                 ]}
               >
-                {user.avatar_url ? (
+                {awayDisplayImageUrl ? (
                   <CachedImage
-                    source={{ uri: user.avatar_url }}
+                    source={{ uri: awayDisplayImageUrl }}
                     style={[styles.avatarSmall, dynamicStyles.avatarSmall]}
                     cachePolicy="memory-disk"
                     contentFit="cover"
@@ -350,7 +352,8 @@ const participantsEqual = (
       a[i].id !== b[i].id ||
       a[i].user?.is_online !== b[i].user?.is_online ||
       a[i].user?.last_seen_at !== b[i].user?.last_seen_at ||
-      a[i].user?.default_room_id !== b[i].user?.default_room_id
+      a[i].user?.default_room_id !== b[i].user?.default_room_id ||
+      a[i].user?.custom_mood?.image_url !== b[i].user?.custom_mood?.image_url
     ) {
       return false;
     }

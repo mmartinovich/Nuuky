@@ -4,7 +4,7 @@ import { Image as CachedImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
-import { User, Streak, MoodSelfie } from '../types';
+import { User, Streak } from '../types';
 import { getMoodColor, getCustomMoodColor } from '../lib/theme';
 import { useLowPowerMode } from '../stores/appStore';
 import { isUserTrulyOnline } from '../lib/utils';
@@ -289,11 +289,10 @@ function FriendParticleComponent({
     [friend.custom_mood?.color, friend.mood]
   );
 
-  // Check if friend has an active mood selfie (not expired)
-  const hasSelfie = useMemo(() => {
-    if (!friend.mood_selfie) return false;
-    return new Date(friend.mood_selfie.expires_at) > new Date();
-  }, [friend.mood_selfie]);
+  // Check if friend has a custom mood image
+  const hasCustomMoodImage = useMemo(() => {
+    return !!friend.custom_mood?.image_url;
+  }, [friend.custom_mood?.image_url]);
 
   // Get initials from display name
   const getInitials = (name: string) => {
@@ -422,17 +421,17 @@ function FriendParticleComponent({
             />
           ))}
           
-          {/* Avatar circle - on top (shows selfie when active) */}
+          {/* Avatar circle - on top (shows custom mood image when active) */}
           <View style={styles.avatarContainer}>
-            {hasSelfie && friend.mood_selfie ? (
+            {hasCustomMoodImage && friend.custom_mood ? (
               <>
                 <CachedImage
-                  source={{ uri: friend.mood_selfie.image_url }}
+                  source={{ uri: friend.custom_mood.image_url! }}
                   style={styles.avatar}
                   cachePolicy="memory-disk"
                   contentFit="cover"
                   transition={0}
-                  recyclingKey={`selfie-${friend.id}`}
+                  recyclingKey={`mood-img-${friend.id}`}
                 />
                 {/* Initials behind image as instant fallback while image loads from disk */}
                 <View style={[styles.avatarPlaceholder, { backgroundColor: `${moodColors.base}30`, position: 'absolute', width: '100%', height: '100%', zIndex: 0 }]}>
@@ -461,8 +460,8 @@ function FriendParticleComponent({
             )}
           </View>
 
-          {/* Camera badge for active selfie */}
-          {hasSelfie && (
+          {/* Camera badge for custom mood image */}
+          {hasCustomMoodImage && (
             <View style={styles.selfieBadge}>
               <Ionicons name="camera" size={10} color="#FFFFFF" />
             </View>
@@ -514,11 +513,10 @@ export const FriendParticle = memo(FriendParticleComponent, (prevProps, nextProp
     prevProps.friend.id === nextProps.friend.id &&
     prevProps.friend.mood === nextProps.friend.mood &&
     prevProps.friend.custom_mood_id === nextProps.friend.custom_mood_id &&
+    prevProps.friend.custom_mood?.image_url === nextProps.friend.custom_mood?.image_url &&
     prevProps.friend.avatar_url === nextProps.friend.avatar_url &&
     prevProps.friend.is_online === nextProps.friend.is_online &&
     prevProps.friend.last_seen_at === nextProps.friend.last_seen_at &&
-    prevProps.friend.mood_selfie?.id === nextProps.friend.mood_selfie?.id &&
-    prevProps.friend.mood_selfie?.expires_at === nextProps.friend.mood_selfie?.expires_at &&
     prevProps.position.x === nextProps.position.x &&
     prevProps.position.y === nextProps.position.y &&
     prevProps.hasActiveFlare === nextProps.hasActiveFlare &&

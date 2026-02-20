@@ -87,7 +87,7 @@ import { NotificationsModal } from "../../components/NotificationsModal";
 import { useLofiMusic } from "../../hooks/useLofiMusic";
 import { OrbitEmptyState } from "../../components/OrbitEmptyState";
 import { useInvite } from "../../hooks/useInvite";
-import { useMoodSelfie } from "../../hooks/useMoodSelfie";
+// useMoodSelfie removed — mood images now handled via useCustomMood
 import { usePhotoNudge } from "../../hooks/usePhotoNudge";
 import { useVoiceMoment } from "../../hooks/useVoiceMoment";
 import { PhotoNudgeViewer } from "../../components/PhotoNudgeViewer";
@@ -111,7 +111,7 @@ export default function QuantumOrbitScreen() {
   const activeCustomMood = useActiveCustomMood();
   const setFriends = useAppStore((s) => s.setFriends);
   const { currentMood, changeMood } = useMood();
-  const { customMoods, createCustomMood, selectCustomMood, deleteCustomMood } = useCustomMood();
+  const { customMoods, createCustomMood, selectCustomMood, deleteCustomMood, captureMoodImage, pickMoodImage, imageLoading: moodImageLoading } = useCustomMood();
   const { sendNudge } = useNudge();
   const { sendCallMe } = useCallMe();
   const { sendFlare, activeFlares, myActiveFlare } = useFlare();
@@ -179,8 +179,7 @@ export default function QuantumOrbitScreen() {
   // Invite for empty state
   const { shareInvite } = useInvite();
 
-  // Mood selfie
-  const { activeSelfie, captureSelfie, pickFromLibrary, deleteSelfie, fetchActiveSelfie, loading: selfieLoading } = useMoodSelfie();
+  // Mood selfie — no longer used, mood images handled via useCustomMood
 
   // Photo nudge
   const { fetchPhotoNudge } = usePhotoNudge();
@@ -193,19 +192,13 @@ export default function QuantumOrbitScreen() {
     soundReactionsRef.current = soundReactions;
   }, [soundReactions]);
 
-  // Fetch active selfie on mount
+  // Prefetch custom mood image for instant loading
   useEffect(() => {
-    if (currentUser) {
-      fetchActiveSelfie();
+    const moodImageUrl = activeCustomMood?.image_url;
+    if (moodImageUrl) {
+      CachedImage.prefetch(moodImageUrl);
     }
-  }, [currentUser?.id]);
-
-  // Prefetch selfie image for instant loading in mood picker
-  useEffect(() => {
-    if (activeSelfie?.image_url) {
-      CachedImage.prefetch(activeSelfie.image_url);
-    }
-  }, [activeSelfie?.image_url]);
+  }, [activeCustomMood?.image_url]);
 
   const { unreadCount: notificationCount } = useNotifications();
   const totalBadgeCount = notificationCount + roomInvites.length;
@@ -511,9 +504,17 @@ export default function QuantumOrbitScreen() {
             id,
             display_name,
             mood,
+            custom_mood_id,
             is_online,
             last_seen_at,
-            avatar_url
+            avatar_url,
+            custom_mood:custom_mood_id (
+              id,
+              emoji,
+              text,
+              color,
+              image_url
+            )
           )
         `,
         )
@@ -700,10 +701,10 @@ export default function QuantumOrbitScreen() {
     <RNAnimated.View style={[styles.container, { backgroundColor: theme.colors.bg.primary, opacity: fadeAnim }]}>
       <StatusBar barStyle={"light-content"} />
 
-      {/* Hidden preload of selfie image for instant display in mood picker */}
-      {activeSelfie?.image_url && (
+      {/* Hidden preload of custom mood image for instant display */}
+      {activeCustomMood?.image_url && (
         <CachedImage
-          source={{ uri: activeSelfie.image_url }}
+          source={{ uri: activeCustomMood.image_url }}
           style={{ width: 1, height: 1, position: 'absolute', opacity: 0 }}
           cachePolicy="memory-disk"
         />
@@ -727,7 +728,6 @@ export default function QuantumOrbitScreen() {
         hasActiveFlare={!!myActiveFlare}
         mood={currentUser?.mood}
         customMood={activeCustomMood}
-        moodSelfie={activeSelfie}
         isCustomMoodActive={!!activeCustomMood}
         showHint={showHint}
         statusText={activeCustomMood ? (activeCustomMood.text || undefined) : currentVibe}
@@ -823,14 +823,12 @@ export default function QuantumOrbitScreen() {
           const mood = customMoods[0] || activeCustomMood;
           if (mood) selectCustomMood(mood.id);
         }}
-        onSaveCustomMood={async (emoji, text, color) => {
-          await createCustomMood(emoji, text, color);
+        onSaveCustomMood={async (emoji, text, color, imageUrl) => {
+          await createCustomMood(emoji, text, color, imageUrl);
         }}
-        moodSelfie={activeSelfie}
-        onCaptureSelfie={captureSelfie}
-        onPickFromLibrary={pickFromLibrary}
-        onDeleteSelfie={deleteSelfie}
-        selfieLoading={selfieLoading}
+        onCaptureMoodImage={captureMoodImage}
+        onPickMoodImage={pickMoodImage}
+        imageLoading={moodImageLoading}
         />
       )}
 

@@ -6,7 +6,7 @@ import { BlurView } from "expo-blur";
 import Svg, { Defs, RadialGradient, Stop, Circle } from "react-native-svg";
 import * as Haptics from "expo-haptics";
 import { getMoodImage } from "../lib/theme";
-import { CustomMood, MoodSelfie } from "../types";
+import { CustomMood } from "../types";
 import { useTheme } from "../hooks/useTheme";
 import { useLowPowerMode } from "../stores/appStore";
 
@@ -22,7 +22,6 @@ interface CentralOrbProps {
   hasActiveFlare: boolean;
   mood?: "good" | "neutral" | "not_great" | "reach_out";
   customMood?: CustomMood | null;
-  moodSelfie?: MoodSelfie | null;
   isCustomMoodActive?: boolean;
   showHint?: boolean;
   statusText?: string;
@@ -35,7 +34,6 @@ function CentralOrbComponent({
   hasActiveFlare,
   mood = "neutral",
   customMood,
-  moodSelfie,
   isCustomMoodActive = false,
   showHint = false,
   statusText,
@@ -349,11 +347,10 @@ function CentralOrbComponent({
 
   const moodImage = getMoodImage(mood);
 
-  // Check if mood selfie should be shown (active, not expired, AND custom mood is selected)
-  const showSelfie = useMemo(() => {
-    if (!moodSelfie || !isCustomMoodActive) return false;
-    return new Date(moodSelfie.expires_at) > new Date();
-  }, [moodSelfie, isCustomMoodActive]);
+  // Check if custom mood image should be shown
+  const showMoodImage = useMemo(() => {
+    return isCustomMoodActive && !!customMood?.image_url;
+  }, [isCustomMoodActive, customMood?.image_url]);
 
   return (
     <Animated.View
@@ -578,20 +575,20 @@ function CentralOrbComponent({
               />
 
               {/* All content pre-rendered, toggle visibility for instant switching */}
-              {/* Selfie - always render if available to keep in memory */}
-              {moodSelfie?.image_url && (
-                <View style={[styles.moodContentAbsolute, { opacity: showSelfie ? 1 : 0, zIndex: showSelfie ? 10 : 0 }]} pointerEvents={showSelfie ? 'auto' : 'none'}>
-                  <CachedImage source={{ uri: moodSelfie.image_url }} style={styles.selfieImage} cachePolicy="memory-disk" contentFit="cover" />
+              {/* Custom mood image - shows when custom mood with image is active */}
+              {customMood?.image_url && (
+                <View style={[styles.moodContentAbsolute, { opacity: showMoodImage ? 1 : 0, zIndex: showMoodImage ? 10 : 0 }]} pointerEvents={showMoodImage ? 'auto' : 'none'}>
+                  <CachedImage source={{ uri: customMood.image_url }} style={styles.selfieImage} cachePolicy="memory-disk" contentFit="cover" />
                 </View>
               )}
-              {/* Custom emoji */}
+              {/* Custom emoji - shows when custom mood is active but has no image */}
               {customMood && (
-                <View style={[styles.moodContentAbsolute, { opacity: !showSelfie && isCustomMoodActive ? 1 : 0, zIndex: !showSelfie && isCustomMoodActive ? 10 : 0 }]} pointerEvents={!showSelfie && isCustomMoodActive ? 'auto' : 'none'}>
+                <View style={[styles.moodContentAbsolute, { opacity: !showMoodImage && isCustomMoodActive ? 1 : 0, zIndex: !showMoodImage && isCustomMoodActive ? 10 : 0 }]} pointerEvents={!showMoodImage && isCustomMoodActive ? 'auto' : 'none'}>
                   <Text style={styles.customMoodEmoji}>{customMood.emoji}</Text>
                 </View>
               )}
               {/* Preset mood - always render */}
-              <View style={[styles.moodContentAbsolute, { opacity: !showSelfie && !isCustomMoodActive ? 1 : 0, zIndex: !showSelfie && !isCustomMoodActive ? 10 : 0 }]} pointerEvents={!showSelfie && !isCustomMoodActive ? 'auto' : 'none'}>
+              <View style={[styles.moodContentAbsolute, { opacity: !showMoodImage && !isCustomMoodActive ? 1 : 0, zIndex: !showMoodImage && !isCustomMoodActive ? 10 : 0 }]} pointerEvents={!showMoodImage && !isCustomMoodActive ? 'auto' : 'none'}>
                 <CachedImage source={moodImage} style={styles.moodImage} contentFit="contain" />
               </View>
             </LinearGradient>
@@ -614,8 +611,7 @@ export const CentralOrb = memo(CentralOrbComponent, (prevProps, nextProps) => {
     prevProps.hasActiveFlare === nextProps.hasActiveFlare &&
     prevProps.showHint === nextProps.showHint &&
     prevProps.customMood?.id === nextProps.customMood?.id &&
-    prevProps.moodSelfie?.id === nextProps.moodSelfie?.id &&
-    prevProps.moodSelfie?.expires_at === nextProps.moodSelfie?.expires_at &&
+    prevProps.customMood?.image_url === nextProps.customMood?.image_url &&
     prevProps.isCustomMoodActive === nextProps.isCustomMoodActive &&
     prevProps.statusText === nextProps.statusText &&
     prevProps.onPress === nextProps.onPress

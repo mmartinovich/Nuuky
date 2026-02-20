@@ -7,6 +7,7 @@ export interface CustomMood {
   emoji: string;
   text: string;
   color: string;
+  image_url?: string;
   created_at: string;
   last_used_at: string;
 }

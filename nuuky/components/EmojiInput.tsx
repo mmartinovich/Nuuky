@@ -43,7 +43,6 @@ export const EmojiInput: React.FC<EmojiInputProps> = ({
       const matches = [...text.matchAll(emojiRegex)];
       const lastEmoji = matches[matches.length - 1]?.[0];
       if (lastEmoji) {
-        if (hasSelfie) onDeleteSelfie?.();
         onChangeEmoji(lastEmoji);
         Keyboard.dismiss();
         return;
@@ -164,7 +163,6 @@ export const EmojiInput: React.FC<EmojiInputProps> = ({
                 },
               ]}
               onPress={() => {
-                if (hasSelfie) onDeleteSelfie?.();
                 onChangeEmoji(emoji);
               }}
               activeOpacity={0.7}

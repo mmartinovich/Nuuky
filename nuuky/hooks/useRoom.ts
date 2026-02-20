@@ -205,7 +205,8 @@ export const useRoom = () => {
                 id,
                 emoji,
                 text,
-                color
+                color,
+                image_url
               )
             )
           )
@@ -243,7 +244,8 @@ export const useRoom = () => {
               id,
               emoji,
               text,
-              color
+              color,
+              image_url
             )
           )
         `)

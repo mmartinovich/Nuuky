@@ -5,7 +5,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { PresetMood, CustomMood, MoodSelfie } from '../types';
+import { PresetMood, CustomMood } from '../types';
 import { getMoodImage, getMoodColor, getCustomMoodColor, radius, CUSTOM_MOOD_NEUTRAL_COLOR } from '../lib/theme';
 import { useTheme } from '../hooks/useTheme';
 import { EmojiInput } from './EmojiInput';
@@ -35,13 +35,11 @@ interface MoodPickerProps {
   customMood?: CustomMood | null;
   isCustomMoodActive?: boolean;
   onSelectCustomMood?: () => void;
-  onSaveCustomMood?: (emoji: string, text: string, color: string) => void | Promise<void>;
+  onSaveCustomMood?: (emoji: string, text: string, color: string, imageUrl?: string) => void | Promise<void>;
   originPoint?: { x: number; y: number };
-  moodSelfie?: MoodSelfie | null;
-  onCaptureSelfie?: () => Promise<boolean>;
-  onPickFromLibrary?: () => Promise<boolean>;
-  onDeleteSelfie?: () => void;
-  selfieLoading?: boolean;
+  onCaptureMoodImage?: () => Promise<string | null>;
+  onPickMoodImage?: () => Promise<string | null>;
+  imageLoading?: boolean;
 }
 
 export const MoodPicker: React.FC<MoodPickerProps> = ({
@@ -54,11 +52,9 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
   onSelectCustomMood,
   onSaveCustomMood,
   originPoint,
-  moodSelfie,
-  onCaptureSelfie,
-  onPickFromLibrary,
-  onDeleteSelfie,
-  selfieLoading,
+  onCaptureMoodImage,
+  onPickMoodImage,
+  imageLoading,
 }) => {
   const { theme, accent } = useTheme();
   const insets = useSafeAreaInsets();
@@ -66,6 +62,7 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editEmoji, setEditEmoji] = useState('');
   const [editText, setEditText] = useState('');
+  const [pendingImageUrl, setPendingImageUrl] = useState<string | null>(null);
 
   const offsetX = (originPoint?.x ?? SCREEN_W / 2) - SCREEN_W / 2;
   const offsetY = (originPoint?.y ?? SCREEN_H / 2) - SCREEN_H / 2;
@@ -79,9 +76,9 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
       setIsEditing(false);
       setEditEmoji(customMood?.emoji ?? '');
       setEditText(customMood?.text ?? '');
-      // Prefetch selfie image so it's ready immediately
-      if (moodSelfie?.image_url) {
-        Image.prefetch(moodSelfie.image_url);
+      // Prefetch custom mood image so it's ready immediately
+      if (customMood?.image_url) {
+        Image.prefetch(customMood.image_url);
       }
     } else {
       progress.value = 0;
@@ -102,6 +99,7 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
   const handleStartEditing = useCallback(() => {
     setEditEmoji(customMood?.emoji ?? '');
     setEditText(customMood?.text ?? '');
+    setPendingImageUrl(customMood?.image_url ?? null);
     setIsEditing(true);
   }, [customMood]);
 
@@ -111,32 +109,37 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
     if (!cleanedEmoji) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await onSaveCustomMood?.(cleanedEmoji, cleanedText, CUSTOM_MOOD_NEUTRAL_COLOR);
+    await onSaveCustomMood?.(cleanedEmoji, cleanedText, CUSTOM_MOOD_NEUTRAL_COLOR, pendingImageUrl ?? undefined);
     setIsEditing(false);
     handleClose();
-  }, [editEmoji, editText, onSaveCustomMood, handleClose]);
+  }, [editEmoji, editText, pendingImageUrl, onSaveCustomMood, handleClose]);
 
   const canSave = editEmoji.trim().length > 0;
 
-  // Check if selfie is active (not expired)
-  const isSelfieActive = moodSelfie && new Date(moodSelfie.expires_at) > new Date();
-
-  const handleCaptureSelfie = useCallback(async (): Promise<boolean> => {
+  const handleCaptureMoodImage = useCallback(async (): Promise<boolean> => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const success = await onCaptureSelfie?.();
-    return success ?? false;
-  }, [onCaptureSelfie]);
+    const url = await onCaptureMoodImage?.();
+    if (url) {
+      setPendingImageUrl(url);
+      return true;
+    }
+    return false;
+  }, [onCaptureMoodImage]);
 
-  const handlePickFromLibrary = useCallback(async (): Promise<boolean> => {
+  const handlePickMoodImage = useCallback(async (): Promise<boolean> => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const success = await onPickFromLibrary?.();
-    return success ?? false;
-  }, [onPickFromLibrary]);
+    const url = await onPickMoodImage?.();
+    if (url) {
+      setPendingImageUrl(url);
+      return true;
+    }
+    return false;
+  }, [onPickMoodImage]);
 
-  const handleDeleteSelfie = useCallback(() => {
+  const handleDeleteMoodImage = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onDeleteSelfie?.();
-  }, [onDeleteSelfie]);
+    setPendingImageUrl(null);
+  }, []);
 
   const animatedStyle = useAnimatedStyle(() => {
     const p = progress.value;
@@ -262,8 +265,8 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                 >
                   <View style={styles.imageWrapperSmall}>
                     {customMood && !isEditing ? (
-                      isSelfieActive && moodSelfie?.image_url ? (
-                        <Image source={{ uri: moodSelfie.image_url }} style={styles.selfieImage} cachePolicy="memory-disk" contentFit="cover" />
+                      customMood.image_url ? (
+                        <Image source={{ uri: customMood.image_url }} style={styles.selfieImage} cachePolicy="memory-disk" contentFit="cover" />
                       ) : (
                         <Text style={{ fontSize: 42 }}>{customMood.emoji}</Text>
                       )
@@ -298,11 +301,11 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                     <EmojiInput
                       value={editEmoji}
                       onChangeEmoji={setEditEmoji}
-                      onCameraPress={handleCaptureSelfie}
-                      onLibraryPress={handlePickFromLibrary}
-                      selfieUrl={isSelfieActive ? moodSelfie?.image_url : null}
-                      onDeleteSelfie={handleDeleteSelfie}
-                      selfieLoading={selfieLoading}
+                      onCameraPress={handleCaptureMoodImage}
+                      onLibraryPress={handlePickMoodImage}
+                      selfieUrl={pendingImageUrl}
+                      onDeleteSelfie={handleDeleteMoodImage}
+                      selfieLoading={imageLoading}
                     />
 
                     <View style={[styles.textInputCard, { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border }]}>
