@@ -1,6 +1,6 @@
 import { logger } from '../lib/logger';
 import { useEffect, useCallback, useRef, useState } from 'react';
-import { Alert, Platform, PermissionsAndroid } from 'react-native';
+import { Alert, Platform, PermissionsAndroid, AppState, AppStateStatus } from 'react-native';
 import { useAppStore } from '../stores/appStore';
 import {
   initializeLiveKit,
@@ -36,6 +36,8 @@ export const useAudio = (
   const currentRoomId = useRef<string | null>(null);
   const [micEnabled, setMicEnabled] = useState(false);
   const isManualConnection = useRef(false); // Track if user manually connected (don't auto-disconnect)
+  const backgroundDisconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wasMutedByBackground = useRef(false); // Track if we auto-muted on background
 
   // Initialize LiveKit on first use
   useEffect(() => {
@@ -104,9 +106,6 @@ export const useAudio = (
         setAudioError(error);
         Alert.alert('Audio Error', error);
       },
-      onAllMuted: () => {
-        handleDisconnect();
-      },
       onDataReceived: (data: Uint8Array, participant: RemoteParticipant | undefined) => {
         dataCallbackRef.current?.(data, participant);
       },
@@ -117,7 +116,7 @@ export const useAudio = (
     return () => {
       setAudioEventCallbacks(null);
     };
-  }, [currentUser?.id, handleDisconnect, setAudioConnectionStatus, setAudioError, addSpeakingParticipant, removeSpeakingParticipant]);
+  }, [currentUser?.id, setAudioConnectionStatus, setAudioError, addSpeakingParticipant, removeSpeakingParticipant]);
 
   // Debounce timer for audio connections
   const connectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -138,6 +137,67 @@ export const useAudio = (
       }
     };
   }, []);
+
+  // Background handling: auto-mute immediately, disconnect after grace period
+  const BACKGROUND_DISCONNECT_DELAY = 10000; // 10 seconds grace period
+
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'background') {
+        // App going to background — auto-mute immediately for privacy
+        if (isConnected() && micEnabled) {
+          setLocalMicrophoneEnabled(false).catch(() => {});
+          setMicEnabled(false);
+          wasMutedByBackground.current = true;
+          logger.log('[useAudio] Auto-muted on background');
+        }
+
+        // Start grace period timer to disconnect
+        if (isConnected() && !backgroundDisconnectTimer.current) {
+          backgroundDisconnectTimer.current = setTimeout(() => {
+            backgroundDisconnectTimer.current = null;
+            if (isConnected()) {
+              logger.log('[useAudio] Disconnecting audio after background grace period');
+              disconnectFromAudioRoom();
+              currentRoomId.current = null;
+              clearSpeakingParticipants();
+              setMicEnabled(false);
+            }
+          }, BACKGROUND_DISCONNECT_DELAY);
+        }
+      } else if (nextAppState === 'active') {
+        // App returning to foreground — cancel pending disconnect
+        if (backgroundDisconnectTimer.current) {
+          clearTimeout(backgroundDisconnectTimer.current);
+          backgroundDisconnectTimer.current = null;
+          logger.log('[useAudio] Cancelled background disconnect (quick return)');
+        }
+
+        // If we were disconnected by the background timer, auto-reconnect
+        if (roomId && currentUser && !isConnected() && currentRoomId.current === null) {
+          if (otherParticipantCount !== undefined && otherParticipantCount > 0) {
+            currentRoomId.current = roomId;
+            connectToAudioRoom(roomId, false).then((success) => {
+              if (!success) {
+                currentRoomId.current = null;
+              }
+              setMicEnabled(false);
+              wasMutedByBackground.current = false;
+            });
+          }
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => {
+      subscription.remove();
+      if (backgroundDisconnectTimer.current) {
+        clearTimeout(backgroundDisconnectTimer.current);
+        backgroundDisconnectTimer.current = null;
+      }
+    };
+  }, [roomId, currentUser?.id, otherParticipantCount, micEnabled, clearSpeakingParticipants]);
 
   // Handle room changes — disconnect old room, auto-connect to new one for listening (mic off).
   // Connection runs in the background so it doesn't block UI/navigation.
@@ -304,6 +364,15 @@ export const useAudio = (
     return sendRoomData(data);
   }, [audioConnectionStatus]);
 
+  // Allow consumers to check and clear background mute flag
+  const consumeBackgroundMute = useCallback((): boolean => {
+    if (wasMutedByBackground.current) {
+      wasMutedByBackground.current = false;
+      return true;
+    }
+    return false;
+  }, []);
+
   return {
     connectionStatus: audioConnectionStatus,
     isConnected: audioConnectionStatus === 'connected',
@@ -316,5 +385,6 @@ export const useAudio = (
     mute: handleMute,
     unmute: handleUnmute,
     sendData,
+    consumeBackgroundMute,
   };
 };

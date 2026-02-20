@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, Alert, TouchableOpacity, ActivityIndicator, Text } from 'react-native';
+import { View, StyleSheet, Alert, TouchableOpacity, ActivityIndicator, Text, AppState } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -44,6 +44,7 @@ export default function RoomScreen() {
     unmute: audioUnmute,
     mute: audioMute,
     disconnect: audioDisconnect,
+    consumeBackgroundMute,
   } = useAudio(currentRoom?.id || null);
 
   useEffect(() => {
@@ -72,6 +73,27 @@ export default function RoomScreen() {
       }
     }, [currentRoom?.id, loadParticipants])
   );
+
+  // Sync local mute state when auto-muted by app backgrounding
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active' && consumeBackgroundMute()) {
+        // useAudio already muted the mic — sync local UI + DB
+        setIsMuted(true);
+        if (currentRoom && currentUser) {
+          supabase
+            .from('room_participants')
+            .update({ is_muted: true })
+            .eq('room_id', currentRoom.id)
+            .eq('user_id', currentUser.id)
+            .then(({ error }) => {
+              if (error) logger.error('[Room] Failed to sync background mute to DB:', error);
+            });
+        }
+      }
+    });
+    return () => subscription.remove();
+  }, [currentRoom?.id, currentUser?.id, consumeBackgroundMute]);
 
   const handleJoinRoom = async () => {
     if (!id) return;

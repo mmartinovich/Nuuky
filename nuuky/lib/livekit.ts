@@ -34,27 +34,10 @@ export const initializeLiveKit = () => {
 
 // Singleton room instance
 let currentRoom: Room | null = null;
-let silenceTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Generation counter — incremented on every connect/disconnect call.
 // Stale operations check this and bail if a newer operation has started.
 let connectionGeneration = 0;
-
-// Configurable silence timeout (default: 30 seconds)
-export let SILENCE_TIMEOUT_MS = 30000;
-
-// Function to update timeout at runtime
-export const setSilenceTimeout = (milliseconds: number) => {
-  SILENCE_TIMEOUT_MS = milliseconds;
-};
-
-// Presets for easy configuration
-export const SilenceTimeoutPresets = {
-  AGGRESSIVE: 30000,   // 30s - current, lowest cost
-  BALANCED: 120000,    // 2 min - good balance
-  RELAXED: 300000,     // 5 min - near-instant reconnect
-  NEVER: Infinity,     // Never disconnect - Discord-style
-} as const;
 
 // Token caching (1-hour TTL)
 let cachedToken: LiveKitTokenResponse | null = null;
@@ -76,7 +59,6 @@ type AudioEventCallbacks = {
   onConnectionStatusChange: (status: string) => void;
   onParticipantSpeaking: (participantId: string, isSpeaking: boolean) => void;
   onError: (error: string) => void;
-  onAllMuted: () => void;
   onDataReceived?: (data: Uint8Array, participant: RemoteParticipant | undefined) => void;
 };
 
@@ -234,7 +216,6 @@ export const connectToAudioRoom = async (roomId: string, enableMic: boolean = tr
 
     eventCallbacks?.onConnectionStatusChange('connected');
     await currentRoom.localParticipant.setMicrophoneEnabled(enableMic);
-    resetSilenceTimer();
 
     return true;
   } catch (error) {
@@ -250,7 +231,6 @@ export const connectToAudioRoom = async (roomId: string, enableMic: boolean = tr
 // Disconnect from LiveKit room
 export const disconnectFromAudioRoom = async (): Promise<void> => {
   ++connectionGeneration; // invalidate any in-flight connect
-  clearSilenceTimer();
 
   if (currentRoom) {
     try { await currentRoom.disconnect(); } catch {}
@@ -274,14 +254,6 @@ export const setLocalMicrophoneEnabled = async (
   await configureAudioFocus(enabled);
 
   await currentRoom.localParticipant.setMicrophoneEnabled(enabled);
-
-  if (enabled) {
-    // Reset silence timer when unmuting
-    resetSilenceTimer();
-  } else {
-    // Check if everyone is now muted
-    checkAllMuted();
-  }
 };
 
 // Check if anyone is unmuted
@@ -341,11 +313,6 @@ const setupRoomEventListeners = (room: Room) => {
           localSpeaking
         );
       }
-
-      // Reset silence timer if anyone is speaking
-      if (speakers.length > 0) {
-        resetSilenceTimer();
-      }
     }
   );
 
@@ -369,18 +336,6 @@ const setupRoomEventListeners = (room: Room) => {
     }
   });
 
-  room.on(RoomEvent.TrackMuted, (publication, _participant) => {
-    if (publication.kind === Track.Kind.Audio) {
-      checkAllMuted();
-    }
-  });
-
-  room.on(RoomEvent.TrackUnmuted, (publication, _participant) => {
-    if (publication.kind === Track.Kind.Audio) {
-      resetSilenceTimer();
-    }
-  });
-
   room.on(RoomEvent.Disconnected, () => {
     eventCallbacks?.onConnectionStatusChange('disconnected');
   });
@@ -389,30 +344,6 @@ const setupRoomEventListeners = (room: Room) => {
   room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant?: RemoteParticipant) => {
     eventCallbacks?.onDataReceived?.(payload, participant);
   });
-};
-
-// Silence timer management
-const resetSilenceTimer = () => {
-  clearSilenceTimer();
-
-  silenceTimer = setTimeout(() => {
-    if (!isAnyoneUnmuted()) {
-      eventCallbacks?.onAllMuted();
-    }
-  }, SILENCE_TIMEOUT_MS);
-};
-
-const clearSilenceTimer = () => {
-  if (silenceTimer) {
-    clearTimeout(silenceTimer);
-    silenceTimer = null;
-  }
-};
-
-const checkAllMuted = () => {
-  if (!isAnyoneUnmuted()) {
-    resetSilenceTimer();
-  }
 };
 
 // Get current room (for debugging/status)

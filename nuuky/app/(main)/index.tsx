@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Alert, StatusBar, Animated as RNAnimated } from "react-native";
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Alert, StatusBar, Animated as RNAnimated, AppState } from "react-native";
 import { Image as CachedImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
@@ -159,6 +159,7 @@ export default function QuantumOrbitScreen() {
     mute: audioMute,
     disconnect: audioDisconnect,
     isConnected: isAudioConnected,
+    consumeBackgroundMute,
   } = useAudio(defaultRoom?.id || null, (data, participant) => {
     soundReactionsRef.current?.handleDataReceived(data, participant);
   }, otherParticipantCount);
@@ -251,6 +252,15 @@ export default function QuantumOrbitScreen() {
   const [bubblePosition, setBubblePosition] = useState({ x: 0, y: 0 });
   const [isMuted, setIsMuted] = useState(true);
 
+  // Sync local mute state when auto-muted by app backgrounding
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active' && consumeBackgroundMute()) {
+        setIsMuted(true);
+      }
+    });
+    return () => subscription.remove();
+  }, [consumeBackgroundMute]);
 
   // Extracted hooks
   const isCurrentUserSpeaking = currentUser?.id ? speakingParticipants.includes(currentUser.id) : false;
