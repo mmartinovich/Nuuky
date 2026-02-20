@@ -14,6 +14,7 @@ import {
   Platform,
   UIManager,
   Dimensions,
+  KeyboardAvoidingView,
 } from "react-native";
 import { Image as CachedImage } from 'expo-image';
 import { BlurView } from "expo-blur";
@@ -414,6 +415,10 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
         </Animated.View>
 
         <Animated.View style={[styles.fullScreenContent, animatedStyle]}>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
           {/* ScrollView - underneath header */}
           <ScrollView
             style={styles.scrollView}
@@ -725,6 +730,7 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
                 </View>
               )}
           </ScrollView>
+          </KeyboardAvoidingView>
 
           {/* Header with gradient fade - absolute positioned on top */}
           <LinearGradient

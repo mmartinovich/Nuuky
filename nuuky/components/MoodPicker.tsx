@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Pressable, Modal, ScrollView, TextInput, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Pressable, Modal, ScrollView, TextInput, Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -175,6 +175,10 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
         </Animated.View>
 
         <Animated.View style={[styles.fullScreenContent, animatedStyle]}>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
           {/* ScrollView - underneath header */}
           <ScrollView
             showsVerticalScrollIndicator={false}
@@ -338,6 +342,7 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
               </View>
             </View>
           </ScrollView>
+          </KeyboardAvoidingView>
 
           {/* Header with gradient fade - absolute positioned on top */}
           <LinearGradient

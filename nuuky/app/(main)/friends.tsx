@@ -14,6 +14,7 @@ import {
   Platform,
   UIManager,
   SectionListData,
+  KeyboardAvoidingView,
 } from "react-native";
 import Animated, {
   useSharedValue,
@@ -715,6 +716,10 @@ export default function FriendsScreen() {
           </View>
         ) : (
           // ============ ADD FRIENDS TAB ============
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={[styles.addContent, { paddingBottom: insets.bottom + spacing["3xl"] }]}
@@ -947,6 +952,7 @@ export default function FriendsScreen() {
               </Text>
             </TouchableOpacity>
           </ScrollView>
+          </KeyboardAvoidingView>
         )}
       </LinearGradient>
 

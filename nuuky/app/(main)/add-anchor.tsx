@@ -8,6 +8,8 @@ import {
   TextInput,
   ActivityIndicator,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { Image as CachedImage } from "expo-image";
 import { BlurView } from "expo-blur";
@@ -210,6 +212,10 @@ export default function AddAnchorScreen() {
 
         {/* Content */}
         <Animated.View style={[styles.fullScreenContent, contentStyle]}>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
           {/* ScrollView - underneath header */}
           <ScrollView
             style={styles.scrollView}
@@ -313,6 +319,7 @@ export default function AddAnchorScreen() {
               </View>
             )}
           </ScrollView>
+          </KeyboardAvoidingView>
 
           {/* Header with gradient fade - absolute positioned on top */}
           <LinearGradient
