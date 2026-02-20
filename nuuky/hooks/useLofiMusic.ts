@@ -6,10 +6,8 @@ import {
   playLofi,
   stopLofi,
   pauseLofi,
-  resumeLofi,
   setLofiVolume,
   getLofiState,
-  isLofiAvailable,
   moodToTrack,
   LofiTrack,
 } from '../lib/lofiMusicPlayer';
@@ -54,6 +52,7 @@ export const useLofiMusic = (otherParticipantCount?: number): UseLofiMusicReturn
   // Track initialization
   const isInitialized = useRef(false);
   const isManualPlay = useRef(false); // Track if user manually started playback
+  const userPausedRef = useRef(false); // Track if user explicitly paused (blocks auto-play)
 
   // Get current mood
   const currentMood: PresetMood = currentUser?.mood || 'neutral';
@@ -96,6 +95,15 @@ export const useLofiMusic = (otherParticipantCount?: number): UseLofiMusicReturn
     setCurrentTrack(state.currentTrack);
   }, []);
 
+  // Reset userPausedRef when alone status changes so auto-play works on next solo session
+  const prevIsAloneRef = useRef(isAlone);
+  useEffect(() => {
+    if (prevIsAloneRef.current !== isAlone) {
+      prevIsAloneRef.current = isAlone;
+      userPausedRef.current = false;
+    }
+  }, [isAlone]);
+
   // Auto-play/stop based on alone status (only for auto-started playback)
   useEffect(() => {
     if (!isAvailable || !lofiAutoPlay) return;
@@ -103,7 +111,7 @@ export const useLofiMusic = (otherParticipantCount?: number): UseLofiMusicReturn
     const targetTrack = getEffectiveTrack();
     let autoPlayTimer: ReturnType<typeof setTimeout> | null = null;
 
-    if (isAlone && !isPlaying) {
+    if (isAlone && !isPlaying && !userPausedRef.current) {
       // Start playing when alone (auto-play) with 5 second delay
       logger.log('[useLofiMusic] Will auto-play in 5 seconds (alone in room)');
       autoPlayTimer = setTimeout(() => {
@@ -159,6 +167,7 @@ export const useLofiMusic = (otherParticipantCount?: number): UseLofiMusicReturn
   const play = useCallback(async () => {
     // Mark as manual play so auto-stop doesn't interrupt
     isManualPlay.current = true;
+    userPausedRef.current = false; // Clear pause flag since user is playing
 
     // Try to initialize if not available yet
     let available = isAvailable;
@@ -189,6 +198,7 @@ export const useLofiMusic = (otherParticipantCount?: number): UseLofiMusicReturn
   // Pause action
   const pause = useCallback(async () => {
     isManualPlay.current = false; // Reset manual flag
+    userPausedRef.current = true; // Block auto-play from re-triggering
     await pauseLofi(true);
     setIsPlaying(false);
   }, []);
