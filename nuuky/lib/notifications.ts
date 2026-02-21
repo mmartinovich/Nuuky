@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { supabase } from './supabase';
 
@@ -57,7 +58,10 @@ export async function registerForPushNotificationsAsync(): Promise<string | unde
       return;
     }
 
-    token = (await Notifications.getExpoPushTokenAsync()).data;
+    const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+    token = (await Notifications.getExpoPushTokenAsync({
+      projectId,
+    })).data;
   }
 
   return token;
@@ -71,8 +75,8 @@ export async function savePushTokenToUser(userId: string, token: string) {
       .eq('id', userId);
 
     if (error) throw error;
-  } catch (_error) {
-    // Silently fail
+  } catch (error) {
+    console.error('[Notifications] Failed to save push token:', error);
   }
 }
 

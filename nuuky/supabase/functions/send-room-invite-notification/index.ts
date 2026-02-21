@@ -31,43 +31,35 @@ serve(async (req) => {
 
     console.log(`Processing room invite from ${sender_id} for room ${room_id}`);
 
-    const { data: sender, error: senderError } = await supabase
-      .from('users')
-      .select('display_name')
-      .eq('id', sender_id)
-      .single();
+    // Parallel: fetch sender, room, and receivers
+    const [senderResult, roomResult, receiversResult] = await Promise.all([
+      supabase.from('users').select('display_name').eq('id', sender_id).single(),
+      supabase.from('rooms').select('name, is_private').eq('id', room_id).single(),
+      supabase.from('users').select('id, display_name, fcm_token').in('id', receiver_ids),
+    ]);
 
-    if (senderError || !sender) {
-      console.error('Sender not found:', senderError);
+    const sender = senderResult.data;
+    const room = roomResult.data;
+    const receivers = receiversResult.data;
+
+    if (senderResult.error || !sender) {
+      console.error('Sender not found:', senderResult.error);
       return new Response(
         JSON.stringify({ error: 'Sender not found' }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const { data: room, error: roomError } = await supabase
-      .from('rooms')
-      .select('name, is_private')
-      .eq('id', room_id)
-      .single();
-
-    if (roomError || !room) {
-      console.error('Room not found:', roomError);
+    if (roomResult.error || !room) {
+      console.error('Room not found:', roomResult.error);
       return new Response(
         JSON.stringify({ error: 'Room not found' }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const roomName = room.name || 'a room';
-
-    const { data: receivers, error: receiversError } = await supabase
-      .from('users')
-      .select('id, display_name, fcm_token')
-      .in('id', receiver_ids);
-
-    if (receiversError) {
-      console.error('Error fetching receivers:', receiversError);
+    if (receiversResult.error) {
+      console.error('Error fetching receivers:', receiversResult.error);
       return new Response(
         JSON.stringify({ error: 'Failed to fetch receivers' }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
@@ -80,6 +72,8 @@ serve(async (req) => {
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     }
+
+    const roomName = room.name || 'a room';
 
     const tokens = receivers
       .filter(r => r.fcm_token)
@@ -117,34 +111,31 @@ serve(async (req) => {
       source_type: 'room_invite',
     }));
 
-    if (notificationsToInsert.length > 0) {
-      const { error: notificationError } = await supabase
-        .from('notifications')
-        .insert(notificationsToInsert);
+    // Parallel: insert DB records + send batch push + send batch silent
+    const [, pushResult] = await Promise.all([
+      notificationsToInsert.length > 0
+        ? supabase.from('notifications').insert(notificationsToInsert).then(({ error }) => {
+            if (error) console.error('Failed to insert notifications:', error);
+          })
+        : Promise.resolve(),
+      sendBatchExpoNotifications(tokens, notification),
+      sendBatchSilentNotifications(tokens, {
+        sync_type: 'sync_rooms',
+        notification_type: 'room_invite',
+        room_id: room_id,
+        room_name: roomName,
+        sender_id: sender_id,
+        sender_name: sender.display_name,
+      }),
+    ]);
 
-      if (notificationError) {
-        console.error('Failed to insert notifications:', notificationError);
-      }
-    }
-
-    const result = await sendBatchExpoNotifications(tokens, notification);
-
-    await sendBatchSilentNotifications(tokens, {
-      sync_type: 'sync_rooms',
-      notification_type: 'room_invite',
-      room_id: room_id,
-      room_name: roomName,
-      sender_id: sender_id,
-      sender_name: sender.display_name,
-    });
-
-    console.log(`Sent ${result.success} room invite notifications + silent sync`);
+    console.log(`Sent ${pushResult.success} room invite notifications + silent sync`);
 
     return new Response(
       JSON.stringify({
         message: 'Room invite notifications sent',
-        sent: result.success,
-        failed: result.failed,
+        sent: pushResult.success,
+        failed: pushResult.failed,
         total_receivers: receivers.length,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }

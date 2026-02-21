@@ -32,44 +32,34 @@ serve(async (req) => {
 
     console.log(`Processing photo nudge notification from ${sender_id} to ${receiver_id}`);
 
-    // Get sender info
-    const { data: sender, error: senderError } = await supabase
-      .from('users')
-      .select('display_name, avatar_url')
-      .eq('id', sender_id)
-      .single();
+    // Parallel: fetch sender, receiver, preferences, and unread count
+    const [senderResult, receiverResult, prefsResult, unreadResult] = await Promise.all([
+      supabase.from('users').select('display_name, avatar_url').eq('id', sender_id).single(),
+      supabase.from('users').select('fcm_token, display_name').eq('id', receiver_id).single(),
+      supabase.from('user_preferences').select('nudges_enabled').eq('user_id', receiver_id).single(),
+      supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', receiver_id).eq('is_read', false),
+    ]);
 
-    if (senderError || !sender) {
-      console.error('Sender not found:', senderError);
+    const sender = senderResult.data;
+    const receiver = receiverResult.data;
+
+    if (senderResult.error || !sender) {
+      console.error('Sender not found:', senderResult.error);
       return new Response(
         JSON.stringify({ error: 'Sender not found' }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // Get receiver info
-    const { data: receiver, error: receiverError } = await supabase
-      .from('users')
-      .select('fcm_token, display_name')
-      .eq('id', receiver_id)
-      .single();
-
-    if (receiverError || !receiver) {
-      console.error('Receiver not found:', receiverError);
+    if (receiverResult.error || !receiver) {
+      console.error('Receiver not found:', receiverResult.error);
       return new Response(
         JSON.stringify({ error: 'Receiver not found' }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // Check user preferences (use nudges_enabled for now since photo nudges are similar)
-    const { data: preferences } = await supabase
-      .from('user_preferences')
-      .select('nudges_enabled')
-      .eq('user_id', receiver_id)
-      .single();
-
-    const nudgesEnabled = preferences?.nudges_enabled ?? true;
+    const nudgesEnabled = prefsResult.data?.nudges_enabled ?? true;
 
     if (!nudgesEnabled) {
       console.log(`Receiver ${receiver.display_name} has nudges disabled`);
@@ -86,6 +76,8 @@ serve(async (req) => {
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     }
+
+    const badgeCount = (unreadResult.count ?? 0) + 1;
 
     // Build notification content
     const title = `📷 Photo from ${sender.display_name}`;
@@ -105,23 +97,20 @@ serve(async (req) => {
       },
       sound: 'default' as const,
       priority: 'high' as const,
+      badge: badgeCount,
     };
 
-    const sent = await sendExpoNotification(receiver.fcm_token, notification);
-
-    // Send silent notification for background sync
-    await sendSilentNotification(receiver.fcm_token, {
-      sync_type: 'sync_notifications',
-      notification_type: 'photo_nudge',
-      sender_id: sender_id,
-      sender_name: sender.display_name,
-      photo_nudge_id: photo_nudge_id,
-    });
-
-    // Insert notification record
-    const { error: notificationError } = await supabase
-      .from('notifications')
-      .insert({
+    // Parallel: send push, silent push, and insert DB record
+    const [pushResult] = await Promise.all([
+      sendExpoNotification(receiver.fcm_token, notification),
+      sendSilentNotification(receiver.fcm_token, {
+        sync_type: 'sync_notifications',
+        notification_type: 'photo_nudge',
+        sender_id: sender_id,
+        sender_name: sender.display_name,
+        photo_nudge_id: photo_nudge_id,
+      }),
+      supabase.from('notifications').insert({
         user_id: receiver_id,
         type: 'photo_nudge',
         title: notification.title,
@@ -129,13 +118,12 @@ serve(async (req) => {
         data: notification.data,
         source_id: photo_nudge_id,
         source_type: 'photo_nudge',
-      });
+      }).then(({ error }) => {
+        if (error) console.error('Failed to insert notification:', error);
+      }),
+    ]);
 
-    if (notificationError) {
-      console.error('Failed to insert notification:', notificationError);
-    }
-
-    if (sent) {
+    if (pushResult) {
       console.log(`✓ Photo nudge notification sent to ${receiver.display_name}`);
       return new Response(
         JSON.stringify({ message: 'Notification sent', sent: true }),

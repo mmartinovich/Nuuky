@@ -9,6 +9,9 @@
       "distribution": "internal",
       "ios": {
         "resourceClass": "m-medium"
+      },
+      "android": {
+        "resourceClass": "m-medium"
       }
     },
     "preview": {
@@ -20,10 +23,18 @@
     "production": {
       "ios": {
         "resourceClass": "m-medium"
+      },
+      "android": {
+        "resourceClass": "m-medium"
       }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./google-service-account.json",
+        "track": "internal"
+      }
+    }
   }
 }

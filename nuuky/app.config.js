@@ -33,7 +33,7 @@ export default {
         NSFaceIDUsageDescription: "Nūūky uses Face ID to verify your identity before signing in.",
         NSMicrophoneUsageDescription: "Nūūky needs microphone access to let you talk with friends in rooms.",
         NSCameraUsageDescription: "Nūūky needs camera access to scan QR codes.",
-        UIBackgroundModes: ["audio"],
+        UIBackgroundModes: ["audio", "remote-notification"],
         ITSAppUsesNonExemptEncryption: false,
         NSPrivacyAccessedAPITypes: [
           {
@@ -84,6 +84,7 @@ export default {
       "expo-font",
       "expo-router",
       "expo-av",
+      "expo-notifications",
       "expo-apple-authentication",
       [
         "expo-contacts",

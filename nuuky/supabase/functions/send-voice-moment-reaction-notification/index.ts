@@ -40,28 +40,26 @@ serve(async (req) => {
 
     console.log(`Processing voice moment reaction from ${sender_id} to ${receiver_id}`);
 
-    const { data: sender, error: senderError } = await supabase
-      .from('users')
-      .select('display_name, avatar_url')
-      .eq('id', sender_id)
-      .single();
+    // Parallel: fetch sender, receiver, and unread count
+    const [senderResult, receiverResult, unreadResult] = await Promise.all([
+      supabase.from('users').select('display_name, avatar_url').eq('id', sender_id).single(),
+      supabase.from('users').select('fcm_token, display_name').eq('id', receiver_id).single(),
+      supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', receiver_id).eq('is_read', false),
+    ]);
 
-    if (senderError || !sender) {
-      console.error('Sender not found:', senderError);
+    const sender = senderResult.data;
+    const receiver = receiverResult.data;
+
+    if (senderResult.error || !sender) {
+      console.error('Sender not found:', senderResult.error);
       return new Response(
         JSON.stringify({ error: 'Sender not found' }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const { data: receiver, error: receiverError } = await supabase
-      .from('users')
-      .select('fcm_token, display_name')
-      .eq('id', receiver_id)
-      .single();
-
-    if (receiverError || !receiver) {
-      console.error('Receiver not found:', receiverError);
+    if (receiverResult.error || !receiver) {
+      console.error('Receiver not found:', receiverResult.error);
       return new Response(
         JSON.stringify({ error: 'Receiver not found' }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
@@ -75,6 +73,8 @@ serve(async (req) => {
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     }
+
+    const badgeCount = (unreadResult.count ?? 0) + 1;
 
     const emoji = REACTION_EMOJI_MAP[reaction_type] || '💬';
     const title = `${emoji} ${sender.display_name} reacted to your voice moment`;
@@ -93,31 +93,25 @@ serve(async (req) => {
       },
       sound: 'default' as const,
       priority: 'high' as const,
+      badge: badgeCount,
     };
 
-    // Push notification is best-effort - don't fail the whole request if it doesn't send
-    let sent = false;
-    try {
-      sent = await sendExpoNotification(receiver.fcm_token, notification);
-    } catch (pushError) {
-      console.error('Push notification error:', pushError);
-    }
-
-    try {
-      await sendSilentNotification(receiver.fcm_token, {
+    // Parallel: send push, silent push, and insert DB record
+    const [pushResult] = await Promise.all([
+      sendExpoNotification(receiver.fcm_token, notification).catch((err) => {
+        console.error('Push notification error:', err);
+        return false;
+      }),
+      sendSilentNotification(receiver.fcm_token, {
         sync_type: 'sync_notifications',
         notification_type: 'voice_moment_reaction',
         sender_id: sender_id,
         sender_name: sender.display_name,
         voice_moment_id: voice_moment_id,
-      });
-    } catch (silentError) {
-      console.error('Silent notification error:', silentError);
-    }
-
-    const { error: notificationError } = await supabase
-      .from('notifications')
-      .insert({
+      }).catch((err) => {
+        console.error('Silent notification error:', err);
+      }),
+      supabase.from('notifications').insert({
         user_id: receiver_id,
         type: 'voice_moment_reaction',
         title: notification.title,
@@ -125,15 +119,14 @@ serve(async (req) => {
         data: notification.data,
         source_id: voice_moment_id,
         source_type: 'voice_moment',
-      });
+      }).then(({ error }) => {
+        if (error) console.error('Failed to insert notification:', error);
+      }),
+    ]);
 
-    if (notificationError) {
-      console.error('Failed to insert notification:', notificationError);
-    }
-
-    console.log(`Voice moment reaction notification: push=${sent}, db=${!notificationError}`);
+    console.log(`Voice moment reaction notification: push=${pushResult}, db=saved`);
     return new Response(
-      JSON.stringify({ message: 'Processed', sent, saved: !notificationError }),
+      JSON.stringify({ message: 'Processed', sent: pushResult, saved: true }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
 

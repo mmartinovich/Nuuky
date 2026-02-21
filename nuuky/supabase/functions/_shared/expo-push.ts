@@ -42,6 +42,23 @@ interface ExpoPushResponse {
 }
 
 /**
+ * Build headers for Expo Push API requests.
+ * Includes Authorization if EXPO_ACCESS_TOKEN is set (required for Enhanced Push Security).
+ */
+function getExpoPushHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'Accept-encoding': 'gzip, deflate',
+    'Content-Type': 'application/json',
+  };
+  const accessToken = Deno.env.get('EXPO_ACCESS_TOKEN');
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`;
+  }
+  return headers;
+}
+
+/**
  * Send a push notification to a specific Expo push token
  */
 export async function sendExpoNotification(
@@ -66,11 +83,7 @@ export async function sendExpoNotification(
   try {
     const response = await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Accept-encoding': 'gzip, deflate',
-        'Content-Type': 'application/json',
-      },
+      headers: getExpoPushHeaders(),
       body: JSON.stringify(message),
     });
 
@@ -143,11 +156,7 @@ export async function sendBatchExpoNotifications(
     try {
       const response = await fetch('https://exp.host/--/api/v2/push/send', {
         method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Accept-encoding': 'gzip, deflate',
-          'Content-Type': 'application/json',
-        },
+        headers: getExpoPushHeaders(),
         body: JSON.stringify(messages),
       });
 
@@ -221,11 +230,7 @@ export async function sendSilentNotification(
   try {
     const response = await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Accept-encoding': 'gzip, deflate',
-        'Content-Type': 'application/json',
-      },
+      headers: getExpoPushHeaders(),
       body: JSON.stringify(message),
     });
 
@@ -293,11 +298,7 @@ export async function sendBatchSilentNotifications(
     try {
       const response = await fetch('https://exp.host/--/api/v2/push/send', {
         method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Accept-encoding': 'gzip, deflate',
-          'Content-Type': 'application/json',
-        },
+        headers: getExpoPushHeaders(),
         body: JSON.stringify(messages),
       });
 

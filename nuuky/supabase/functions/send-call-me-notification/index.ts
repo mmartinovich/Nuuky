@@ -30,41 +30,34 @@ serve(async (req) => {
 
     console.log(`Processing call me request from ${sender_id} to ${receiver_id}`);
 
-    const { data: sender, error: senderError } = await supabase
-      .from('users')
-      .select('display_name, avatar_url')
-      .eq('id', sender_id)
-      .single();
+    // Parallel: fetch sender, receiver, preferences, and unread count
+    const [senderResult, receiverResult, prefsResult, unreadResult] = await Promise.all([
+      supabase.from('users').select('display_name, avatar_url').eq('id', sender_id).single(),
+      supabase.from('users').select('fcm_token, display_name').eq('id', receiver_id).single(),
+      supabase.from('user_preferences').select('nudges_enabled').eq('user_id', receiver_id).single(),
+      supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', receiver_id).eq('is_read', false),
+    ]);
 
-    if (senderError || !sender) {
-      console.error('Sender not found:', senderError);
+    const sender = senderResult.data;
+    const receiver = receiverResult.data;
+
+    if (senderResult.error || !sender) {
+      console.error('Sender not found:', senderResult.error);
       return new Response(
         JSON.stringify({ error: 'Sender not found' }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const { data: receiver, error: receiverError } = await supabase
-      .from('users')
-      .select('fcm_token, display_name')
-      .eq('id', receiver_id)
-      .single();
-
-    if (receiverError || !receiver) {
-      console.error('Receiver not found:', receiverError);
+    if (receiverResult.error || !receiver) {
+      console.error('Receiver not found:', receiverResult.error);
       return new Response(
         JSON.stringify({ error: 'Receiver not found' }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const { data: preferences } = await supabase
-      .from('user_preferences')
-      .select('nudges_enabled')
-      .eq('user_id', receiver_id)
-      .single();
-
-    const callsEnabled = preferences?.nudges_enabled ?? true;
+    const callsEnabled = prefsResult.data?.nudges_enabled ?? true;
 
     if (!callsEnabled) {
       console.log(`Receiver ${receiver.display_name} has calls disabled`);
@@ -82,6 +75,8 @@ serve(async (req) => {
       );
     }
 
+    const badgeCount = (unreadResult.count ?? 0) + 1;
+
     const notificationData = {
       type: 'call_me',
       sender_id: sender_id,
@@ -96,19 +91,18 @@ serve(async (req) => {
       data: notificationData,
       sound: 'default' as const,
       priority: 'high' as const,
+      badge: badgeCount,
     };
 
-    const sent = await sendExpoNotification(receiver.fcm_token, visibleNotification);
-
-    await sendSilentNotification(receiver.fcm_token, {
-      sync_type: 'sync_notifications',
-      notification_type: 'call_me',
-      ...notificationData,
-    });
-
-    const { error: notificationError } = await supabase
-      .from('notifications')
-      .insert({
+    // Parallel: send push, silent push, and insert DB record
+    const [pushResult] = await Promise.all([
+      sendExpoNotification(receiver.fcm_token, visibleNotification),
+      sendSilentNotification(receiver.fcm_token, {
+        sync_type: 'sync_notifications',
+        notification_type: 'call_me',
+        ...notificationData,
+      }),
+      supabase.from('notifications').insert({
         user_id: receiver_id,
         type: 'call_me',
         title: visibleNotification.title,
@@ -116,13 +110,12 @@ serve(async (req) => {
         data: notificationData,
         source_id: sender_id,
         source_type: 'call_me',
-      });
+      }).then(({ error }) => {
+        if (error) console.error('Failed to insert notification:', error);
+      }),
+    ]);
 
-    if (notificationError) {
-      console.error('Failed to insert notification:', notificationError);
-    }
-
-    if (sent) {
+    if (pushResult) {
       console.log(`✓ Call me notification sent to ${receiver.display_name}`);
       return new Response(
         JSON.stringify({ message: 'Notification sent', sent: true }),

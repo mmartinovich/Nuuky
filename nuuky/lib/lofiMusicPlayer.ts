@@ -56,11 +56,11 @@ const getLofiSource = (track: LofiTrack): any | null => {
       case 'good':
         return require('../assets/sounds/lofi/happy.mp3');
       case 'neutral':
-        return require('../assets/sounds/lofi/neutral.mp3');
+        return require('../assets/sounds/lofi/mellow_beats.mp3');
       case 'not_great':
-        return require('../assets/sounds/lofi/not_great.mp3');
+        return require('../assets/sounds/lofi/soft_melancholy.mp3');
       case 'sos':
-        return require('../assets/sounds/lofi/sos.mp3');
+        return require('../assets/sounds/lofi/calm_comfort.mp3');
       default:
         return null;
     }

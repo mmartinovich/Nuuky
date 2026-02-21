@@ -29,35 +29,33 @@ serve(async (req) => {
 
     console.log(`Processing flare ${flare_id} from user ${user_id}`);
 
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('display_name, avatar_url')
-      .eq('id', user_id)
-      .single();
-
-    if (userError || !user) {
-      console.error('User not found:', userError);
-      return new Response(
-        JSON.stringify({ error: 'User not found' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const { data: friendships, error: friendsError } = await supabase
-      .from('friendships')
-      .select(`
+    // Parallel: fetch user, friendships, and anchors
+    const [userResult, friendshipsResult, anchorsResult] = await Promise.all([
+      supabase.from('users').select('display_name, avatar_url').eq('id', user_id).single(),
+      supabase.from('friendships').select(`
         friend_id,
         friend:friend_id (
           id,
           display_name,
           fcm_token
         )
-      `)
-      .eq('user_id', user_id)
-      .eq('status', 'accepted');
+      `).eq('user_id', user_id).eq('status', 'accepted'),
+      supabase.from('anchors').select('anchor_id').eq('user_id', user_id),
+    ]);
 
-    if (friendsError) {
-      console.error('Error fetching friends:', friendsError);
+    const user = userResult.data;
+
+    if (userResult.error || !user) {
+      console.error('User not found:', userResult.error);
+      return new Response(
+        JSON.stringify({ error: 'User not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const friendships = friendshipsResult.data;
+    if (friendshipsResult.error) {
+      console.error('Error fetching friends:', friendshipsResult.error);
       return new Response(
         JSON.stringify({ error: 'Failed to fetch friends' }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
@@ -72,15 +70,10 @@ serve(async (req) => {
       );
     }
 
-    const { data: anchors } = await supabase
-      .from('anchors')
-      .select('anchor_id')
-      .eq('user_id', user_id);
-
-    const anchorIds = new Set(anchors?.map(a => a.anchor_id) || []);
-
+    const anchorIds = new Set(anchorsResult.data?.map(a => a.anchor_id) || []);
     const friendIds = friendships.map((f: any) => f.friend_id);
 
+    // Fetch preferences for all friends
     const { data: allPreferences } = await supabase
       .from('user_preferences')
       .select('user_id, flares_enabled')
@@ -117,8 +110,6 @@ serve(async (req) => {
 
     console.log(`Found ${regularTokens.length} regular friends and ${anchorTokens.length} anchors with tokens`);
 
-    let totalSent = 0;
-
     const notificationsToInsert = filteredFriendships.map((friendship: any) => ({
       user_id: friendship.friend_id,
       type: 'flare',
@@ -134,67 +125,77 @@ serve(async (req) => {
       source_type: 'flare',
     }));
 
-    if (notificationsToInsert.length > 0) {
-      const { error: notificationError } = await supabase
-        .from('notifications')
-        .insert(notificationsToInsert);
+    // Parallel: insert DB records + send anchor pushes + send regular pushes + send silent pushes
+    const pushPromises: Promise<any>[] = [];
 
-      if (notificationError) {
-        console.error('Failed to insert notifications:', notificationError);
-      }
-    }
+    pushPromises.push(
+      notificationsToInsert.length > 0
+        ? supabase.from('notifications').insert(notificationsToInsert).then(({ error }) => {
+            if (error) console.error('Failed to insert notifications:', error);
+          })
+        : Promise.resolve()
+    );
+
+    let totalSent = 0;
 
     if (anchorTokens.length > 0) {
-      const anchorNotification = {
-        title: '🚨 FLARE from ' + user.display_name,
-        body: `${user.display_name} needs support right now. They sent a flare.`,
-        data: {
-          type: 'flare',
-          user_id: user_id,
-          user_name: user.display_name,
-          flare_id: flare_id,
-          is_anchor: 'true',
-        },
-        sound: 'default' as const,
-        priority: 'high' as const,
-      };
-
-      const anchorResult = await sendBatchExpoNotifications(anchorTokens, anchorNotification);
-      totalSent += anchorResult.success;
-      console.log(`Sent ${anchorResult.success} anchor notifications`);
+      pushPromises.push(
+        sendBatchExpoNotifications(anchorTokens, {
+          title: '🚨 FLARE from ' + user.display_name,
+          body: `${user.display_name} needs support right now. They sent a flare.`,
+          data: {
+            type: 'flare',
+            user_id: user_id,
+            user_name: user.display_name,
+            flare_id: flare_id,
+            is_anchor: 'true',
+          },
+          sound: 'default' as const,
+          priority: 'high' as const,
+        }).then((result) => {
+          totalSent += result.success;
+          console.log(`Sent ${result.success} anchor notifications`);
+        })
+      );
     }
 
     if (regularTokens.length > 0) {
-      const regularNotification = {
-        title: '🚨 Flare from ' + user.display_name,
-        body: `${user.display_name} sent a flare. They might need company or support.`,
-        data: {
-          type: 'flare',
-          user_id: user_id,
-          user_name: user.display_name,
-          flare_id: flare_id,
-          is_anchor: 'false',
-        },
-        sound: 'default' as const,
-        priority: 'high' as const,
-      };
-
-      const regularResult = await sendBatchExpoNotifications(regularTokens, regularNotification);
-      totalSent += regularResult.success;
-      console.log(`Sent ${regularResult.success} regular notifications`);
+      pushPromises.push(
+        sendBatchExpoNotifications(regularTokens, {
+          title: '🚨 Flare from ' + user.display_name,
+          body: `${user.display_name} sent a flare. They might need company or support.`,
+          data: {
+            type: 'flare',
+            user_id: user_id,
+            user_name: user.display_name,
+            flare_id: flare_id,
+            is_anchor: 'false',
+          },
+          sound: 'default' as const,
+          priority: 'high' as const,
+        }).then((result) => {
+          totalSent += result.success;
+          console.log(`Sent ${result.success} regular notifications`);
+        })
+      );
     }
 
     const allTokens = [...anchorTokens, ...regularTokens];
     if (allTokens.length > 0) {
-      await sendBatchSilentNotifications(allTokens, {
-        sync_type: 'sync_flares',
-        notification_type: 'flare',
-        sender_id: user_id,
-        sender_name: user.display_name,
-        flare_id: flare_id,
-      });
-      console.log(`Sent ${allTokens.length} silent sync notifications`);
+      pushPromises.push(
+        sendBatchSilentNotifications(allTokens, {
+          sync_type: 'sync_flares',
+          notification_type: 'flare',
+          sender_id: user_id,
+          sender_name: user.display_name,
+          flare_id: flare_id,
+        }).then(() => {
+          console.log(`Sent ${allTokens.length} silent sync notifications`);
+        })
+      );
     }
+
+    await Promise.all(pushPromises);
 
     return new Response(
       JSON.stringify({
