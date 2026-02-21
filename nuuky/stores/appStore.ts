@@ -401,6 +401,7 @@ export const useAppStore = create<AppState>()(
         lofiVolume: state.lofiVolume,
         lofiSelectedTrack: state.lofiSelectedTrack,
         favoriteFriends: state.favoriteFriends,
+        unreadNotificationCount: state.unreadNotificationCount,
       }),
     }
   )

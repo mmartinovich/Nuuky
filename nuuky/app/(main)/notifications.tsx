@@ -57,12 +57,13 @@ export default function NotificationsScreen() {
     loadMyInvites();
   }, []);
 
-  // Mark all as read when viewing the screen
+  // Mark all as read when entering the screen (mount only)
   useEffect(() => {
     if (unreadCount > 0) {
       markAllAsRead();
     }
-  }, [notifications.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleAcceptInvite = async (inviteId: string) => {
     const success = await acceptInvite(inviteId);
