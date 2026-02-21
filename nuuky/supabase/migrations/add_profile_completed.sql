@@ -39,7 +39,8 @@ BEGIN
   ON CONFLICT (id) DO UPDATE SET
     email = COALESCE(EXCLUDED.email, users.email),
     auth_provider = EXCLUDED.auth_provider,
-    avatar_url = COALESCE(EXCLUDED.avatar_url, users.avatar_url);
+    avatar_url = COALESCE(EXCLUDED.avatar_url, users.avatar_url),
+    profile_completed = COALESCE(EXCLUDED.profile_completed, users.profile_completed);
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

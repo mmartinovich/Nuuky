@@ -329,11 +329,12 @@ export default function RootLayout() {
                 text: "Add Friend",
                 onPress: async () => {
                   try {
-                    // Create two-way friendship
-                    await supabase.from("friendships").insert([
-                      { user_id: user.id, friend_id: targetUser.id, status: "accepted" },
-                      { user_id: targetUser.id, friend_id: user.id, status: "accepted" },
-                    ]);
+                    // Atomic friendship creation via RPC
+                    const { data: rpcResult, error: rpcError } = await supabase
+                      .rpc('create_friendship', { user1_id: user.id, user2_id: targetUser.id });
+                    if (rpcError || (rpcResult && !rpcResult.success)) {
+                      throw rpcError || new Error(rpcResult?.error);
+                    }
                     Alert.alert("Success", `${targetUser.display_name} added as friend!`);
                   } catch (err) {
                     logger.error("Error adding friend:", err);

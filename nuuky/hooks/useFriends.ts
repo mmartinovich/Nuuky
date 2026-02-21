@@ -199,59 +199,6 @@ export const useFriends = () => {
         return false;
       }
 
-      // Check if friendship already exists (either direction)
-      const { data: existing, error: checkError } = await supabase
-        .from('friendships')
-        .select('id, user_id, friend_id, status')
-        .or(`and(user_id.eq.${currentUser.id},friend_id.eq.${userId}),and(user_id.eq.${userId},friend_id.eq.${currentUser.id})`);
-
-      if (checkError) {
-        logger.error('Error checking existing friendship:', checkError);
-      }
-
-      if (existing && existing.length > 0) {
-        // Check if BOTH directions exist
-        const hasForward = existing.some(f => f.user_id === currentUser.id && f.friend_id === userId);
-        const hasReverse = existing.some(f => f.user_id === userId && f.friend_id === currentUser.id);
-
-        if (hasForward && hasReverse) {
-          await loadFriends();
-          return true;
-        }
-
-        // Only ONE direction exists - insert the missing direction
-        const missingRecords = [];
-        if (!hasForward) {
-          missingRecords.push({
-            user_id: currentUser.id,
-            friend_id: userId,
-            status: 'accepted',
-          });
-        }
-        if (!hasReverse) {
-          missingRecords.push({
-            user_id: userId,
-            friend_id: currentUser.id,
-            status: 'accepted',
-          });
-        }
-
-        const { error: insertMissingError } = await supabase
-          .from('friendships')
-          .insert(missingRecords)
-          .select();
-
-        if (insertMissingError) {
-          logger.error('Error inserting missing direction:', insertMissingError);
-          if (insertMissingError.code !== '23505') {
-            throw insertMissingError;
-          }
-        }
-
-        await loadFriends();
-        return true;
-      }
-
       // Get user details for confirmation message
       const { data: targetUser } = await supabase
         .from('users')
@@ -259,31 +206,18 @@ export const useFriends = () => {
         .eq('id', userId)
         .single();
 
-      // Create instant two-way friendship (no pending state)
-      const { error: insertError } = await supabase
-        .from('friendships')
-        .insert([
-          {
-            user_id: currentUser.id,
-            friend_id: userId,
-            status: 'accepted',
-          },
-          {
-            user_id: userId,
-            friend_id: currentUser.id,
-            status: 'accepted',
-          },
-        ])
-        .select();
+      // Atomic friendship creation via RPC (handles race conditions + duplicates)
+      const { data: rpcResult, error: rpcError } = await supabase
+        .rpc('create_friendship', { user1_id: currentUser.id, user2_id: userId });
 
-      if (insertError) {
-        logger.error('Insert error:', insertError);
-        // Handle duplicate key error - means they're already friends
-        if (insertError.code === '23505') {
-          await loadFriends();
-          return true; // Silently succeed since they're already friends
-        }
-        throw insertError;
+      if (rpcError) {
+        logger.error('RPC error:', rpcError);
+        throw rpcError;
+      }
+
+      if (rpcResult && !rpcResult.success) {
+        logger.error('Friendship creation failed:', rpcResult.error);
+        throw new Error(rpcResult.error);
       }
 
       await loadFriends();

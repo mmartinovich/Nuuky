@@ -208,6 +208,7 @@ export const RoomSettingsModal: React.FC<RoomSettingsModalProps> = ({
   }, [availableFriends, inviteSearch]);
 
   const handleInviteFriend = async (friendId: string) => {
+    if (invitingIds.has(friendId) || invitedIds.has(friendId)) return;
     setInvitingIds((prev) => new Set(prev).add(friendId));
     try {
       await onInvite?.(friendId);

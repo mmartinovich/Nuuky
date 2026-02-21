@@ -24,13 +24,15 @@ const RippleRing = ({ delay, color }: { delay: number; color: string }) => {
   const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(progress, {
+    const anim = Animated.timing(progress, {
       toValue: 1,
       duration: 500,
       delay,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
-    }).start();
+    });
+    anim.start();
+    return () => anim.stop();
   }, []);
 
   const scale = progress.interpolate({
@@ -63,13 +65,15 @@ const CameraFlash = ({ delay }: { delay: number }) => {
   const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(progress, {
+    const anim = Animated.timing(progress, {
       toValue: 1,
       duration: 400,
       delay,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
-    }).start();
+    });
+    anim.start();
+    return () => anim.stop();
   }, []);
 
   const scale = progress.interpolate({
@@ -101,13 +105,15 @@ const SoundWave = ({ delay, side, color = '#22C55E' }: { delay: number; side: 'l
   const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(progress, {
+    const anim = Animated.timing(progress, {
       toValue: 1,
       duration: 400,
       delay,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
-    }).start();
+    });
+    anim.start();
+    return () => anim.stop();
   }, []);
 
   const scale = progress.interpolate({

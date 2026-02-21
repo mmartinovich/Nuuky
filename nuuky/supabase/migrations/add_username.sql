@@ -106,6 +106,7 @@ BEGIN
     email = COALESCE(EXCLUDED.email, users.email),
     auth_provider = EXCLUDED.auth_provider,
     avatar_url = COALESCE(EXCLUDED.avatar_url, users.avatar_url),
+    profile_completed = COALESCE(EXCLUDED.profile_completed, users.profile_completed),
     username = COALESCE(users.username, EXCLUDED.username);
   RETURN NEW;
 END;

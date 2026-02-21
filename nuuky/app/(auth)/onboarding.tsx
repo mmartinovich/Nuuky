@@ -200,6 +200,7 @@ export default function OnboardingScreen() {
   };
 
   const handleContinue = async () => {
+    if (loading) return;
     const trimmedName = displayName.trim();
     const trimmedUsername = username.trim().toLowerCase();
 

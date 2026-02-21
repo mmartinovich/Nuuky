@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -42,6 +42,7 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
   const { theme, accent } = useTheme();
   const insets = useSafeAreaInsets();
   const [roomName, setNuukName] = useState('');
+  const creatingRef = useRef(false);
 
   const offsetX = (originPoint?.x ?? SCREEN_W / 2) - SCREEN_W / 2;
   const offsetY = (originPoint?.y ?? SCREEN_H / 2) - SCREEN_H / 2;
@@ -65,11 +66,14 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
   const canCreate = roomName.trim().length > 0;
 
   const handleCreate = () => {
-    if (!canCreate) return;
+    if (!canCreate || creatingRef.current) return;
+    creatingRef.current = true;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onCreate(roomName.trim(), true);
     setNuukName('');
     handleClose();
+    // Reset after a short delay to allow the close animation to finish
+    setTimeout(() => { creatingRef.current = false; }, 500);
   };
 
   const handleCancel = () => {

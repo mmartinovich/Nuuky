@@ -49,6 +49,7 @@ export function VoiceMomentPlayer({
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackProgress, setPlaybackProgress] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [reacting, setReacting] = useState(false);
 
   const [waveformWidth, setWaveformWidth] = useState(0);
@@ -85,6 +86,7 @@ export function VoiceMomentPlayer({
   useEffect(() => {
     if (visible && voiceMoment) {
       setLoading(true);
+      setLoadError(false);
       setActiveReaction(voiceMoment.reaction || null);
       setPlaybackProgress(0);
 
@@ -148,6 +150,7 @@ export function VoiceMomentPlayer({
     } catch (error) {
       if (gen !== loadGeneration.current) return;
       console.error("Failed to load audio:", error);
+      setLoadError(true);
       setLoading(false);
     }
   };
@@ -206,6 +209,14 @@ export function VoiceMomentPlayer({
       console.error("Playback toggle error:", error);
     }
   }, [isPlaying]);
+
+  const handleRetry = useCallback(() => {
+    if (!voiceMoment) return;
+    setLoading(true);
+    setLoadError(false);
+    const gen = ++loadGeneration.current;
+    loadAudio(voiceMoment.audio_url, gen);
+  }, [voiceMoment]);
 
   const handleClose = useCallback(() => {
     Animated.parallel([
@@ -367,6 +378,23 @@ export function VoiceMomentPlayer({
                 <View style={[styles.audioArea, { borderTopColor: theme.colors.glass.border }]}>
                   {loading ? (
                     <ActivityIndicator color={accent.primary} size="large" />
+                  ) : loadError ? (
+                    <View style={styles.errorContainer}>
+                      <Ionicons name="alert-circle-outline" size={32} color={theme.colors.text.tertiary} />
+                      <Text style={[styles.errorText, { color: theme.colors.text.tertiary }]}>
+                        Failed to load audio
+                      </Text>
+                      <TouchableOpacity
+                        style={[styles.retryButton, { backgroundColor: accent.primary }]}
+                        onPress={handleRetry}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="refresh" size={16} color={accent.textOnPrimary} />
+                        <Text style={[styles.retryButtonText, { color: accent.textOnPrimary }]}>
+                          Retry
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   ) : (
                     <>
                       {/* Waveform */}
@@ -589,6 +617,31 @@ const styles = StyleSheet.create({
     width: '100%',
     height: WAVEFORM_H,
     marginBottom: 16,
+  },
+
+  // Error state
+  errorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    gap: 8,
+  },
+  errorText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+    marginTop: 4,
+  },
+  retryButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 
   // Play button

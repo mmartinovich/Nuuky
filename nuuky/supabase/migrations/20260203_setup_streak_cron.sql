@@ -1,3 +1,7 @@
+-- WARNING: Replace YOUR_PROJECT_REF and YOUR_CRON_SECRET with actual values before uncommenting the SQL below.
+-- YOUR_PROJECT_REF: Found in Supabase Dashboard -> Project Settings -> General
+-- YOUR_CRON_SECRET: A dedicated secret for cron job authentication (set as an edge function secret)
+--
 -- Setup cron job for streak fading notifications
 -- Runs every 4 hours to check for fading streaks and send push notifications
 --

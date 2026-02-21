@@ -337,14 +337,25 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                 onEnterSelectionMode={() => enterSelectionMode(notification.id)}
                 cardStyle={true}
                 isExpired={
-                  (notification.type === 'photo_nudge' &&
-                  notification.data?.photo_nudge_id &&
-                  photoNudgeCache[notification.data.photo_nudge_id]
-                    ? new Date(photoNudgeCache[notification.data.photo_nudge_id].expires_at) < new Date()
-                    : false) ||
-                  ((notification.type === 'voice_moment' || notification.type === 'voice_moment_reaction')
-                    ? new Date(notification.created_at).getTime() + 24 * 60 * 60 * 1000 < Date.now()
-                    : false)
+                  (() => {
+                    if (
+                      notification.type === 'photo_nudge' &&
+                      notification.data?.photo_nudge_id != null
+                    ) {
+                      const cached = photoNudgeCache[notification.data.photo_nudge_id];
+                      if (cached?.expires_at) {
+                        return new Date(cached.expires_at) < new Date();
+                      }
+                      return false;
+                    }
+                    if (
+                      (notification.type === 'voice_moment' || notification.type === 'voice_moment_reaction') &&
+                      notification.created_at != null
+                    ) {
+                      return new Date(notification.created_at).getTime() + 24 * 60 * 60 * 1000 < Date.now();
+                    }
+                    return false;
+                  })()
                 }
               />
             </React.Fragment>

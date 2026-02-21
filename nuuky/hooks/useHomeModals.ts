@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SoundReactionType, PhotoNudge, VoiceMoment } from '../types';
@@ -25,6 +25,13 @@ export function useHomeModals({
   fetchVoiceMoment,
 }: UseHomeModalsOptions) {
   const router = useRouter();
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const [showMoodPicker, setShowMoodPicker] = useState(false);
   const [showRoomList, setShowRoomList] = useState(false);
@@ -73,6 +80,7 @@ export function useHomeModals({
 
   const handleSoundSelect = useCallback(async (soundId: SoundReactionType) => {
     const result = await onSoundSelect(soundId);
+    if (!isMountedRef.current) return;
     if (!result.success && result.error) {
       Alert.alert("Cannot Send", result.error);
     }
@@ -80,10 +88,12 @@ export function useHomeModals({
 
   const handleCreateRoom = useCallback(async (name?: string, isPrivate?: boolean) => {
     await onCreateRoom(name, isPrivate);
+    if (!isMountedRef.current) return;
     setShowCreateRoom(false);
   }, [onCreateRoom]);
 
   const handleJoinRoom = useCallback(async (roomId: string) => {
+    if (!isMountedRef.current) return;
     setShowRoomList(false);
     await onJoinRoom(roomId);
   }, [onJoinRoom]);
@@ -100,6 +110,7 @@ export function useHomeModals({
 
   const openPhotoNudgeById = useCallback(async (id: string) => {
     const nudge = await fetchPhotoNudge(id);
+    if (!isMountedRef.current) return;
     if (nudge) {
       setActivePhotoNudge(nudge);
       setShowPhotoNudge(true);
@@ -118,6 +129,7 @@ export function useHomeModals({
 
   const openVoiceMomentById = useCallback(async (id: string) => {
     const vm = await fetchVoiceMoment(id);
+    if (!isMountedRef.current) return;
     if (vm) {
       setActiveVoiceMoment(vm);
       setShowVoiceMoment(true);

@@ -1,3 +1,8 @@
+-- WARNING: Replace YOUR_PROJECT_REF and YOUR_SERVICE_ROLE_KEY with actual values before running.
+-- SECURITY NOTE: Consider using a dedicated CRON_SECRET instead of SERVICE_ROLE_KEY.
+-- The service role key has full database access; a CRON_SECRET scoped to cron auth
+-- (as used in check-streak-notifications) is the safer pattern.
+
 -- Enable pg_cron extension for scheduled jobs
 create extension if not exists pg_cron;
 

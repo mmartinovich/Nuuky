@@ -150,6 +150,10 @@ ALTER TABLE rooms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE room_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE flares ENABLE ROW LEVEL SECURITY;
 ALTER TABLE nudges ENABLE ROW LEVEL SECURITY;
+-- NOTE: nudge_limits has RLS enabled with NO policies intentionally.
+-- This table is only accessed by the check_nudge_limit() trigger function,
+-- which runs as the table owner (postgres) and bypasses RLS.
+-- No direct client access is needed or allowed.
 ALTER TABLE nudge_limits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE blocks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;

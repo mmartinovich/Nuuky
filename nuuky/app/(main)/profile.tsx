@@ -237,26 +237,38 @@ export default function ProfileScreen() {
           title: "Change Profile Photo",
         },
         async (buttonIndex) => {
-          if (buttonIndex === 0) {
-            await pickAndUploadAvatar("camera");
-          } else if (buttonIndex === 1) {
-            await pickAndUploadAvatar("gallery");
-          } else if (buttonIndex === 2 && currentUser?.avatar_url) {
-            await deleteAvatar();
+          try {
+            if (buttonIndex === 0) {
+              await pickAndUploadAvatar("camera");
+            } else if (buttonIndex === 1) {
+              await pickAndUploadAvatar("gallery");
+            } else if (buttonIndex === 2 && currentUser?.avatar_url) {
+              await deleteAvatar();
+            }
+          } catch (error) {
+            Alert.alert("Error", "Failed to update avatar. Please try again.");
           }
         },
       );
     } else {
+      const safeAvatarAction = async (action: () => Promise<any>) => {
+        try {
+          await action();
+        } catch (error) {
+          Alert.alert("Error", "Failed to update avatar. Please try again.");
+        }
+      };
+
       const buttons: any[] = [
-        { text: "Take Photo", onPress: () => pickAndUploadAvatar("camera") },
-        { text: "Choose from Library", onPress: () => pickAndUploadAvatar("gallery") },
+        { text: "Take Photo", onPress: () => safeAvatarAction(() => pickAndUploadAvatar("camera")) },
+        { text: "Choose from Library", onPress: () => safeAvatarAction(() => pickAndUploadAvatar("gallery")) },
       ];
 
       if (currentUser?.avatar_url) {
         buttons.push({
           text: "Remove Photo",
           style: "destructive",
-          onPress: () => deleteAvatar(),
+          onPress: () => safeAvatarAction(() => deleteAvatar()),
         });
       }
 

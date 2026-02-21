@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -32,6 +32,7 @@ export default function OnboardingInviteScreen() {
 
   const [addedContacts, setAddedContacts] = useState<Set<string>>(new Set());
   const [addingUserId, setAddingUserId] = useState<string | null>(null);
+  const isSyncingRef = useRef(false);
 
   // Count of friends added during this onboarding
   const addedCount = addedContacts.size;
@@ -47,11 +48,19 @@ export default function OnboardingInviteScreen() {
   }, [matches.notOnNuuky]);
 
   const handleSyncContacts = async () => {
-    await syncContacts();
+    if (isSyncingRef.current || syncLoading) return;
+    isSyncingRef.current = true;
+    try {
+      await syncContacts();
+    } catch (error) {
+      Alert.alert("Sync Failed", "Unable to sync contacts. Please try again.");
+    } finally {
+      isSyncingRef.current = false;
+    }
   };
 
   const handleAddFromContacts = async (contact: MatchedContact) => {
-    if (!contact.userId) return;
+    if (!contact.userId || addingUserId) return;
 
     setAddingUserId(contact.userId);
     try {
