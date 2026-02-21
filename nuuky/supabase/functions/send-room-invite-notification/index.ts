@@ -16,7 +16,16 @@ serve(async (req) => {
 
     const { userId, supabase } = await authenticateRequest(req);
 
-    const { room_id, sender_id, receiver_ids }: RoomInviteRequest = await req.json();
+    let body: RoomInviteRequest;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body' }),
+        { status: 400, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
+      );
+    }
+    const { room_id, sender_id, receiver_ids } = body;
 
     if (!room_id || !sender_id || !receiver_ids || receiver_ids.length === 0) {
       return new Response(

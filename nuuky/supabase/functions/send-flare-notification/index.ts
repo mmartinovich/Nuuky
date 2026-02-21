@@ -15,7 +15,16 @@ serve(async (req) => {
 
     const { userId, supabase } = await authenticateRequest(req);
 
-    const { user_id, flare_id }: FlareRequest = await req.json();
+    let body: FlareRequest;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body' }),
+        { status: 400, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
+      );
+    }
+    const { user_id, flare_id } = body;
 
     if (!user_id || !flare_id) {
       return new Response(

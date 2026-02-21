@@ -78,7 +78,16 @@ Deno.serve(async (req: Request) => {
     }
 
     // Parse request body
-    const { roomId }: TokenRequest = await req.json();
+    let body: TokenRequest;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid request body" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const { roomId } = body;
 
     if (!roomId) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {

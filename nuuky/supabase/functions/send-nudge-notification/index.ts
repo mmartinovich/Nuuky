@@ -16,7 +16,16 @@ serve(async (req) => {
     // Authenticate and authorize
     const { userId, supabase } = await authenticateRequest(req);
 
-    const { receiver_id, sender_id }: NudgeRequest = await req.json();
+    let body: NudgeRequest;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body' }),
+        { status: 400, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
+      );
+    }
+    const { receiver_id, sender_id } = body;
 
     if (!receiver_id || !sender_id) {
       return new Response(

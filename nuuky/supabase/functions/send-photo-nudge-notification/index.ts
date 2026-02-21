@@ -18,7 +18,16 @@ serve(async (req) => {
     // Authenticate and authorize
     const { userId, supabase } = await authenticateRequest(req);
 
-    const { receiver_id, sender_id, photo_nudge_id, caption }: PhotoNudgeNotificationRequest = await req.json();
+    let body: PhotoNudgeNotificationRequest;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body' }),
+        { status: 400, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
+      );
+    }
+    const { receiver_id, sender_id, photo_nudge_id, caption } = body;
 
     if (!receiver_id || !sender_id || !photo_nudge_id) {
       return new Response(

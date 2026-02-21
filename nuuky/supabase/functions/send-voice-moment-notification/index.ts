@@ -17,7 +17,16 @@ serve(async (req) => {
 
     const { userId, supabase } = await authenticateRequest(req);
 
-    const { receiver_id, sender_id, voice_moment_id, caption }: VoiceMomentNotificationRequest = await req.json();
+    let body: VoiceMomentNotificationRequest;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body' }),
+        { status: 400, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
+      );
+    }
+    const { receiver_id, sender_id, voice_moment_id, caption } = body;
 
     if (!receiver_id || !sender_id || !voice_moment_id) {
       return new Response(
