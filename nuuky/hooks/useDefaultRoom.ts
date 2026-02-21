@@ -84,7 +84,7 @@ export const useDefaultRoom = () => {
     setDefaultRoomId(roomId);
 
     // Persist in background (don't block navigation)
-    AsyncStorage.setItem(DEFAULT_ROOM_KEY, roomId).catch(console.error);
+    AsyncStorage.setItem(DEFAULT_ROOM_KEY, roomId).catch(logger.error);
 
     // Sync to Supabase in background
     supabase

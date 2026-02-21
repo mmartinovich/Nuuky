@@ -1,3 +1,4 @@
+import { logger } from "../../lib/logger";
 import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Alert, StatusBar, Animated as RNAnimated, AppState } from "react-native";
 import { Image as CachedImage } from "expo-image";
@@ -429,7 +430,7 @@ export default function QuantumOrbitScreen() {
       joiningRoomRef.current = true;
       joinRoomFn(defaultRoom.id)
         .catch((err: any) => {
-          console.error('Failed to auto-join default room:', err);
+          logger.error('Failed to auto-join default room:', err);
         })
         .finally(() => {
           joiningRoomRef.current = false;

@@ -159,6 +159,8 @@ export const InAppNotificationBanner: React.FC<Props> = ({ notification, onDismi
         activeOpacity={0.95}
         onPress={handlePress}
         style={styles.touchable}
+        accessibilityLabel={`Notification: ${notification.title}`}
+        accessibilityRole="button"
       >
         <BlurView
           intensity={80}
@@ -234,6 +236,8 @@ export const InAppNotificationBanner: React.FC<Props> = ({ notification, onDismi
               style={styles.dismissButton}
               onPress={dismissNotification}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityLabel="Dismiss notification"
+              accessibilityRole="button"
             >
               <Ionicons
                 name="close"

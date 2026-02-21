@@ -1,3 +1,4 @@
+import { logger } from "../lib/logger";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   View,
@@ -149,7 +150,7 @@ export function VoiceMomentPlayer({
       setLoading(false);
     } catch (error) {
       if (gen !== loadGeneration.current) return;
-      console.error("Failed to load audio:", error);
+      logger.error("Failed to load audio:", error);
       setLoadError(true);
       setLoading(false);
     }
@@ -206,7 +207,7 @@ export function VoiceMomentPlayer({
         setIsPlaying(true);
       }
     } catch (error) {
-      console.error("Playback toggle error:", error);
+      logger.error("Playback toggle error:", error);
     }
   }, [isPlaying]);
 

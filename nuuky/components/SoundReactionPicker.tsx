@@ -250,6 +250,8 @@ export const SoundReactionPicker: React.FC<SoundReactionPickerProps> = ({
               onPressOut={handlePressOut}
               disabled={isDisabled}
               delayLongPress={250}
+              accessibilityLabel={`Send ${metadata.label} sound`}
+              accessibilityRole="button"
               style={({ pressed }) => [
                 styles.button,
                 pressed && styles.buttonPressed,

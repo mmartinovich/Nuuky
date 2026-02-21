@@ -103,7 +103,7 @@ const SettingsRow: React.FC<SettingsRowProps> = ({
 
   if (onPress) {
     return (
-      <TouchableOpacity activeOpacity={interactionStates.pressed} onPress={onPress}>
+      <TouchableOpacity activeOpacity={interactionStates.pressed} onPress={onPress} accessibilityLabel={label} accessibilityRole="button">
         {content}
       </TouchableOpacity>
     );
@@ -323,6 +323,8 @@ export default function SettingsScreen() {
             style={styles.backButton}
             onPress={() => router.back()}
             activeOpacity={interactionStates.pressed}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
           >
             <Ionicons name="chevron-back" size={28} color={theme.colors.text.primary} />
           </TouchableOpacity>

@@ -1,3 +1,4 @@
+import { logger } from "../../lib/logger";
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   View,
@@ -233,7 +234,7 @@ export default function VoiceMomentRecorderScreen() {
       }
       setIsPreviewPlaying(true);
     } catch (error) {
-      console.error("Preview playback error:", error);
+      logger.error("Preview playback error:", error);
     }
   }, [recordedUri, isPreviewPlaying]);
 

@@ -106,7 +106,7 @@ const ProfileRow: React.FC<ProfileRowProps> = ({
 
   if (onPress) {
     return (
-      <TouchableOpacity activeOpacity={interactionStates.pressed} onPress={onPress}>
+      <TouchableOpacity activeOpacity={interactionStates.pressed} onPress={onPress} accessibilityLabel={label} accessibilityRole="button">
         {content}
       </TouchableOpacity>
     );
@@ -406,6 +406,8 @@ export default function ProfileScreen() {
             disabled={loading}
             activeOpacity={0.8}
             style={styles.avatarWrapper}
+            accessibilityLabel="Change profile photo"
+            accessibilityRole="button"
           >
             <View style={styles.avatarContainer}>
               {previewUri ? (
@@ -480,7 +482,7 @@ export default function ProfileScreen() {
               </View>
               <View style={[styles.editDivider, { backgroundColor: theme.colors.glass.background }]} />
               <View style={styles.editButtons}>
-                <TouchableOpacity style={styles.editButton} onPress={handleCancelEdit} activeOpacity={interactionStates.pressed}>
+                <TouchableOpacity style={styles.editButton} onPress={handleCancelEdit} activeOpacity={interactionStates.pressed} accessibilityLabel="Cancel name edit" accessibilityRole="button">
                   <Text style={[styles.cancelButtonText, { color: theme.colors.text.secondary }]}>Cancel</Text>
                 </TouchableOpacity>
                 <View style={[styles.buttonDivider, { backgroundColor: theme.colors.glass.background }]} />
@@ -489,6 +491,8 @@ export default function ProfileScreen() {
                   onPress={handleSaveName}
                   disabled={loading || editedName.trim().length === 0}
                   activeOpacity={interactionStates.pressed}
+                  accessibilityLabel="Save display name"
+                  accessibilityRole="button"
                 >
                   <Text
                     style={[
@@ -562,6 +566,8 @@ export default function ProfileScreen() {
                   onPress={handleCountryPress}
                   activeOpacity={interactionStates.pressed}
                   style={styles.countryButton}
+                  accessibilityLabel="Select country code"
+                  accessibilityRole="button"
                 >
                   <CountryPicker
                     visible={showCountryPicker}
@@ -587,6 +593,8 @@ export default function ProfileScreen() {
                             onPress={() => setShowCountryPicker(false)}
                             style={[pickerStyles.closeButton, { backgroundColor: theme.colors.glass.border }]}
                             activeOpacity={0.7}
+                            accessibilityLabel="Close country picker"
+                            accessibilityRole="button"
                           >
                             <Ionicons name="close" size={22} color={theme.colors.text.secondary} />
                           </TouchableOpacity>
@@ -636,7 +644,7 @@ export default function ProfileScreen() {
               </View>
               <View style={[styles.editDivider, { backgroundColor: theme.colors.glass.background }]} />
               <View style={styles.editButtons}>
-                <TouchableOpacity style={styles.editButton} onPress={handleCancelPhoneEdit} activeOpacity={interactionStates.pressed}>
+                <TouchableOpacity style={styles.editButton} onPress={handleCancelPhoneEdit} activeOpacity={interactionStates.pressed} accessibilityLabel="Cancel phone number edit" accessibilityRole="button">
                   <Text style={[styles.cancelButtonText, { color: theme.colors.text.secondary }]}>Cancel</Text>
                 </TouchableOpacity>
                 <View style={[styles.buttonDivider, { backgroundColor: theme.colors.glass.background }]} />
@@ -645,6 +653,8 @@ export default function ProfileScreen() {
                   onPress={handleSavePhone}
                   disabled={loading}
                   activeOpacity={interactionStates.pressed}
+                  accessibilityLabel="Save phone number"
+                  accessibilityRole="button"
                 >
                   <Text
                     style={[
@@ -697,6 +707,8 @@ export default function ProfileScreen() {
         >
           <TouchableOpacity
             activeOpacity={interactionStates.pressed}
+            accessibilityLabel="Delete account"
+            accessibilityRole="button"
             onPress={() => {
               Alert.alert(
                 "Delete Account",
@@ -772,6 +784,8 @@ export default function ProfileScreen() {
             style={styles.backButton}
             onPress={() => router.back()}
             activeOpacity={interactionStates.pressed}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
           >
             <Ionicons name="chevron-back" size={28} color={theme.colors.text.primary} />
           </TouchableOpacity>

@@ -1,3 +1,4 @@
+import { logger } from "../../lib/logger";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
@@ -102,7 +103,7 @@ export default function PhotoNudgeCameraScreen() {
         setCameraReady(false);
       }
     } catch (error) {
-      console.error("Failed to take picture:", error);
+      logger.error("Failed to take picture:", error);
     }
   }, []);
 

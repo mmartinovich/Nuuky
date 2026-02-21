@@ -94,6 +94,8 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
               onPress={handleCopy}
               disabled={copying}
               activeOpacity={0.7}
+              accessibilityLabel="Copy link"
+              accessibilityRole="button"
             >
               {copying ? (
                 <Ionicons name="checkmark" size={20} color={accent.primary} />
@@ -109,6 +111,8 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
               style={[styles.actionButton, { backgroundColor: accent.soft }]}
               onPress={handleShare}
               activeOpacity={0.7}
+              accessibilityLabel="Share QR code"
+              accessibilityRole="button"
             >
               <Ionicons name="share-outline" size={20} color={accent.primary} />
               <Text style={[styles.actionText, { color: accent.primary }]}>Share</Text>
@@ -144,7 +148,7 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({ visible, value, title,
             {/* Header */}
             <View style={styles.header}>
               <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>{title || "QR Code"}</Text>
-              <TouchableOpacity style={[styles.closeButton, { backgroundColor: theme.colors.glass.background }]} onPress={onClose} activeOpacity={0.8}>
+              <TouchableOpacity style={[styles.closeButton, { backgroundColor: theme.colors.glass.background }]} onPress={onClose} activeOpacity={0.8} accessibilityLabel="Close QR code" accessibilityRole="button">
                 <Ionicons name="close" size={24} color={theme.colors.text.primary} />
               </TouchableOpacity>
             </View>
