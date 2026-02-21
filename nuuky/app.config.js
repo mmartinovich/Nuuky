@@ -73,6 +73,7 @@ export default {
         backgroundColor: "#050510",
       },
       package: "com.nuuky.app",
+      versionCode: 1,
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
       permissions: ["android.permission.RECORD_AUDIO", "android.permission.MODIFY_AUDIO_SETTINGS"],
@@ -121,6 +122,7 @@ export default {
       livekitUrl: process.env.EXPO_PUBLIC_LIVEKIT_URL,
       googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
       googleIosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID, // Optional
+      privacyPolicyUrl: "https://nuuky.app/privacy-policy",
       eas: {
         projectId: "3f5531ab-d0f2-44e9-84c2-fd4767070371",
       },

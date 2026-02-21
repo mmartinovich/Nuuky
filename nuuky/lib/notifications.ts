@@ -3,6 +3,7 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { supabase } from './supabase';
+import { logger } from './logger';
 
 /**
  * Configure how notifications should be handled when app is foregrounded
@@ -76,7 +77,7 @@ export async function savePushTokenToUser(userId: string, token: string) {
 
     if (error) throw error;
   } catch (error) {
-    console.error('[Notifications] Failed to save push token');
+    logger.error('[Notifications] Failed to save push token');
   }
 }
 
@@ -106,12 +107,12 @@ export async function sendPushNotification(
     });
 
     if (!response.ok) {
-      console.warn('[Notifications] Push send failed');
+      logger.warn('[Notifications] Push send failed');
       return false;
     }
     return true;
   } catch (error) {
-    console.warn('[Notifications] Push send failed');
+    logger.warn('[Notifications] Push send failed');
     return false;
   }
 }
