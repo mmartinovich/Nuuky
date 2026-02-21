@@ -342,7 +342,13 @@ function FriendParticleComponent({
         <View {...panHandlers} pointerEvents="auto">
 
       {/* Main Particle with Avatar */}
-      <TouchableOpacity activeOpacity={0.8} onPress={handlePress} style={{ zIndex: 100 }}>
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={handlePress}
+        style={{ zIndex: 100 }}
+        accessibilityLabel={`${friend.display_name}${isOnline ? ', online' : ''}${hasActiveFlare ? ', has active flare' : ''}`}
+        accessibilityRole="button"
+      >
         <View style={styles.particleWrapper}>
           {/* Prominent outer glow for all friends - brighter for online (behind everything) */}
           <Animated.View

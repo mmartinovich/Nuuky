@@ -213,6 +213,8 @@ export default function RoomsScreen() {
                   style={styles.emptyButton}
                   onPress={handleCreateRoom}
                   activeOpacity={interactionStates?.pressed || 0.7}
+                  accessibilityLabel="Create room"
+                  accessibilityRole="button"
                 >
                   <View style={[styles.emptyButtonGradient, { backgroundColor: accent.primary }]}>
                     <Ionicons name="add" size={20} color={accent.textOnPrimary} />
@@ -236,6 +238,8 @@ export default function RoomsScreen() {
               style={styles.backButton}
               onPress={() => router.back()}
               activeOpacity={interactionStates?.pressed || 0.7}
+              accessibilityLabel="Go back"
+              accessibilityRole="button"
             >
               <Ionicons name="chevron-back" size={28} color={theme.colors.text.primary} />
             </TouchableOpacity>
@@ -246,6 +250,8 @@ export default function RoomsScreen() {
               style={[styles.createButton, { backgroundColor: accent.soft }]}
               onPress={handleCreateRoom}
               activeOpacity={interactionStates?.pressed || 0.7}
+              accessibilityLabel="Create new room"
+              accessibilityRole="button"
             >
               <Ionicons name="add" size={28} color={accent.primary} />
             </TouchableOpacity>

@@ -32,7 +32,7 @@ serve(async (req) => {
     if (!cronSecret || !secretsMatch) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
+        { status: 401, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
       );
     }
 
@@ -66,7 +66,7 @@ serve(async (req) => {
     if (!inactiveUsers || inactiveUsers.length === 0) {
       return new Response(
         JSON.stringify({ message: 'No inactive users found', count: 0 }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
+        { status: 200, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
       );
     }
 
@@ -168,14 +168,14 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify(result),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      { status: 200, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
     );
 
   } catch (error) {
     console.error('Function error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: 'Internal server error' }),
+      { status: 500, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
     );
   }
 });

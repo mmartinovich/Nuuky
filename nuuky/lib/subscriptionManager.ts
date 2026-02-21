@@ -55,6 +55,9 @@ class SubscriptionManager {
    * @returns Cleanup function to unregister the subscription
    */
   register(id: string, createChannel: SubscriptionCallback): CleanupCallback {
+    // Re-attach AppState listener if cleanup() was called previously
+    this.init();
+
     // If already registered, fully stop and remove the old subscription first
     // to prevent the new subscription from racing with the old cleanup
     const existing = this.subscriptions.get(id);
@@ -167,11 +170,13 @@ class SubscriptionManager {
     });
     this.subscriptions.clear();
 
+    // Reset initialized flag first so init() can re-attach listener
+    this.isInitialized = false;
+
     // Remove AppState listener
     if (this.appStateSubscription) {
       this.appStateSubscription.remove();
       this.appStateSubscription = null;
-      this.isInitialized = false;
     }
   }
 }

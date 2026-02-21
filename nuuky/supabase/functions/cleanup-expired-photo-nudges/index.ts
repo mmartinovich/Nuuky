@@ -23,7 +23,7 @@ import { verifyCronSecret, AuthError, authErrorResponse } from '../_shared/auth.
 serve(async (req) => {
   try {
     if (req.method !== 'POST') {
-      return new Response('Method not allowed', { status: 405 });
+      return new Response('Method not allowed', { status: 405, headers: { 'X-Content-Type-Options': 'nosniff' } });
     }
 
     // Verify cron secret for scheduled function
@@ -63,7 +63,7 @@ serve(async (req) => {
       console.log('No expired items to clean up');
       return new Response(
         JSON.stringify({ message: 'No expired items', cleaned: 0 }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
+        { status: 200, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
       );
     }
 
@@ -212,7 +212,7 @@ serve(async (req) => {
         photosCleaned,
         voiceMomentsCleaned,
       }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      { status: 200, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
     );
 
   } catch (error) {
@@ -221,8 +221,8 @@ serve(async (req) => {
     }
     console.error('Cleanup function error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: 'Internal server error' }),
+      { status: 500, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
     );
   }
 });

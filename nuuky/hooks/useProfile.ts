@@ -123,17 +123,58 @@ export const useProfile = () => {
         return false;
       }
 
-      const imageUri = result.assets[0].uri;
+      const asset = result.assets[0];
+      const imageUri = asset.uri;
+
+      // Validate file size (max 5MB)
+      const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+      if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
+        Alert.alert(
+          'File Too Large',
+          'Please choose an image under 5MB.'
+        );
+        return false;
+      }
+
+      // Validate MIME type based on file extension
+      const ext = imageUri.split('.').pop()?.toLowerCase();
+      const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png'];
+      if (ext && ext.length <= 5 && !ext.includes('/') && !ALLOWED_EXTENSIONS.includes(ext)) {
+        Alert.alert(
+          'Invalid File Type',
+          'Only JPEG and PNG images are allowed.'
+        );
+        return false;
+      }
+
+      // Also check mimeType if available from the picker
+      if (asset.mimeType && !['image/jpeg', 'image/png'].includes(asset.mimeType)) {
+        Alert.alert(
+          'Invalid File Type',
+          'Only JPEG and PNG images are allowed.'
+        );
+        return false;
+      }
 
       // Show preview immediately for instant feedback
       setPreviewUri(imageUri);
       setLoading(true);
       setUploadProgress(0);
 
-      // Check if file exists
+      // Check if file exists and validate size from filesystem if not available from picker
       const fileInfo = await FileSystem.getInfoAsync(imageUri);
       if (!fileInfo.exists) {
         throw new Error('Selected image file not found');
+      }
+
+      // Double-check file size from filesystem if picker didn't provide it
+      if (!asset.fileSize && fileInfo.size && fileInfo.size > MAX_FILE_SIZE) {
+        setPreviewUri(null);
+        Alert.alert(
+          'File Too Large',
+          'Please choose an image under 5MB.'
+        );
+        return false;
       }
 
       // Create file path - handle camera URIs that may not have extension

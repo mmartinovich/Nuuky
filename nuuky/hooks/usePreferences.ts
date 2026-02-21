@@ -11,6 +11,15 @@ export const usePreferences = () => {
   const [loading, setLoading] = useState(true);
   const preferencesRef = useRef(preferences);
   preferencesRef.current = preferences;
+  const isMountedRef = useRef(true);
+
+  // Track mount state
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Load preferences on mount and when user changes
   useEffect(() => {
@@ -33,6 +42,8 @@ export const usePreferences = () => {
         .eq('user_id', currentUser.id)
         .single();
 
+      if (!isMountedRef.current) return;
+
       if (error) {
         // If no preferences exist, create default ones using upsert to handle race
         if (error.code === 'PGRST116') {
@@ -42,6 +53,7 @@ export const usePreferences = () => {
             .select()
             .single();
 
+          if (!isMountedRef.current) return;
           if (createError) throw createError;
           setPreferences(newPrefs);
         } else {
@@ -52,6 +64,7 @@ export const usePreferences = () => {
       }
     } catch (error: any) {
       logger.error('Error loading preferences:', error);
+      if (!isMountedRef.current) return;
       // Set default preferences locally if loading fails
       setPreferences({
         id: '',
@@ -63,7 +76,9 @@ export const usePreferences = () => {
         updated_at: new Date().toISOString(),
       });
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 

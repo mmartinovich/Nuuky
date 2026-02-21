@@ -17,6 +17,16 @@ export const stopNetworkMonitor = () => {
   unsubscribe = null;
 };
 
+/**
+ * Force re-attach the NetInfo listener.
+ * Call this on app resume to handle cases where the OS killed the listener
+ * while the app was in extended background.
+ */
+export const restartNetworkMonitor = () => {
+  stopNetworkMonitor();
+  startNetworkMonitor();
+};
+
 // Fetch wrapper with exponential backoff retry
 export const fetchWithRetry = async <T>(
   fn: () => Promise<T>,

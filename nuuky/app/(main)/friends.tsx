@@ -432,6 +432,16 @@ export default function FriendsScreen() {
       });
   }, [scrubberLetters, handleScrubStart, handleScrubEnd, handleScrubUpdate]);
 
+  const sortButtonActiveStyle = useMemo(
+    () => ({ backgroundColor: accent.primary, borderColor: accent.primary }),
+    [accent.primary]
+  );
+
+  const sortButtonBorderStyle = useMemo(
+    () => ({ borderColor: theme.colors.glass.border }),
+    [theme.colors.glass.border]
+  );
+
   const handleSortChange = (mode: SortMode) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setSortMode(mode);
@@ -484,6 +494,8 @@ export default function FriendsScreen() {
               style={styles.backButton}
               onPress={() => router.back()}
               activeOpacity={interactionStates.pressed}
+              accessibilityLabel="Go back"
+              accessibilityRole="button"
             >
               <Ionicons name="chevron-back" size={28} color={theme.colors.text.primary} />
             </TouchableOpacity>
@@ -492,6 +504,8 @@ export default function FriendsScreen() {
               style={[styles.refreshButton, { backgroundColor: accent.soft }]}
               onPress={handleRefresh}
               activeOpacity={interactionStates.pressed}
+              accessibilityLabel="Refresh friends list"
+              accessibilityRole="button"
             >
               <Ionicons name="refresh" size={24} color={accent.primary} />
             </TouchableOpacity>
@@ -513,6 +527,9 @@ export default function FriendsScreen() {
               onPress={() => handleTabChange('friends')}
               onLayout={(e) => setTabWidth(e.nativeEvent.layout.width)}
               activeOpacity={0.7}
+              accessibilityLabel={`My Friends tab${friends.length > 0 ? `, ${friends.length} friends` : ''}`}
+              accessibilityRole="button"
+              accessibilityState={{ selected: activeTab === 'friends' }}
             >
               <Ionicons
                 name="people"
@@ -544,6 +561,9 @@ export default function FriendsScreen() {
               style={styles.tab}
               onPress={() => handleTabChange('add')}
               activeOpacity={0.7}
+              accessibilityLabel="Add Friends tab"
+              accessibilityRole="button"
+              accessibilityState={{ selected: activeTab === 'add' }}
             >
               <Ionicons
                 name="person-add"
@@ -578,9 +598,11 @@ export default function FriendsScreen() {
                     onChangeText={handleSearchQueryChange}
                     autoCorrect={false}
                     autoCapitalize="none"
+                    accessibilityLabel="Filter friends"
+                    accessibilityRole="search"
                   />
                   {searchQuery.length > 0 && (
-                    <TouchableOpacity onPress={() => { setSearchQuery(""); setDebouncedSearchQuery(""); if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); }} activeOpacity={0.7}>
+                    <TouchableOpacity onPress={() => { setSearchQuery(""); setDebouncedSearchQuery(""); if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); }} activeOpacity={0.7} accessibilityLabel="Clear search" accessibilityRole="button">
                       <Ionicons name="close-circle" size={18} color={theme.colors.text.tertiary} />
                     </TouchableOpacity>
                   )}
@@ -593,11 +615,14 @@ export default function FriendsScreen() {
                       key={mode}
                       style={[
                         styles.sortButton,
-                        { borderColor: theme.colors.glass.border },
-                        sortMode === mode && { backgroundColor: accent.primary, borderColor: accent.primary }
+                        sortButtonBorderStyle,
+                        sortMode === mode && sortButtonActiveStyle
                       ]}
                       onPress={() => handleSortChange(mode)}
                       activeOpacity={0.7}
+                      accessibilityLabel={`Sort by ${mode === 'alpha' ? 'alphabetical' : mode === 'online' ? 'online status' : 'recent activity'}`}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: sortMode === mode }}
                     >
                       <Text style={[
                         styles.sortButtonText,
@@ -655,6 +680,8 @@ export default function FriendsScreen() {
                       style={[styles.emptyButton, { backgroundColor: accent.primary }]}
                       onPress={() => handleTabChange('add')}
                       activeOpacity={0.7}
+                      accessibilityLabel="Add Friends"
+                      accessibilityRole="button"
                     >
                       <Ionicons name="person-add" size={18} color="#000" />
                       <Text style={styles.emptyButtonText}>Add Friends</Text>
@@ -693,6 +720,8 @@ export default function FriendsScreen() {
                         onPress={() => handleLetterPress(letter)}
                         style={styles.letterButton}
                         disabled={letter !== '★' && !availableLetters.has(letter)}
+                        accessibilityLabel={letter === '★' ? 'Jump to favorites' : `Jump to letter ${letter}`}
+                        accessibilityRole="button"
                       >
                         <Text style={[
                           styles.letterText,
@@ -732,6 +761,8 @@ export default function FriendsScreen() {
                 activeOpacity={0.7}
                 onPress={toggleUsernameSearch}
                 style={styles.expandableCardHeader}
+                accessibilityLabel={usernameSearchExpanded ? "Collapse username search" : "Find by username"}
+                accessibilityRole="button"
               >
                 <View style={[styles.addSectionIcon, { backgroundColor: accent.soft }]}>
                   <Ionicons name="at" size={20} color={accent.primary} />
@@ -763,13 +794,15 @@ export default function FriendsScreen() {
                       autoCapitalize="none"
                       autoCorrect={false}
                       autoFocus
+                      accessibilityLabel="Search by username"
+                      accessibilityRole="search"
                     />
                     {(userSearchLoading || usernameQuery.length > 0) && (
                       <View style={styles.searchTrailingIcon}>
                         {userSearchLoading ? (
                           <ActivityIndicator size="small" color={theme.colors.text.tertiary} />
                         ) : (
-                          <TouchableOpacity onPress={() => handleUsernameSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                          <TouchableOpacity onPress={() => handleUsernameSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityLabel="Clear username search" accessibilityRole="button">
                             <Ionicons name="close-circle" size={16} color={theme.colors.text.tertiary} />
                           </TouchableOpacity>
                         )}
@@ -829,6 +862,8 @@ export default function FriendsScreen() {
                                     onPress={() => handleAddFriendFromSearch(user.id)}
                                     disabled={isAdding}
                                     activeOpacity={0.7}
+                                    accessibilityLabel={`Add ${user.display_name} as friend`}
+                                    accessibilityRole="button"
                                   >
                                     {isAdding ? (
                                       <ActivityIndicator size="small" color="#000" />
@@ -862,6 +897,8 @@ export default function FriendsScreen() {
                 onPress={syncContacts}
                 disabled={syncLoading}
                 style={[styles.expandableCardHeader, syncLoading && styles.buttonDisabled]}
+                accessibilityLabel={syncLoading ? "Searching contacts" : "Find friends from contacts"}
+                accessibilityRole="button"
               >
                 <View style={[styles.addSectionIcon, { backgroundColor: accent.soft }]}>
                   {syncLoading ? (
@@ -928,6 +965,8 @@ export default function FriendsScreen() {
                           disabled={loading}
                           style={[styles.addButton, { backgroundColor: accent.primary }]}
                           activeOpacity={0.7}
+                          accessibilityLabel={`Add ${contact.displayName || contact.name} as friend`}
+                          accessibilityRole="button"
                         >
                           <Ionicons name="person-add" size={14} color="#000" />
                           <Text style={styles.addButtonText}>Add</Text>
@@ -945,6 +984,8 @@ export default function FriendsScreen() {
               onPress={() => shareInvite()}
               disabled={sending}
               style={[styles.inviteCard, { borderColor: theme.colors.glass.border }]}
+              accessibilityLabel="Send invite to someone not on Nuuky"
+              accessibilityRole="button"
             >
               <Ionicons name="share-social-outline" size={20} color={accent.primary} />
               <Text style={[styles.inviteText, { color: theme.colors.text.secondary }]}>

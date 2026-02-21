@@ -5,6 +5,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
+  "X-Content-Type-Options": "nosniff",
 };
 
 interface TokenRequest {
@@ -37,7 +38,7 @@ Deno.serve(async (req: Request) => {
         apiSecret: !!apiSecret,
         livekitUrl: !!livekitUrl,
       });
-      return new Response(JSON.stringify({ error: "LiveKit not configured" }), {
+      return new Response(JSON.stringify({ error: "Internal server error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -46,7 +47,7 @@ Deno.serve(async (req: Request) => {
     // Get JWT from Authorization header
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "No Authorization header" }), {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -68,7 +69,7 @@ Deno.serve(async (req: Request) => {
     if (userError || !user) {
       console.error("Auth error:", userError);
       return new Response(
-        JSON.stringify({ error: "Unauthorized", details: userError?.message }),
+        JSON.stringify({ error: "Unauthorized" }),
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -80,7 +81,7 @@ Deno.serve(async (req: Request) => {
     const { roomId }: TokenRequest = await req.json();
 
     if (!roomId) {
-      return new Response(JSON.stringify({ error: "Missing roomId" }), {
+      return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -100,7 +101,7 @@ Deno.serve(async (req: Request) => {
 
     if (!participant) {
       return new Response(
-        JSON.stringify({ error: "Not a participant of this room" }),
+        JSON.stringify({ error: "Forbidden" }),
         {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -158,7 +159,7 @@ Deno.serve(async (req: Request) => {
     );
   } catch (error) {
     console.error("Function error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

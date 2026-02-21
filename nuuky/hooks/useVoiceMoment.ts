@@ -329,7 +329,7 @@ export const useVoiceMoment = () => {
 
       if (error) throw error;
 
-      const momentsWithSignedUrls = await Promise.all(
+      const results = await Promise.allSettled(
         (data || []).map(async (moment) => {
           const urlParts = moment.audio_url.split('/voice-moments/');
           if (urlParts.length === 2) {
@@ -344,6 +344,10 @@ export const useVoiceMoment = () => {
           return moment;
         })
       );
+
+      const momentsWithSignedUrls = results
+        .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+        .map(r => r.value);
 
       return momentsWithSignedUrls as VoiceMoment[];
     } catch (error: any) {

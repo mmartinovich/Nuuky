@@ -85,6 +85,8 @@ const RoomCardComponent: React.FC<RoomCardProps> = ({ room, onPress, onLongPress
         { borderWidth: 1, borderColor: theme.colors.glass.border },
         isDefault && [styles.cardSelected, { backgroundColor: accent.soft, borderColor: accent.primary + '40' }],
       ]}
+      accessibilityLabel={`${displayName}, ${participantCount} member${participantCount !== 1 ? 's' : ''}${isDefault ? ', currently selected' : ''}`}
+      accessibilityRole="button"
     >
       {isDefault && (
         <View style={[styles.selectedIndicator, { backgroundColor: accent.primary }]} />

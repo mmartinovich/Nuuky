@@ -122,7 +122,7 @@ export const useLofiMusic = (otherParticipantCount?: number): UseLofiMusicReturn
             setCurrentTrack(targetTrack);
             logger.log('[useLofiMusic] Auto-play started');
           }
-        });
+        }).catch(err => logger.error('[useLofiMusic] Auto-play error:', err));
       }, 5000);
     } else if (!isAlone && isPlaying && !isManualPlay.current) {
       // Stop when someone joins, but ONLY if it was auto-started
@@ -130,7 +130,7 @@ export const useLofiMusic = (otherParticipantCount?: number): UseLofiMusicReturn
       logger.log('[useLofiMusic] Auto-stopping (friend joined)');
       pauseLofi(true).then(() => {
         setIsPlaying(false);
-      });
+      }).catch(err => logger.error('[useLofiMusic] Auto-stop error:', err));
     }
 
     // Cleanup: cancel timer if conditions change before 5 seconds
@@ -152,7 +152,7 @@ export const useLofiMusic = (otherParticipantCount?: number): UseLofiMusicReturn
         if (success) {
           setCurrentTrack(targetTrack);
         }
-      });
+      }).catch(err => logger.error('[useLofiMusic] Mood track switch error:', err));
     }
   }, [currentMood, isPlaying, currentTrack, selectedTrack]);
 
@@ -237,7 +237,7 @@ export const useLofiMusic = (otherParticipantCount?: number): UseLofiMusicReturn
           if (success) {
             setCurrentTrack(targetTrack);
           }
-        });
+        }).catch(err => logger.error('[useLofiMusic] Track select error:', err));
       }
     },
     [setLofiSelectedTrackStore, isPlaying, isAvailable, currentMood]

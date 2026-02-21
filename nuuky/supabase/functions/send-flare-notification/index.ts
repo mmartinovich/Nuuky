@@ -10,7 +10,7 @@ interface FlareRequest {
 serve(async (req) => {
   try {
     if (req.method !== 'POST') {
-      return new Response('Method not allowed', { status: 405 });
+      return new Response('Method not allowed', { status: 405, headers: { 'X-Content-Type-Options': 'nosniff' } });
     }
 
     const { userId, supabase } = await authenticateRequest(req);
@@ -20,7 +20,7 @@ serve(async (req) => {
     if (!user_id || !flare_id) {
       return new Response(
         JSON.stringify({ error: 'Missing user_id or flare_id' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
       );
     }
 
@@ -49,7 +49,7 @@ serve(async (req) => {
       console.error('User not found:', userResult.error);
       return new Response(
         JSON.stringify({ error: 'User not found' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
+        { status: 404, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
       );
     }
 
@@ -57,8 +57,8 @@ serve(async (req) => {
     if (friendshipsResult.error) {
       console.error('Error fetching friends:', friendshipsResult.error);
       return new Response(
-        JSON.stringify({ error: 'Failed to fetch friends' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Internal server error' }),
+        { status: 500, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
       );
     }
 
@@ -66,7 +66,7 @@ serve(async (req) => {
       console.log('User has no friends to notify');
       return new Response(
         JSON.stringify({ message: 'No friends to notify', sent: 0 }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
+        { status: 200, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
       );
     }
 
@@ -204,7 +204,7 @@ serve(async (req) => {
         anchors: anchorTokens.length,
         friends: regularTokens.length,
       }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      { status: 200, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
     );
 
   } catch (error) {
@@ -213,8 +213,8 @@ serve(async (req) => {
     }
     console.error('Function error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: 'Internal server error' }),
+      { status: 500, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
     );
   }
 });

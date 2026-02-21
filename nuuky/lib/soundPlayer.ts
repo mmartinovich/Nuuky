@@ -43,6 +43,10 @@ let isPreloaded = false;
 let preloadPromise: Promise<void> | null = null;
 let isAudioAvailable = false;
 
+// Track on-demand sound instances to prevent unbounded memory accumulation
+const MAX_ON_DEMAND_SOUNDS = 5;
+const onDemandSounds: { sound: any; timeout: ReturnType<typeof setTimeout> }[] = [];
+
 /**
  * Preload all reaction sounds into memory for instant playback.
  * Call this once at app startup.
@@ -127,15 +131,38 @@ export const playSound = async (soundId: SoundReactionType): Promise<void> => {
         return;
       }
       // Fallback: load and play on demand
+      // Enforce concurrent limit — evict oldest on-demand sound if at capacity
+      while (onDemandSounds.length >= MAX_ON_DEMAND_SOUNDS) {
+        const oldest = onDemandSounds.shift();
+        if (oldest) {
+          clearTimeout(oldest.timeout);
+          try { oldest.sound.unloadAsync(); } catch {}
+        }
+      }
+
       const { sound: newSound } = await Audio.Sound.createAsync(
         source,
         { shouldPlay: true, volume: 1.0 }
       );
+
+      const removeEntry = () => {
+        const idx = onDemandSounds.findIndex(e => e.sound === newSound);
+        if (idx !== -1) onDemandSounds.splice(idx, 1);
+      };
+
       // Clean up after playback (with safety timeout to prevent leak)
-      const safetyTimeout = setTimeout(() => { try { newSound.unloadAsync(); } catch {} }, 10000);
+      const safetyTimeout = setTimeout(() => {
+        removeEntry();
+        try { newSound.unloadAsync(); } catch {}
+      }, 10000);
+
+      const entry = { sound: newSound, timeout: safetyTimeout };
+      onDemandSounds.push(entry);
+
       newSound.setOnPlaybackStatusUpdate((status: any) => {
         if (status.isLoaded && status.didJustFinish) {
           clearTimeout(safetyTimeout);
+          removeEntry();
           newSound.unloadAsync();
         }
       });

@@ -1,9 +1,9 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  SectionList,
   TouchableOpacity,
   RefreshControl,
   StatusBar,
@@ -108,8 +108,8 @@ export default function NotificationsScreen() {
     [notifications]
   );
 
-  // Group notifications by time period
-  const groupedNotifications = useMemo(() => {
+  // Group notifications by time period into SectionList-compatible format
+  const sections = useMemo(() => {
     const groups: {
       today: AppNotification[];
       yesterday: AppNotification[];
@@ -125,7 +125,11 @@ export default function NotificationsScreen() {
       groups[group].push(notification);
     });
 
-    return groups;
+    const result: { title: string; data: AppNotification[] }[] = [];
+    if (groups.today.length > 0) result.push({ title: 'TODAY', data: groups.today });
+    if (groups.yesterday.length > 0) result.push({ title: 'YESTERDAY', data: groups.yesterday });
+    if (groups.earlier.length > 0) result.push({ title: 'EARLIER', data: groups.earlier });
+    return result;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notificationsKey]);
 
@@ -150,46 +154,32 @@ export default function NotificationsScreen() {
     }).start();
   }, [selectionMode]);
 
-  const renderSection = (
-    title: string,
-    sectionNotifications: AppNotification[],
-    baseDelay: number
-  ) => {
-    if (sectionNotifications.length === 0) return null;
+  const renderNotificationItem = useCallback(({ item, index }: { item: AppNotification; index: number }) => (
+    <View>
+      {index > 0 && (
+        <View style={[styles.separator, { backgroundColor: theme.colors.glass.border }]} />
+      )}
+      <NotificationCard
+        notification={item}
+        onPress={() => handleNotificationTap(item)}
+        onDelete={() => handleDeleteNotification(item.id)}
+        animationDelay={index * 50}
+        selectionMode={selectionMode}
+        isSelected={selectedIds.has(item.id)}
+        onToggleSelect={() => toggleSelect(item.id)}
+        onEnterSelectionMode={() => enterSelectionMode(item.id)}
+        cardStyle={true}
+      />
+    </View>
+  ), [theme, selectionMode, selectedIds, handleNotificationTap, toggleSelect, enterSelectionMode]);
 
-    return (
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.text.tertiary }]}>
-          {title}
-        </Text>
-        <View
-          style={[
-            styles.notificationsCard,
-            { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border },
-          ]}
-        >
-          {sectionNotifications.map((notification, index) => (
-            <React.Fragment key={notification.id}>
-              {index > 0 && (
-                <View style={[styles.separator, { backgroundColor: theme.colors.glass.border }]} />
-              )}
-              <NotificationCard
-                notification={notification}
-                onPress={() => handleNotificationTap(notification)}
-                onDelete={() => handleDeleteNotification(notification.id)}
-                animationDelay={baseDelay + index * 50}
-                selectionMode={selectionMode}
-                isSelected={selectedIds.has(notification.id)}
-                onToggleSelect={() => toggleSelect(notification.id)}
-                onEnterSelectionMode={() => enterSelectionMode(notification.id)}
-                cardStyle={true}
-              />
-            </React.Fragment>
-          ))}
-        </View>
-      </View>
-    );
-  };
+  const renderSectionHeader = useCallback(({ section }: { section: { title: string } }) => (
+    <Text style={[styles.sectionTitle, { color: theme.colors.text.tertiary, marginTop: 8 }]}>
+      {section.title}
+    </Text>
+  ), [theme]);
+
+  const keyExtractor = useCallback((item: AppNotification) => item.id, []);
 
   const hasNotifications = notifications.length > 0;
 
@@ -204,6 +194,8 @@ export default function NotificationsScreen() {
               style={[styles.headerButton, { backgroundColor: theme.colors.glass.background }]}
               onPress={selectionMode ? clearSelection : () => router.back()}
               activeOpacity={0.7}
+              accessibilityLabel={selectionMode ? "Cancel selection" : "Close notifications"}
+              accessibilityRole="button"
             >
               <Ionicons name="close" size={22} color={theme.colors.text.primary} />
             </TouchableOpacity>
@@ -212,6 +204,8 @@ export default function NotificationsScreen() {
                 style={[styles.headerButton, { backgroundColor: theme.colors.glass.background }]}
                 onPress={() => enterSelectionMode()}
                 activeOpacity={0.7}
+                accessibilityLabel="Edit notifications"
+                accessibilityRole="button"
               >
                 <Text style={[styles.editButtonText, { color: accent.primary }]}>Edit</Text>
               </TouchableOpacity>
@@ -221,7 +215,7 @@ export default function NotificationsScreen() {
             {selectionMode ? `${selectedIds.size} Selected` : 'Notifications'}
           </Text>
           {selectionMode ? (
-            <TouchableOpacity onPress={allSelected ? deselectAll : selectAll} activeOpacity={0.7}>
+            <TouchableOpacity onPress={allSelected ? deselectAll : selectAll} activeOpacity={0.7} accessibilityLabel={allSelected ? "Deselect all notifications" : "Select all notifications"} accessibilityRole="button">
               <Text style={[styles.subtitleLink, { color: accent.primary }]}>
                 {allSelected ? 'Deselect All' : 'Select All'}
               </Text>
@@ -237,8 +231,12 @@ export default function NotificationsScreen() {
           )}
         </View>
 
-        {/* Scrollable Content */}
-        <ScrollView
+        {/* Scrollable Content - SectionList for virtualized performance */}
+        <SectionList
+          sections={sections}
+          keyExtractor={keyExtractor}
+          renderItem={renderNotificationItem}
+          renderSectionHeader={renderSectionHeader}
           style={styles.scrollView}
           contentContainerStyle={[
             styles.scrollContent,
@@ -246,92 +244,83 @@ export default function NotificationsScreen() {
               paddingBottom: insets.bottom + (selectionMode ? 80 : 24),
             },
           ]}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={refreshNotifications}
-                tintColor={theme.colors.text.secondary}
-              />
-            }
-          >
-          {/* Room Invites Section */}
-          {hasInvites && (
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: theme.colors.text.tertiary }]}>
-                  ROOM INVITES
-                </Text>
-                <View style={[styles.badge, { backgroundColor: accent.soft }]}>
-                  <Text style={[styles.badgeText, { color: accent.primary }]}>
-                    {roomInvites.length}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={refreshNotifications}
+              tintColor={theme.colors.text.secondary}
+            />
+          }
+          maxToRenderPerBatch={15}
+          windowSize={7}
+          initialNumToRender={15}
+          stickySectionHeadersEnabled={false}
+          ListHeaderComponent={
+            hasInvites ? (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={[styles.sectionTitle, { color: theme.colors.text.tertiary }]}>
+                    ROOM INVITES
                   </Text>
+                  <View style={[styles.badge, { backgroundColor: accent.soft }]}>
+                    <Text style={[styles.badgeText, { color: accent.primary }]}>
+                      {roomInvites.length}
+                    </Text>
+                  </View>
+                </View>
+                <View
+                  style={[
+                    styles.invitesCard,
+                    { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border },
+                  ]}
+                >
+                  {roomInvites.map((invite, index) => (
+                    <React.Fragment key={invite.id}>
+                      {index > 0 && (
+                        <View style={[styles.separator, { backgroundColor: theme.colors.glass.border }]} />
+                      )}
+                      <InviteCard
+                        invite={invite}
+                        onAccept={() => handleAcceptInvite(invite.id)}
+                        onDecline={() => handleDeclineInvite(invite.id)}
+                        cardStyle={true}
+                      />
+                    </React.Fragment>
+                  ))}
                 </View>
               </View>
-              <View
-                style={[
-                  styles.invitesCard,
-                  { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border },
-                ]}
-              >
-                {roomInvites.map((invite, index) => (
-                  <React.Fragment key={invite.id}>
-                    {index > 0 && (
-                      <View style={[styles.separator, { backgroundColor: theme.colors.glass.border }]} />
-                    )}
-                    <InviteCard
-                      invite={invite}
-                      onAccept={() => handleAcceptInvite(invite.id)}
-                      onDecline={() => handleDeclineInvite(invite.id)}
-                      cardStyle={true}
-                    />
-                  </React.Fragment>
-                ))}
+            ) : null
+          }
+          ListEmptyComponent={
+            !hasInvites ? (
+              <View style={styles.emptyState}>
+                <Animated.View
+                  style={[
+                    styles.emptyIconContainer,
+                    {
+                      backgroundColor: theme.colors.glass.background,
+                      borderColor: theme.colors.glass.border,
+                      transform: [{ scale: pulseAnim }],
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="notifications-off-outline"
+                    size={48}
+                    color={theme.colors.text.tertiary}
+                  />
+                </Animated.View>
+                <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>
+                  No notifications yet
+                </Text>
+                <Text style={[styles.emptyMessage, { color: theme.colors.text.tertiary }]}>
+                  When friends nudge you or invite you to rooms, you'll see it here
+                </Text>
               </View>
-            </View>
-          )}
-
-          {hasNotifications ? (
-            <>
-              {renderSection('TODAY', groupedNotifications.today, 0)}
-              {renderSection(
-                'YESTERDAY',
-                groupedNotifications.yesterday,
-                groupedNotifications.today.length * 50
-              )}
-              {renderSection(
-                'EARLIER',
-                groupedNotifications.earlier,
-                (groupedNotifications.today.length + groupedNotifications.yesterday.length) * 50
-              )}
-            </>
-          ) : !hasInvites && (
-            <View style={styles.emptyState}>
-              <Animated.View
-                style={[
-                  styles.emptyIconContainer,
-                  {
-                    backgroundColor: theme.colors.glass.background,
-                    borderColor: theme.colors.glass.border,
-                    transform: [{ scale: pulseAnim }],
-                  },
-                ]}
-              >
-                <Ionicons
-                  name="notifications-off-outline"
-                  size={48}
-                  color={theme.colors.text.tertiary}
-                />
-              </Animated.View>
-              <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>
-                No notifications yet
-              </Text>
-              <Text style={[styles.emptyMessage, { color: theme.colors.text.tertiary }]}>
-                When friends nudge you or invite you to rooms, you'll see it here
-              </Text>
-            </View>
-          )}
-        </ScrollView>
+            ) : null
+          }
+        />
 
         {/* Bottom action bar for selection mode */}
         <Animated.View
@@ -362,6 +351,8 @@ export default function NotificationsScreen() {
             onPress={handleDeleteSelected}
             activeOpacity={0.7}
             disabled={selectedIds.size === 0}
+            accessibilityLabel={`Delete ${selectedIds.size} selected notification${selectedIds.size !== 1 ? 's' : ''}`}
+            accessibilityRole="button"
           >
             <Ionicons name="trash-outline" size={18} color="#FFF" />
             <Text style={styles.deleteButtonText}>

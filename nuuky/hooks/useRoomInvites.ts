@@ -443,11 +443,18 @@ export const useRoomInvites = () => {
             filter: `receiver_id=eq.${currentUser.id}`,
           },
           (payload) => {
-            if (payload.eventType === 'INSERT') {
-              throttledLoadInvites();
-            } else if (payload.eventType === 'DELETE' ||
-                       (payload.eventType === 'UPDATE' && (payload.new as any).status !== 'pending')) {
-              useAppStore.getState().removeRoomInvite((payload.old as any)?.id || (payload.new as any)?.id);
+            try {
+              if (payload.eventType === 'INSERT') {
+                throttledLoadInvites();
+              } else if (payload.eventType === 'DELETE' ||
+                         (payload.eventType === 'UPDATE' && payload.new && (payload.new as any).status !== 'pending')) {
+                const inviteId = (payload.old as any)?.id || (payload.new as any)?.id;
+                if (inviteId) {
+                  useAppStore.getState().removeRoomInvite(inviteId);
+                }
+              }
+            } catch (error) {
+              logger.error('Error handling room invite realtime event:', error);
             }
           }
         )

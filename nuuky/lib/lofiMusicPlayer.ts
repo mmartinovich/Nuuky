@@ -264,16 +264,23 @@ export const stopLofi = async (fadeOut = true): Promise<void> => {
 export const pauseLofi = async (fadeOut = true): Promise<void> => {
   if (!currentSound || !isPlaying) return;
 
+  // Capture the sound reference at call time to avoid stale closure
+  const soundToPause = currentSound;
+
   try {
     if (fadeOut) {
-      await fadeVolume(currentSound, targetVolume, 0, async () => {
+      // fadeVolume internally increments fadeGeneration and guards the onComplete
+      await fadeVolume(soundToPause, targetVolume, 0, async () => {
         try {
-          await currentSound?.pauseAsync();
+          // Only pause if this is still the active sound
+          if (currentSound === soundToPause) {
+            await soundToPause.pauseAsync();
+            isPlaying = false;
+          }
         } catch {}
-        isPlaying = false;
       });
     } else {
-      await currentSound.pauseAsync();
+      await soundToPause.pauseAsync();
       isPlaying = false;
     }
 
@@ -296,19 +303,21 @@ export const resumeLofi = async (fadeIn = true): Promise<boolean> => {
 
     await currentSound.playAsync();
     isPlaying = true;
-
-    if (fadeIn) {
-      fadeVolume(currentSound, 0, targetVolume).catch(err =>
-        logger.error('[LofiPlayer] Resume fade-in error:', err)
-      );
-    }
-
-    logger.log('[LofiPlayer] Resumed');
-    return true;
   } catch (error) {
     logger.error('[LofiPlayer] Resume failed:', error);
+    // playAsync failed — don't set isPlaying and skip fade-in
     return false;
   }
+
+  // Fade in only after playback confirmed successful
+  if (fadeIn) {
+    fadeVolume(currentSound, 0, targetVolume).catch(err =>
+      logger.error('[LofiPlayer] Resume fade-in error:', err)
+    );
+  }
+
+  logger.log('[LofiPlayer] Resumed');
+  return true;
 };
 
 /**

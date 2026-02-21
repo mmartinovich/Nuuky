@@ -52,18 +52,9 @@ if (typeof globalThis.addEventListener === 'function') {
 // Deep link validation helpers
 const VALID_USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
 const VALID_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-let deepLinkTimestamps: number[] = [];
+const VALID_URL_SCHEMES = ['nuuky://', 'https://nuuky.app/', 'exp://'];
 const DEEP_LINK_RATE_LIMIT = 5;
 const DEEP_LINK_RATE_WINDOW_MS = 60_000;
-
-function isDeepLinkRateLimited(): boolean {
-  const now = Date.now();
-  // Filter out expired timestamps (replace array to avoid unbounded growth from shift())
-  deepLinkTimestamps = deepLinkTimestamps.filter(t => now - t <= DEEP_LINK_RATE_WINDOW_MS);
-  if (deepLinkTimestamps.length >= DEEP_LINK_RATE_LIMIT) return true;
-  deepLinkTimestamps.push(now);
-  return false;
-}
 
 // Type for pending deep link actions (to execute after login)
 interface PendingDeepLinkAction {
@@ -119,6 +110,7 @@ export default function RootLayout() {
   const notificationCleanupRef = useRef<(() => void) | null>(null);
   const pendingDeepLinkRef = useRef<PendingDeepLinkAction | null>(null);
   const showNotificationBannerRef = useRef<((notification: any) => void) | null>(null);
+  const deepLinkTimestampsRef = useRef<number[]>([]);
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);
 
@@ -467,8 +459,25 @@ export default function RootLayout() {
       }
     };
 
+    // Rate limit deep links using ref-based timestamps
+    const isDeepLinkRateLimited = (): boolean => {
+      const now = Date.now();
+      deepLinkTimestampsRef.current = deepLinkTimestampsRef.current.filter(
+        (t) => now - t <= DEEP_LINK_RATE_WINDOW_MS
+      );
+      if (deepLinkTimestampsRef.current.length >= DEEP_LINK_RATE_LIMIT) return true;
+      deepLinkTimestampsRef.current.push(now);
+      return false;
+    };
+
     // Handle all deep links
     const handleDeepLink = async (url: string) => {
+      // Validate URL scheme before processing
+      if (!VALID_URL_SCHEMES.some((scheme) => url.startsWith(scheme))) {
+        logger.warn('Deep link rejected: invalid URL scheme', url);
+        return;
+      }
+
       const parsed = Linking.parse(url);
       const { queryParams, path } = parsed;
 

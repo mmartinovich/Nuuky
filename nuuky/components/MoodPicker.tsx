@@ -173,6 +173,8 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
               style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.4)' }]}
               activeOpacity={1}
               onPress={handleClose}
+              accessibilityLabel="Close mood picker"
+              accessibilityRole="button"
             />
           </BlurView>
         </Animated.View>
@@ -180,7 +182,7 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
         <Animated.View style={[styles.fullScreenContent, animatedStyle]}>
           <KeyboardAvoidingView
             style={{ flex: 1 }}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           >
           {/* ScrollView - underneath header */}
           <ScrollView
@@ -211,6 +213,8 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                       { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.glass.border },
                       isSelected && { borderColor: moodColors.base, borderWidth: 2, backgroundColor: moodColors.soft },
                     ]}
+                    accessibilityLabel={`${label}: ${description}${isSelected ? ', selected' : ''}`}
+                    accessibilityRole="button"
                   >
                     <View style={styles.imageWrapper}>
                       <Image source={getMoodImage(mood)} style={styles.moodImage} contentFit="contain" />
@@ -262,6 +266,8 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                     }
                   }}
                   delayLongPress={400}
+                  accessibilityLabel={customMood ? `Custom mood: ${customMood.text || customMood.emoji}${isCustomMoodActive ? ', selected' : '. Hold to edit'}` : 'Create custom mood'}
+                  accessibilityRole="button"
                 >
                   <View style={styles.imageWrapperSmall}>
                     {customMood && !isEditing ? (
@@ -317,6 +323,7 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                         placeholderTextColor={theme.colors.text.tertiary}
                         maxLength={20}
                         returnKeyType="done"
+                        accessibilityLabel="Custom mood text"
                       />
                       <Text style={[styles.charCounter, { color: theme.colors.text.tertiary }]}>{editText.length}/20</Text>
                     </View>
@@ -326,6 +333,8 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                         onPress={() => setIsEditing(false)}
                         style={[styles.editorCancel, { backgroundColor: 'rgba(239,68,68,0.12)', borderColor: 'rgba(239,68,68,0.3)' }]}
                         activeOpacity={0.7}
+                        accessibilityLabel="Cancel editing custom mood"
+                        accessibilityRole="button"
                       >
                         <Text style={{ color: '#EF4444', fontSize: 14, fontWeight: '600' }}>Cancel</Text>
                       </TouchableOpacity>
@@ -334,6 +343,8 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                         style={[styles.editorSave, { backgroundColor: canSave ? accent.primary : theme.colors.glass.background }]}
                         activeOpacity={0.7}
                         disabled={!canSave}
+                        accessibilityLabel="Save and use custom mood"
+                        accessibilityRole="button"
                       >
                         <Text style={{ color: canSave ? accent.textOnPrimary : theme.colors.text.tertiary, fontSize: 14, fontWeight: '600' }}>
                           Save & Use
@@ -359,6 +370,8 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({
                 style={[styles.closeButton, { backgroundColor: theme.colors.glass.background }]}
                 onPress={handleClose}
                 activeOpacity={0.7}
+                accessibilityLabel="Close mood picker"
+                accessibilityRole="button"
               >
                 <Ionicons name="close" size={22} color={theme.colors.text.primary} />
               </TouchableOpacity>

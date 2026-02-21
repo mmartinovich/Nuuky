@@ -329,14 +329,15 @@ export const useNotifications = () => {
         .in('id', ids)
         .eq('user_id', currentUser.id);
       if (error) throw error;
-      ids.forEach((id) => removeNotification(id));
+      const store = useAppStore.getState();
+      ids.forEach((id) => store.removeNotification(id));
       clearSelection();
       return true;
     } catch (error: any) {
       logger.error('Error deleting selected notifications:', error);
       return false;
     }
-  }, [currentUser, selectedIds, removeNotification, clearSelection]);
+  }, [currentUser, selectedIds, clearSelection]);
 
   const markSelectedAsRead = useCallback(async () => {
     if (!currentUser || selectedIds.size === 0) return false;
@@ -348,14 +349,15 @@ export const useNotifications = () => {
         .in('id', ids)
         .eq('user_id', currentUser.id);
       if (error) throw error;
-      ids.forEach((id) => markNotificationRead(id));
+      const store = useAppStore.getState();
+      ids.forEach((id) => store.markNotificationRead(id));
       clearSelection();
       return true;
     } catch (error: any) {
       logger.error('Error marking selected as read:', error);
       return false;
     }
-  }, [currentUser, selectedIds, markNotificationRead, clearSelection]);
+  }, [currentUser, selectedIds, clearSelection]);
 
   return {
     notifications,

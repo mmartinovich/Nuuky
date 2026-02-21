@@ -227,7 +227,7 @@ export const usePhotoNudge = () => {
       if (error) throw error;
 
       // Get signed URLs for all photos (private bucket)
-      const photosWithSignedUrls = await Promise.all(
+      const results = await Promise.allSettled(
         (data || []).map(async (nudge) => {
           const urlParts = nudge.image_url.split('/photo-nudges/');
           if (urlParts.length === 2) {
@@ -242,6 +242,10 @@ export const usePhotoNudge = () => {
           return nudge;
         })
       );
+
+      const photosWithSignedUrls = results
+        .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+        .map(r => r.value);
 
       return photosWithSignedUrls as PhotoNudge[];
     } catch (error: any) {

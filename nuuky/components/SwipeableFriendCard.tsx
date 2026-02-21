@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { Image as CachedImage } from 'expo-image';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -43,6 +43,31 @@ export const SwipeableFriendCard: React.FC<SwipeableFriendCardProps> = React.mem
   const friend = friendship.friend as User;
   const moodColors = getMoodColor(friend.mood);
   const isOnline = isUserTrulyOnline(friend.is_online, friend.last_seen_at);
+
+  const cardStyle = useMemo(
+    () => ({
+      backgroundColor: theme.colors.glass.background,
+      borderColor: theme.colors.glass.border,
+    }),
+    [theme.colors.glass.background, theme.colors.glass.border]
+  );
+
+  const avatarBorderStyle = useMemo(
+    () => ({
+      borderColor: isOnline ? moodColors.base : theme.colors.ui.borderLight,
+    }),
+    [isOnline, moodColors.base, theme.colors.ui.borderLight]
+  );
+
+  const avatarPlaceholderStyle = useMemo(
+    () => ({
+      backgroundColor: moodColors.base,
+      borderColor: isOnline ? moodColors.base : theme.colors.ui.borderLight,
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+    }),
+    [isOnline, moodColors.base, theme.colors.ui.borderLight]
+  );
 
   const performRemoveAction = useCallback(async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -132,10 +157,7 @@ export const SwipeableFriendCard: React.FC<SwipeableFriendCardProps> = React.mem
         delayLongPress={400}
         style={[
           styles.friendCard,
-          {
-            backgroundColor: theme.colors.glass.background,
-            borderColor: theme.colors.glass.border,
-          }
+          cardStyle
         ]}
       >
         <View style={styles.friendInfo}>
@@ -145,9 +167,7 @@ export const SwipeableFriendCard: React.FC<SwipeableFriendCardProps> = React.mem
                 source={{ uri: friend.avatar_url }}
                 style={[
                   styles.friendAvatar,
-                  {
-                    borderColor: isOnline ? moodColors.base : theme.colors.ui.borderLight,
-                  },
+                  avatarBorderStyle,
                 ]}
                 cachePolicy="memory-disk"
                 contentFit="cover"
@@ -157,12 +177,7 @@ export const SwipeableFriendCard: React.FC<SwipeableFriendCardProps> = React.mem
               <View
                 style={[
                   styles.friendAvatar,
-                  {
-                    backgroundColor: moodColors.base,
-                    borderColor: isOnline ? moodColors.base : theme.colors.ui.borderLight,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  },
+                  avatarPlaceholderStyle,
                 ]}
               >
                 <Text style={styles.avatarText}>

@@ -76,7 +76,7 @@ export async function savePushTokenToUser(userId: string, token: string) {
 
     if (error) throw error;
   } catch (error) {
-    console.error('[Notifications] Failed to save push token:', error);
+    console.error('[Notifications] Failed to save push token');
   }
 }
 
@@ -106,12 +106,12 @@ export async function sendPushNotification(
     });
 
     if (!response.ok) {
-      console.warn(`[Notifications] Push send failed with status ${response.status}`);
+      console.warn('[Notifications] Push send failed');
       return false;
     }
     return true;
   } catch (error) {
-    console.warn('[Notifications] Push send network error:', error);
+    console.warn('[Notifications] Push send failed');
     return false;
   }
 }

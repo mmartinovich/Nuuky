@@ -57,7 +57,7 @@ function canSendNotification(lastNotificationAt: string | null): boolean {
 serve(async (req) => {
   try {
     if (req.method !== 'POST') {
-      return new Response('Method not allowed', { status: 405 });
+      return new Response('Method not allowed', { status: 405, headers: { 'X-Content-Type-Options': 'nosniff' } });
     }
 
     // Verify cron secret for scheduled function
@@ -86,7 +86,7 @@ serve(async (req) => {
     if (!streaks || streaks.length === 0) {
       return new Response(
         JSON.stringify({ message: 'No active streaks found', count: 0 }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
+        { status: 200, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
       );
     }
 
@@ -225,7 +225,7 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify(result),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      { status: 200, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
     );
 
   } catch (error) {
@@ -234,8 +234,8 @@ serve(async (req) => {
     }
     console.error('Function error:', error);
     return new Response(
-      JSON.stringify({ error: (error as Error).message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: 'Internal server error' }),
+      { status: 500, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
     );
   }
 });

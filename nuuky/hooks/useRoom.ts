@@ -447,6 +447,7 @@ export const useRoom = () => {
     if (isJoiningRoomRef.current) {
       return false;
     }
+    isJoiningRoomRef.current = true;
 
     // Fast path: check local state first to avoid DB round-trips when switching between known rooms
     const freshMyRooms = useAppStore.getState().myRooms;
@@ -463,10 +464,9 @@ export const useRoom = () => {
         setRoomParticipants(knownRoom.participants);
       }
       lastJoinedRoomIdRef.current = roomId;
+      isJoiningRoomRef.current = false;
       return true;
     }
-
-    isJoiningRoomRef.current = true;
     setLoading(true);
     try {
       // Check if already in the room via DB (for rooms not yet in local state)

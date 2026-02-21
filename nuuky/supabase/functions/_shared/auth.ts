@@ -112,8 +112,16 @@ export class AuthError extends Error {
  * Helper to create a JSON error response from an AuthError.
  */
 export function authErrorResponse(error: AuthError): Response {
+  // Map status codes to safe generic messages to avoid leaking internal details
+  const safeMessages: Record<number, string> = {
+    400: 'Bad request',
+    401: 'Unauthorized',
+    403: 'Forbidden',
+    429: 'Rate limit exceeded',
+  };
+  const safeMessage = safeMessages[error.status] || 'Internal server error';
   return new Response(
-    JSON.stringify({ error: error.message }),
-    { status: error.status, headers: { 'Content-Type': 'application/json' } }
+    JSON.stringify({ error: safeMessage }),
+    { status: error.status, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
   );
 }

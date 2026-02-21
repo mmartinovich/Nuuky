@@ -11,7 +11,7 @@ interface RoomInviteRequest {
 serve(async (req) => {
   try {
     if (req.method !== 'POST') {
-      return new Response('Method not allowed', { status: 405 });
+      return new Response('Method not allowed', { status: 405, headers: { 'X-Content-Type-Options': 'nosniff' } });
     }
 
     const { userId, supabase } = await authenticateRequest(req);
@@ -21,7 +21,7 @@ serve(async (req) => {
     if (!room_id || !sender_id || !receiver_ids || receiver_ids.length === 0) {
       return new Response(
         JSON.stringify({ error: 'Missing room_id, sender_id, or receiver_ids' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
       );
     }
 
@@ -46,7 +46,7 @@ serve(async (req) => {
       console.error('Sender not found:', senderResult.error);
       return new Response(
         JSON.stringify({ error: 'Sender not found' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
+        { status: 404, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
       );
     }
 
@@ -54,22 +54,22 @@ serve(async (req) => {
       console.error('Room not found:', roomResult.error);
       return new Response(
         JSON.stringify({ error: 'Room not found' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
+        { status: 404, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
       );
     }
 
     if (receiversResult.error) {
       console.error('Error fetching receivers:', receiversResult.error);
       return new Response(
-        JSON.stringify({ error: 'Failed to fetch receivers' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Internal server error' }),
+        { status: 500, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
       );
     }
 
     if (!receivers || receivers.length === 0) {
       return new Response(
         JSON.stringify({ message: 'No valid receivers found', sent: 0 }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
+        { status: 200, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
       );
     }
 
@@ -83,7 +83,7 @@ serve(async (req) => {
       console.log('No receivers have push tokens');
       return new Response(
         JSON.stringify({ message: 'No receivers with push tokens', sent: 0 }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
+        { status: 200, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
       );
     }
 
@@ -138,7 +138,7 @@ serve(async (req) => {
         failed: pushResult.failed,
         total_receivers: receivers.length,
       }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      { status: 200, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
     );
 
   } catch (error) {
@@ -147,8 +147,8 @@ serve(async (req) => {
     }
     console.error('Function error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: 'Internal server error' }),
+      { status: 500, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
     );
   }
 });

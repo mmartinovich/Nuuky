@@ -21,7 +21,7 @@ const REACTION_EMOJI_MAP: Record<string, string> = {
 serve(async (req) => {
   try {
     if (req.method !== 'POST') {
-      return new Response('Method not allowed', { status: 405 });
+      return new Response('Method not allowed', { status: 405, headers: { 'X-Content-Type-Options': 'nosniff' } });
     }
 
     const { userId, supabase } = await authenticateRequest(req);
@@ -31,7 +31,7 @@ serve(async (req) => {
     if (!receiver_id || !sender_id || !voice_moment_id || !reaction_type) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
       );
     }
 
@@ -54,7 +54,7 @@ serve(async (req) => {
       console.error('Sender not found:', senderResult.error);
       return new Response(
         JSON.stringify({ error: 'Sender not found' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
+        { status: 404, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
       );
     }
 
@@ -62,7 +62,7 @@ serve(async (req) => {
       console.error('Receiver not found:', receiverResult.error);
       return new Response(
         JSON.stringify({ error: 'Receiver not found' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
+        { status: 404, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
       );
     }
 
@@ -70,7 +70,7 @@ serve(async (req) => {
       console.log(`Receiver ${receiver.display_name} has no push token`);
       return new Response(
         JSON.stringify({ message: 'Receiver has no push token', sent: false }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
+        { status: 200, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
       );
     }
 
@@ -127,7 +127,7 @@ serve(async (req) => {
     console.log(`Voice moment reaction notification: push=${pushResult}, db=saved`);
     return new Response(
       JSON.stringify({ message: 'Processed', sent: pushResult, saved: true }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      { status: 200, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
     );
 
   } catch (error) {
@@ -136,8 +136,8 @@ serve(async (req) => {
     }
     console.error('Function error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: 'Internal server error' }),
+      { status: 500, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' } }
     );
   }
 });

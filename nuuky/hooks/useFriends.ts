@@ -173,7 +173,7 @@ export const useFriends = () => {
           (payload) => {
             // Only reload if the changed user is one of our friends
             const friendIds = new Set(
-              useAppStore.getState().friends.map((f: any) => f.friend_id)
+              (useAppStore.getState().friends || []).map((f: any) => f.friend_id)
             );
             if (payload.new && friendIds.has((payload.new as any).id)) {
               throttledLoadFriends();

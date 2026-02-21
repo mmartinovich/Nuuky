@@ -548,7 +548,12 @@ function CentralOrbComponent({
       ) : null}
 
       {/* Frosted Glass Orb - Enhanced */}
-      <TouchableOpacity activeOpacity={0.85} onPress={handlePress}>
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={handlePress}
+        accessibilityLabel="Your mood orb"
+        accessibilityRole="button"
+      >
         <Animated.View
           style={[
             styles.innerOrb,

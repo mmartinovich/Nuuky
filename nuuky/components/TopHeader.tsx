@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
@@ -39,6 +39,15 @@ export const TopHeader = React.memo(function TopHeader({
   const roomDisplayName = isHomeRoom && !isCreator && creatorName
     ? `${creatorName}'s Nūūky`
     : (defaultRoom?.name || 'Room');
+
+  const lofiPlayingStyle = useMemo(
+    () =>
+      isLofiPlaying
+        ? { borderColor: accent.primary, shadowColor: accent.glow, shadowOffset: { width: 0, height: 0 } as const, shadowOpacity: 0.5, shadowRadius: 8 }
+        : undefined,
+    [isLofiPlaying, accent.primary, accent.glow]
+  );
+
   return (
     <View style={styles.topHeader} pointerEvents="box-none">
       <Image source={require("../assets/wordmark.png")} style={styles.wordmarkSmall} contentFit="contain" />
@@ -49,7 +58,7 @@ export const TopHeader = React.memo(function TopHeader({
           style={[
             styles.musicButton,
             { backgroundColor: accent.soft, borderColor: theme.colors.ui.borderLight },
-            isLofiPlaying && { borderColor: accent.primary, shadowColor: accent.glow, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 8 },
+            lofiPlayingStyle,
           ]}
           onPress={onMusicPress}
           activeOpacity={0.7}
@@ -106,7 +115,7 @@ export const TopHeader = React.memo(function TopHeader({
       )}
 
       {audioConnectionStatus !== "disconnected" && defaultRoom && (
-        <View style={{ marginTop: 8 }}>
+        <View style={styles.audioBadgeWrapper}>
           <AudioConnectionBadge status={audioConnectionStatus} />
         </View>
       )}
@@ -185,5 +194,8 @@ const styles = StyleSheet.create({
   roomPillText: {
     fontSize: typography.size.sm,
     fontWeight: typography.weight.medium as any,
+  },
+  audioBadgeWrapper: {
+    marginTop: 8,
   },
 });

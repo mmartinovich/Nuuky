@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { encryptedStorage } from '../lib/secureStorage';
+import { invalidateTokenCache } from '../lib/livekit';
 import { User, Friendship, Room, RoomParticipant, RoomInvite, AudioConnectionStatus, CustomMood, PresetMood, AppNotification, Anchor } from '../types';
 
 interface AppState {
@@ -356,7 +357,10 @@ export const useAppStore = create<AppState>()(
       : [...state.favoriteFriends, friendId]
   })),
 
-  logout: () => set((state) => ({
+  logout: () => {
+    // Clear LiveKit token cache so stale tokens from previous user aren't reused
+    invalidateTokenCache();
+    return set((state) => ({
     currentUser: null,
     isAuthenticated: false,
     friends: [],
@@ -387,7 +391,8 @@ export const useAppStore = create<AppState>()(
     lofiVolume: 0.7,
     lofiSelectedTrack: null,
     favoriteFriends: [],
-  }))
+  }));
+  }
 }),
     {
       name: 'nooke-storage',

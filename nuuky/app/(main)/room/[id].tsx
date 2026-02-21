@@ -13,6 +13,7 @@ import { AudioConnectionBadge } from '../../../components/AudioConnectionBadge';
 import { useAppStore } from '../../../stores/appStore';
 import { supabase } from '../../../lib/supabase';
 import { logger } from '../../../lib/logger';
+import { ErrorBoundary } from '../../../components/ErrorBoundary';
 
 export default function RoomScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -209,72 +210,74 @@ export default function RoomScreen() {
   const participantIds = participants.map((p) => p.user_id);
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.bg.primary }]}>
-      <RoomView
-        roomName={currentRoom.name}
-        participants={participants}
-        currentUser={currentUser}
-        isCreator={currentRoom.creator_id === currentUser?.id}
-        onSettingsPress={handleSettingsPress}
-      />
+    <ErrorBoundary>
+      <View style={[styles.container, { backgroundColor: theme.colors.bg.primary }]}>
+        <RoomView
+          roomName={currentRoom.name}
+          participants={participants}
+          currentUser={currentUser}
+          isCreator={currentRoom.creator_id === currentUser?.id}
+          onSettingsPress={handleSettingsPress}
+        />
 
-      {/* Audio Status Badge */}
-      {audioConnectionStatus !== 'disconnected' && (
-        <View style={styles.audioBadgeContainer}>
-          <AudioConnectionBadge status={audioConnectionStatus} />
+        {/* Audio Status Badge */}
+        {audioConnectionStatus !== 'disconnected' && (
+          <View style={styles.audioBadgeContainer}>
+            <AudioConnectionBadge status={audioConnectionStatus} />
+          </View>
+        )}
+
+        {/* Mute/Unmute Button */}
+        <View style={styles.muteButtonContainer}>
+          <TouchableOpacity
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              handleToggleMute();
+            }}
+            activeOpacity={0.8}
+            disabled={isAudioConnecting}
+            style={[
+              styles.muteButton,
+              {
+                backgroundColor: isMuted ? 'transparent' : accent.primary,
+                borderColor: accent.primary,
+                shadowColor: accent.primary,
+                opacity: isAudioConnecting ? 0.7 : 1,
+              },
+            ]}
+          >
+            {isAudioConnecting ? (
+              <ActivityIndicator size="small" color={isMuted ? accent.primary : accent.textOnPrimary} />
+            ) : (
+              <Ionicons
+                name={isMuted ? 'mic-off' : 'mic'}
+                size={28}
+                color={isMuted ? accent.primary : accent.textOnPrimary}
+              />
+            )}
+          </TouchableOpacity>
         </View>
-      )}
 
-      {/* Mute/Unmute Button */}
-      <View style={styles.muteButtonContainer}>
-        <TouchableOpacity
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            handleToggleMute();
-          }}
-          activeOpacity={0.8}
-          disabled={isAudioConnecting}
-          style={[
-            styles.muteButton,
-            {
-              backgroundColor: isMuted ? 'transparent' : accent.primary,
-              borderColor: accent.primary,
-              shadowColor: accent.primary,
-              opacity: isAudioConnecting ? 0.7 : 1,
-            },
-          ]}
-        >
-          {isAudioConnecting ? (
-            <ActivityIndicator size="small" color={isMuted ? accent.primary : accent.textOnPrimary} />
-          ) : (
-            <Ionicons
-              name={isMuted ? 'mic-off' : 'mic'}
-              size={28}
-              color={isMuted ? accent.primary : accent.textOnPrimary}
-            />
-          )}
-        </TouchableOpacity>
+        <RoomSettingsModal
+          visible={showSettings}
+          roomName={currentRoom.name || 'Room'}
+          roomId={currentRoom.id}
+          isCreator={currentRoom.creator_id === currentUser?.id}
+          creatorId={currentRoom.creator_id}
+          participants={participants}
+          currentUserId={currentUser.id}
+          onClose={() => setShowSettings(false)}
+          onRename={handleRename}
+          onDelete={handleDelete}
+          onLeave={handleLeaveRoom}
+          onRemoveParticipant={handleRemoveParticipant}
+          originPoint={settingsOrigin}
+          friends={friendUsers}
+          participantIds={participantIds}
+          onInvite={handleInviteFriend}
+        />
       </View>
-
-      <RoomSettingsModal
-        visible={showSettings}
-        roomName={currentRoom.name || 'Room'}
-        roomId={currentRoom.id}
-        isCreator={currentRoom.creator_id === currentUser?.id}
-        creatorId={currentRoom.creator_id}
-        participants={participants}
-        currentUserId={currentUser.id}
-        onClose={() => setShowSettings(false)}
-        onRename={handleRename}
-        onDelete={handleDelete}
-        onLeave={handleLeaveRoom}
-        onRemoveParticipant={handleRemoveParticipant}
-        originPoint={settingsOrigin}
-        friends={friendUsers}
-        participantIds={participantIds}
-        onInvite={handleInviteFriend}
-      />
-    </View>
+    </ErrorBoundary>
   );
 }
 
